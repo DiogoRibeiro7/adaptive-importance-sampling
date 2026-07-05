@@ -35,7 +35,7 @@
 <title>typing&#45;extensions</title>
 <ellipse fill="none" stroke="black" cx="436.84" cy="-236.35" rx="101.23" ry="26.74"/>
 <text text-anchor="middle" x="436.84" y="-240.15" font-family="Times,serif" font-size="14.00">typing&#45;extensions</text>
-<text text-anchor="middle" x="436.84" y="-225.15" font-family="Times,serif" font-size="14.00">4.15.0</text>
+<text text-anchor="middle" x="436.84" y="-225.15" font-family="Times,serif" font-size="14.00">4.16.0</text>
 </g>
 <!-- anyio&#45;&gt;typing&#45;extensions -->
 <g id="edge2" class="edge">
@@ -259,7 +259,7 @@
 <title>coverage</title>
 <ellipse fill="none" stroke="black" cx="4565.84" cy="-445.83" rx="57.05" ry="26.74"/>
 <text text-anchor="middle" x="4565.84" y="-449.63" font-family="Times,serif" font-size="14.00">coverage</text>
-<text text-anchor="middle" x="4565.84" y="-434.63" font-family="Times,serif" font-size="14.00">7.14.3</text>
+<text text-anchor="middle" x="4565.84" y="-434.63" font-family="Times,serif" font-size="14.00">7.15.0</text>
 </g>
 <!-- cryptography -->
 <g id="node23" class="node">
@@ -294,7 +294,7 @@
 <title>dulwich</title>
 <ellipse fill="none" stroke="black" cx="1032.84" cy="-341.09" rx="50.82" ry="26.74"/>
 <text text-anchor="middle" x="1032.84" y="-344.89" font-family="Times,serif" font-size="14.00">dulwich</text>
-<text text-anchor="middle" x="1032.84" y="-329.89" font-family="Times,serif" font-size="14.00">1.2.6</text>
+<text text-anchor="middle" x="1032.84" y="-329.89" font-family="Times,serif" font-size="14.00">1.2.7</text>
 </g>
 <!-- dulwich&#45;&gt;typing&#45;extensions -->
 <g id="edge12" class="edge">
@@ -378,7 +378,7 @@
 <title>filelock</title>
 <ellipse fill="none" stroke="black" cx="3374.84" cy="-236.35" rx="47.25" ry="26.74"/>
 <text text-anchor="middle" x="3374.84" y="-240.15" font-family="Times,serif" font-size="14.00">filelock</text>
-<text text-anchor="middle" x="3374.84" y="-225.15" font-family="Times,serif" font-size="14.00">3.29.4</text>
+<text text-anchor="middle" x="3374.84" y="-225.15" font-family="Times,serif" font-size="14.00">3.29.5</text>
 </g>
 <!-- findpython -->
 <g id="node33" class="node">
@@ -943,7 +943,7 @@
 <title>python&#45;discovery</title>
 <ellipse fill="none" stroke="black" cx="3139.84" cy="-341.09" rx="98.08" ry="26.74"/>
 <text text-anchor="middle" x="3139.84" y="-344.89" font-family="Times,serif" font-size="14.00">python&#45;discovery</text>
-<text text-anchor="middle" x="3139.84" y="-329.89" font-family="Times,serif" font-size="14.00">1.4.2</text>
+<text text-anchor="middle" x="3139.84" y="-329.89" font-family="Times,serif" font-size="14.00">1.4.3</text>
 </g>
 <!-- virtualenv&#45;&gt;python&#45;discovery -->
 <g id="edge84" class="edge">

@@ -1,6 +1,6 @@
 # Architecture Documentation
 
-*Auto-generated on 2026-06-28*
+*Auto-generated on 2026-07-05*
 
 ## Project Overview
 
