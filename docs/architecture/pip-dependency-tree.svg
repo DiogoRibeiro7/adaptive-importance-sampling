@@ -77,7 +77,7 @@
 <title>build</title>
 <ellipse fill="none" stroke="black" cx="3556.84" cy="-445.83" rx="37.45" ry="26.74"/>
 <text text-anchor="middle" x="3556.84" y="-449.63" font-family="Times,serif" font-size="14.00">build</text>
-<text text-anchor="middle" x="3556.84" y="-434.63" font-family="Times,serif" font-size="14.00">1.5.0</text>
+<text text-anchor="middle" x="3556.84" y="-434.63" font-family="Times,serif" font-size="14.00">1.5.1</text>
 </g>
 <!-- packaging -->
 <g id="node9" class="node">
@@ -168,7 +168,7 @@
 <title>charset&#45;normalizer</title>
 <ellipse fill="none" stroke="black" cx="845.84" cy="-236.35" rx="107.46" ry="26.74"/>
 <text text-anchor="middle" x="845.84" y="-240.15" font-family="Times,serif" font-size="14.00">charset&#45;normalizer</text>
-<text text-anchor="middle" x="845.84" y="-225.15" font-family="Times,serif" font-size="14.00">3.4.7</text>
+<text text-anchor="middle" x="845.84" y="-225.15" font-family="Times,serif" font-size="14.00">3.4.9</text>
 </g>
 <!-- requests&#45;&gt;charset&#45;normalizer -->
 <g id="edge72" class="edge">
@@ -196,7 +196,7 @@
 <title>cffi</title>
 <ellipse fill="none" stroke="black" cx="1568.84" cy="-131.61" rx="37.45" ry="26.74"/>
 <text text-anchor="middle" x="1568.84" y="-135.41" font-family="Times,serif" font-size="14.00">cffi</text>
-<text text-anchor="middle" x="1568.84" y="-120.41" font-family="Times,serif" font-size="14.00">2.0.0</text>
+<text text-anchor="middle" x="1568.84" y="-120.41" font-family="Times,serif" font-size="14.00">2.1.0</text>
 </g>
 <!-- pycparser -->
 <g id="node16" class="node">
@@ -294,7 +294,7 @@
 <title>dulwich</title>
 <ellipse fill="none" stroke="black" cx="1032.84" cy="-341.09" rx="50.82" ry="26.74"/>
 <text text-anchor="middle" x="1032.84" y="-344.89" font-family="Times,serif" font-size="14.00">dulwich</text>
-<text text-anchor="middle" x="1032.84" y="-329.89" font-family="Times,serif" font-size="14.00">1.2.7</text>
+<text text-anchor="middle" x="1032.84" y="-329.89" font-family="Times,serif" font-size="14.00">1.2.10</text>
 </g>
 <!-- dulwich&#45;&gt;typing&#45;extensions -->
 <g id="edge12" class="edge">
@@ -378,7 +378,7 @@
 <title>filelock</title>
 <ellipse fill="none" stroke="black" cx="3374.84" cy="-236.35" rx="47.25" ry="26.74"/>
 <text text-anchor="middle" x="3374.84" y="-240.15" font-family="Times,serif" font-size="14.00">filelock</text>
-<text text-anchor="middle" x="3374.84" y="-225.15" font-family="Times,serif" font-size="14.00">3.29.5</text>
+<text text-anchor="middle" x="3374.84" y="-225.15" font-family="Times,serif" font-size="14.00">3.29.7</text>
 </g>
 <!-- findpython -->
 <g id="node33" class="node">
@@ -901,7 +901,7 @@
 <title>virtualenv</title>
 <ellipse fill="none" stroke="black" cx="2937.84" cy="-445.83" rx="62.87" ry="26.74"/>
 <text text-anchor="middle" x="2937.84" y="-449.63" font-family="Times,serif" font-size="14.00">virtualenv</text>
-<text text-anchor="middle" x="2937.84" y="-434.63" font-family="Times,serif" font-size="14.00">21.5.1</text>
+<text text-anchor="middle" x="2937.84" y="-434.63" font-family="Times,serif" font-size="14.00">21.6.1</text>
 </g>
 <!-- poetry&#45;&gt;virtualenv -->
 <g id="edge53" class="edge">
@@ -943,7 +943,7 @@
 <title>python&#45;discovery</title>
 <ellipse fill="none" stroke="black" cx="3139.84" cy="-341.09" rx="98.08" ry="26.74"/>
 <text text-anchor="middle" x="3139.84" y="-344.89" font-family="Times,serif" font-size="14.00">python&#45;discovery</text>
-<text text-anchor="middle" x="3139.84" y="-329.89" font-family="Times,serif" font-size="14.00">1.4.3</text>
+<text text-anchor="middle" x="3139.84" y="-329.89" font-family="Times,serif" font-size="14.00">1.4.4</text>
 </g>
 <!-- virtualenv&#45;&gt;python&#45;discovery -->
 <g id="edge84" class="edge">
