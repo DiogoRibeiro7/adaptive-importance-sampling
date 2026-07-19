@@ -14,7 +14,7 @@
 <title>anyio</title>
 <ellipse fill="none" stroke="black" cx="319.84" cy="-341.09" rx="43.68" ry="26.74"/>
 <text text-anchor="middle" x="319.84" y="-344.89" font-family="Times,serif" font-size="14.00">anyio</text>
-<text text-anchor="middle" x="319.84" y="-329.89" font-family="Times,serif" font-size="14.00">4.14.1</text>
+<text text-anchor="middle" x="319.84" y="-329.89" font-family="Times,serif" font-size="14.00">4.14.2</text>
 </g>
 <!-- idna -->
 <g id="node2" class="node">
@@ -77,7 +77,7 @@
 <title>build</title>
 <ellipse fill="none" stroke="black" cx="3556.84" cy="-445.83" rx="37.45" ry="26.74"/>
 <text text-anchor="middle" x="3556.84" y="-449.63" font-family="Times,serif" font-size="14.00">build</text>
-<text text-anchor="middle" x="3556.84" y="-434.63" font-family="Times,serif" font-size="14.00">1.5.1</text>
+<text text-anchor="middle" x="3556.84" y="-434.63" font-family="Times,serif" font-size="14.00">1.5.0</text>
 </g>
 <!-- packaging -->
 <g id="node9" class="node">
@@ -259,7 +259,7 @@
 <title>coverage</title>
 <ellipse fill="none" stroke="black" cx="4565.84" cy="-445.83" rx="57.05" ry="26.74"/>
 <text text-anchor="middle" x="4565.84" y="-449.63" font-family="Times,serif" font-size="14.00">coverage</text>
-<text text-anchor="middle" x="4565.84" y="-434.63" font-family="Times,serif" font-size="14.00">7.15.0</text>
+<text text-anchor="middle" x="4565.84" y="-434.63" font-family="Times,serif" font-size="14.00">7.15.2</text>
 </g>
 <!-- cryptography -->
 <g id="node23" class="node">
@@ -294,7 +294,7 @@
 <title>dulwich</title>
 <ellipse fill="none" stroke="black" cx="1032.84" cy="-341.09" rx="50.82" ry="26.74"/>
 <text text-anchor="middle" x="1032.84" y="-344.89" font-family="Times,serif" font-size="14.00">dulwich</text>
-<text text-anchor="middle" x="1032.84" y="-329.89" font-family="Times,serif" font-size="14.00">1.2.10</text>
+<text text-anchor="middle" x="1032.84" y="-329.89" font-family="Times,serif" font-size="14.00">1.2.11</text>
 </g>
 <!-- dulwich&#45;&gt;typing&#45;extensions -->
 <g id="edge12" class="edge">
@@ -378,7 +378,7 @@
 <title>filelock</title>
 <ellipse fill="none" stroke="black" cx="3374.84" cy="-236.35" rx="47.25" ry="26.74"/>
 <text text-anchor="middle" x="3374.84" y="-240.15" font-family="Times,serif" font-size="14.00">filelock</text>
-<text text-anchor="middle" x="3374.84" y="-225.15" font-family="Times,serif" font-size="14.00">3.29.7</text>
+<text text-anchor="middle" x="3374.84" y="-225.15" font-family="Times,serif" font-size="14.00">3.31.0</text>
 </g>
 <!-- findpython -->
 <g id="node33" class="node">
@@ -399,7 +399,7 @@
 <title>platformdirs</title>
 <ellipse fill="none" stroke="black" cx="3139.84" cy="-236.35" rx="74.91" ry="26.74"/>
 <text text-anchor="middle" x="3139.84" y="-240.15" font-family="Times,serif" font-size="14.00">platformdirs</text>
-<text text-anchor="middle" x="3139.84" y="-225.15" font-family="Times,serif" font-size="14.00">4.10.0</text>
+<text text-anchor="middle" x="3139.84" y="-225.15" font-family="Times,serif" font-size="14.00">4.10.1</text>
 </g>
 <!-- findpython&#45;&gt;platformdirs -->
 <g id="edge16" class="edge">
@@ -560,7 +560,7 @@
 <title>jaraco&#45;functools</title>
 <ellipse fill="none" stroke="black" cx="2809.84" cy="-341.09" rx="91.85" ry="26.74"/>
 <text text-anchor="middle" x="2809.84" y="-344.89" font-family="Times,serif" font-size="14.00">jaraco&#45;functools</text>
-<text text-anchor="middle" x="2809.84" y="-329.89" font-family="Times,serif" font-size="14.00">4.5.0</text>
+<text text-anchor="middle" x="2809.84" y="-329.89" font-family="Times,serif" font-size="14.00">4.6.0</text>
 </g>
 <!-- jaraco&#45;functools&#45;&gt;more&#45;itertools -->
 <g id="edge26" class="edge">
@@ -691,7 +691,7 @@
 <title>pbs&#45;installer</title>
 <ellipse fill="none" stroke="black" cx="1238.84" cy="-445.83" rx="74.91" ry="26.74"/>
 <text text-anchor="middle" x="1238.84" y="-449.63" font-family="Times,serif" font-size="14.00">pbs&#45;installer</text>
-<text text-anchor="middle" x="1238.84" y="-434.63" font-family="Times,serif" font-size="14.00">2026.6.10</text>
+<text text-anchor="middle" x="1238.84" y="-434.63" font-family="Times,serif" font-size="14.00">2026.7.18</text>
 </g>
 <!-- pip -->
 <g id="node58" class="node">
@@ -873,7 +873,7 @@
 <title>tomlkit</title>
 <ellipse fill="none" stroke="black" cx="3759.84" cy="-445.83" rx="48.17" ry="26.74"/>
 <text text-anchor="middle" x="3759.84" y="-449.63" font-family="Times,serif" font-size="14.00">tomlkit</text>
-<text text-anchor="middle" x="3759.84" y="-434.63" font-family="Times,serif" font-size="14.00">0.15.0</text>
+<text text-anchor="middle" x="3759.84" y="-434.63" font-family="Times,serif" font-size="14.00">0.15.1</text>
 </g>
 <!-- poetry&#45;&gt;tomlkit -->
 <g id="edge51" class="edge">
