@@ -154,7 +154,7 @@
 <title>certifi</title>
 <ellipse fill="none" stroke="black" cx="168.84" cy="-236.35" rx="62.87" ry="26.74"/>
 <text text-anchor="middle" x="168.84" y="-240.15" font-family="Times,serif" font-size="14.00">certifi</text>
-<text text-anchor="middle" x="168.84" y="-225.15" font-family="Times,serif" font-size="14.00">2026.6.17</text>
+<text text-anchor="middle" x="168.84" y="-225.15" font-family="Times,serif" font-size="14.00">2026.7.22</text>
 </g>
 <!-- requests&#45;&gt;certifi -->
 <g id="edge75" class="edge">
@@ -294,7 +294,7 @@
 <title>dulwich</title>
 <ellipse fill="none" stroke="black" cx="1032.84" cy="-341.09" rx="50.82" ry="26.74"/>
 <text text-anchor="middle" x="1032.84" y="-344.89" font-family="Times,serif" font-size="14.00">dulwich</text>
-<text text-anchor="middle" x="1032.84" y="-329.89" font-family="Times,serif" font-size="14.00">1.2.11</text>
+<text text-anchor="middle" x="1032.84" y="-329.89" font-family="Times,serif" font-size="14.00">1.2.12</text>
 </g>
 <!-- dulwich&#45;&gt;typing&#45;extensions -->
 <g id="edge12" class="edge">
@@ -357,7 +357,7 @@
 <title>greenlet</title>
 <ellipse fill="none" stroke="black" cx="610.84" cy="-236.35" rx="54.39" ry="26.74"/>
 <text text-anchor="middle" x="610.84" y="-240.15" font-family="Times,serif" font-size="14.00">greenlet</text>
-<text text-anchor="middle" x="610.84" y="-225.15" font-family="Times,serif" font-size="14.00">3.5.3</text>
+<text text-anchor="middle" x="610.84" y="-225.15" font-family="Times,serif" font-size="14.00">3.5.4</text>
 </g>
 <!-- sqlalchemy&#45;&gt;greenlet -->
 <g id="edge79" class="edge">
@@ -371,14 +371,14 @@
 <title>fastjsonschema</title>
 <ellipse fill="none" stroke="black" cx="3411.84" cy="-445.83" rx="89.61" ry="26.74"/>
 <text text-anchor="middle" x="3411.84" y="-449.63" font-family="Times,serif" font-size="14.00">fastjsonschema</text>
-<text text-anchor="middle" x="3411.84" y="-434.63" font-family="Times,serif" font-size="14.00">2.21.2</text>
+<text text-anchor="middle" x="3411.84" y="-434.63" font-family="Times,serif" font-size="14.00">2.22.0</text>
 </g>
 <!-- filelock -->
 <g id="node32" class="node">
 <title>filelock</title>
 <ellipse fill="none" stroke="black" cx="3374.84" cy="-236.35" rx="47.25" ry="26.74"/>
 <text text-anchor="middle" x="3374.84" y="-240.15" font-family="Times,serif" font-size="14.00">filelock</text>
-<text text-anchor="middle" x="3374.84" y="-225.15" font-family="Times,serif" font-size="14.00">3.31.0</text>
+<text text-anchor="middle" x="3374.84" y="-225.15" font-family="Times,serif" font-size="14.00">3.32.0</text>
 </g>
 <!-- findpython -->
 <g id="node33" class="node">
@@ -399,7 +399,7 @@
 <title>platformdirs</title>
 <ellipse fill="none" stroke="black" cx="3139.84" cy="-236.35" rx="74.91" ry="26.74"/>
 <text text-anchor="middle" x="3139.84" y="-240.15" font-family="Times,serif" font-size="14.00">platformdirs</text>
-<text text-anchor="middle" x="3139.84" y="-225.15" font-family="Times,serif" font-size="14.00">4.10.1</text>
+<text text-anchor="middle" x="3139.84" y="-225.15" font-family="Times,serif" font-size="14.00">4.11.0</text>
 </g>
 <!-- findpython&#45;&gt;platformdirs -->
 <g id="edge16" class="edge">
@@ -901,7 +901,7 @@
 <title>virtualenv</title>
 <ellipse fill="none" stroke="black" cx="2937.84" cy="-445.83" rx="62.87" ry="26.74"/>
 <text text-anchor="middle" x="2937.84" y="-449.63" font-family="Times,serif" font-size="14.00">virtualenv</text>
-<text text-anchor="middle" x="2937.84" y="-434.63" font-family="Times,serif" font-size="14.00">21.6.1</text>
+<text text-anchor="middle" x="2937.84" y="-434.63" font-family="Times,serif" font-size="14.00">21.7.0</text>
 </g>
 <!-- poetry&#45;&gt;virtualenv -->
 <g id="edge53" class="edge">
@@ -943,7 +943,7 @@
 <title>python&#45;discovery</title>
 <ellipse fill="none" stroke="black" cx="3139.84" cy="-341.09" rx="98.08" ry="26.74"/>
 <text text-anchor="middle" x="3139.84" y="-344.89" font-family="Times,serif" font-size="14.00">python&#45;discovery</text>
-<text text-anchor="middle" x="3139.84" y="-329.89" font-family="Times,serif" font-size="14.00">1.4.4</text>
+<text text-anchor="middle" x="3139.84" y="-329.89" font-family="Times,serif" font-size="14.00">1.5.0</text>
 </g>
 <!-- virtualenv&#45;&gt;python&#45;discovery -->
 <g id="edge84" class="edge">
