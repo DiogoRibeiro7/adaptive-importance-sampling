@@ -3,6 +3,13 @@ name: Release
 # Publishing to PyPI is deliberately not wired up yet. When you are ready,
 # register the project as a PyPI Trusted Publisher and add a job that runs
 # `pypa/gh-action-pypi-publish` with `id-token: write` — no API token needed.
+#
+# This workflow also used to carry a `build-docker` job that pushed to Docker
+# Hub using DOCKER_USERNAME / DOCKER_PASSWORD. Neither secret is set on this
+# repository, so the job could only ever fail, and no image was ever published
+# (the docs pointed at a `yourusername/safe-ice` placeholder). It was dropped
+# rather than left failing on every tag. To bring it back, add the two secrets
+# and a job using `docker/login-action` and `docker/build-push-action`.
 
 on:
   push:
