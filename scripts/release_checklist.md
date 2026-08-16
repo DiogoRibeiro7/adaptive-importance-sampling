@@ -1,215 +1,95 @@
-# Release Checklist for Safe-ICE
+# Release checklist
 
-This checklist ensures a smooth release process for Safe-ICE.
+Releases are cut by pushing a tag. `.github/workflows/release.yml` then runs the
+full quality gate, builds the distributions, checks that the tag matches the
+packaged version, and publishes a GitHub Release with the artifacts attached.
 
-## Pre-Release Checklist
+Publishing to PyPI is **not** wired up. See "Enabling PyPI" at the bottom if you
+decide to turn it on.
 
-### 1. Code Quality
-- [ ] All tests pass: `poetry run pytest`
-- [ ] Coverage is acceptable (>80%): `poetry run pytest --cov=safe_ice --cov-report=term`
-- [ ] Type checking passes: `poetry run mypy safe_ice`
-- [ ] Linting passes: `poetry run ruff check .`
-- [ ] Code is formatted: `poetry run black . && poetry run isort .`
+## 1. Before you start
 
-### 2. Documentation
-- [ ] Documentation builds without warnings: `cd docs && make clean && make html`
-- [ ] README.md is up to date
-- [ ] CHANGELOG.md has entry for new version
-- [ ] API documentation is complete
-- [ ] Examples run without errors
+- [ ] `main` (or `develop`) is green in CI
+- [ ] Working tree is clean: `git status`
+- [ ] You are up to date: `git pull`
 
-### 3. Version Bumping
-- [ ] Run version bump script: `python scripts/bump_version.py <major|minor|patch>`
-- [ ] Version updated in:
-  - [ ] pyproject.toml
-  - [ ] setup.py
-  - [ ] safe_ice/__init__.py
-  - [ ] docs/source/conf.py
-  - [ ] conda.recipe/meta.yaml
-  - [ ] Dockerfile
+## 2. Verify locally
 
-### 4. Final Checks
-- [ ] No uncommitted changes: `git status`
-- [ ] Branch is up to date: `git pull origin main`
-- [ ] CI/CD passes on main branch
-
-## Release Process
-
-### 1. Create Release Commit
 ```bash
-# Ensure you're on main/master
-git checkout main
-git pull origin main
-
-# Run tests one more time
-poetry run pytest
-
-# Create release commit
-git add -A
-git commit -m "Release v0.1.0"
+ruff check .
+ruff format --check .
+mypy
+pytest -m ""            # the whole suite, including slow tests
+python -m build && python -m twine check --strict dist/*
 ```
 
-### 2. Tag the Release
-```bash
-# Create annotated tag
-git tag -a v0.1.0 -m "Release version 0.1.0"
+- [ ] All of the above pass
+- [ ] Examples still run: `python examples/basic_usage.py`
+- [ ] Docs build: `make -C docs clean html`
 
-# Verify tag
-git tag -l -n
+## 3. Update the changelog
+
+- [ ] Move everything under `## [Unreleased]` into a new `## [X.Y.Z] - YYYY-MM-DD`
+      section in `CHANGELOG.md`
+- [ ] Leave an empty `## [Unreleased]` heading behind
+- [ ] Update the link definitions at the bottom of the file
+
+The release workflow extracts the notes for the tagged version from this file,
+so it is the single source of release notes.
+
+## 4. Bump the version
+
+The version lives in exactly one place: `version` under `[project]` in
+`pyproject.toml`. `safe_ice.__version__` reads it back from the installed
+package metadata, so nothing else needs editing.
+
+Either run the **Version bump** workflow from the Actions tab (it opens a PR),
+or do it locally:
+
+```bash
+python scripts/pyproject_editor.py --check bump-version patch   # preview
+python scripts/pyproject_editor.py bump-version patch           # apply
 ```
 
-### 3. Build Distribution
+- [ ] Version bumped and the change merged
+
+## 5. Tag and push
+
 ```bash
-# Clean previous builds
-rm -rf dist/ build/ *.egg-info
-
-# Build with poetry
-poetry build
-
-# Check the distribution
-twine check dist/*
-
-# Test installation in a fresh environment
-python -m venv test_env
-source test_env/bin/activate  # or test_env\Scripts\activate on Windows
-pip install dist/safe_ice-0.1.0-py3-none-any.whl
-python -c "import safe_ice; print(safe_ice.__version__)"
-safe-ice --version
-deactivate
-rm -rf test_env
+git tag -a v0.1.1 -m "Release v0.1.1"
+git push origin v0.1.1
 ```
 
-### 4. Push to Repository
-```bash
-# Push commits
-git push origin main
+The tag must match the version in `pyproject.toml` exactly, prefixed with `v`.
+The release workflow fails the build if it does not.
 
-# Push tags (triggers CI/CD release workflow)
-git push origin v0.1.0
-```
+- [ ] Tag pushed
+- [ ] Release workflow succeeded
+- [ ] GitHub Release looks right, with `dist/` artifacts attached
 
-### 5. Publish to Test PyPI (Optional)
-```bash
-# Upload to Test PyPI first
-twine upload --repository testpypi dist/*
+## 6. After the release
 
-# Test installation from Test PyPI
-pip install --index-url https://test.pypi.org/simple/ safe-ice
-```
-
-### 6. Publish to PyPI
-```bash
-# Upload to PyPI
-twine upload dist/*
-
-# Verify on PyPI
-# Visit: https://pypi.org/project/safe-ice/
-```
-
-### 7. Create GitHub Release
-1. Go to: https://github.com/yourusername/adaptive-importance-sampling-ice/releases
-2. Click "Draft a new release"
-3. Select the tag: v0.1.0
-4. Title: "Safe-ICE v0.1.0"
-5. Copy content from RELEASE.md
-6. Attach distribution files from `dist/`
-7. Publish release
-
-### 8. Update Documentation
-```bash
-# Build and deploy docs to Read the Docs
-# This should happen automatically via webhook
-
-# Verify at: https://safe-ice.readthedocs.io/
-```
-
-### 9. Docker Image
-```bash
-# Build Docker image
-docker build -t yourusername/safe-ice:0.1.0 .
-docker tag yourusername/safe-ice:0.1.0 yourusername/safe-ice:latest
-
-# Test Docker image
-docker run --rm yourusername/safe-ice:0.1.0 safe-ice --version
-
-# Push to Docker Hub
-docker push yourusername/safe-ice:0.1.0
-docker push yourusername/safe-ice:latest
-```
-
-### 10. Conda Package (Optional)
-```bash
-# Submit to conda-forge
-# Follow: https://conda-forge.org/docs/maintainer/adding_pkgs.html
-
-# After feedstock is created and merged:
-conda install -c conda-forge safe-ice
-```
-
-## Post-Release Checklist
-
-### 1. Verification
-- [ ] Package on PyPI: https://pypi.org/project/safe-ice/
-- [ ] Documentation updated: https://safe-ice.readthedocs.io/
-- [ ] GitHub release created
-- [ ] Docker image available: https://hub.docker.com/r/yourusername/safe-ice
-- [ ] Installation works: `pip install safe-ice`
-
-### 2. Announcement
-- [ ] Update project website (if applicable)
-- [ ] Post on relevant forums/communities
-- [ ] Send announcement to mailing list (if applicable)
-- [ ] Update citation information
-
-### 3. Next Steps
-- [ ] Create new milestone for next release
-- [ ] Move unfinished issues to next milestone
-- [ ] Update ROADMAP.md
-- [ ] Start new development cycle
+- [ ] Read the Docs has built the new version
+- [ ] Close the milestone and open the next one
+- [ ] Update `CITATION.cff` if the release should be cited
 
 ## Troubleshooting
 
-### Build Fails
-- Check all dependencies are installed: `poetry install`
-- Clear caches: `rm -rf .pytest_cache .ruff_cache`
+**The tag/version check fails.** The tag does not match `[project].version`.
+Delete the tag (`git tag -d vX.Y.Z && git push --delete origin vX.Y.Z`), fix the
+version, and tag again.
 
-### Upload to PyPI Fails
-- Check credentials: `~/.pypirc`
-- Ensure version doesn't already exist
-- Verify with: `twine check dist/*`
+**`twine check` fails.** Usually a malformed `README.md`; it is the long
+description and must render as valid Markdown.
 
-### Docker Build Fails
-- Ensure Docker daemon is running
-- Check Dockerfile syntax
-- Clear Docker cache: `docker system prune`
+**Release notes come out empty.** The changelog has no section matching the
+tagged version. The workflow falls back to a generic message rather than
+failing, so fix `CHANGELOG.md` and edit the release.
 
-### Documentation Build Fails
-- Install docs dependencies: `pip install -r docs/requirements.txt`
-- Check for Sphinx warnings
-- Verify all referenced files exist
+## Enabling PyPI
 
-## Emergency Rollback
-
-If something goes wrong:
-
-```bash
-# Delete tag locally
-git tag -d v0.1.0
-
-# Delete tag remotely
-git push origin :refs/tags/v0.1.0
-
-# Yank from PyPI (within 24 hours)
-# Go to: https://pypi.org/manage/project/safe-ice/release/0.1.0/
-# Click "Options" -> "Yank"
-
-# Remove Docker image
-docker rmi yourusername/safe-ice:0.1.0
-```
-
-## Notes
-
-- Always test in a clean environment before releasing
-- Consider making release candidates (rc) for major releases
-- Keep CHANGELOG.md updated throughout development
-- Use semantic versioning: MAJOR.MINOR.PATCH
+1. Register the project on PyPI as a Trusted Publisher for this repository,
+   pointing at `release.yml` and the `pypi` environment.
+2. Add a job to `release.yml` that needs `build`, has `id-token: write`, and
+   runs `pypa/gh-action-pypi-publish`. No API token is required.
+3. Confirm the name `safe-ice` is available or already yours.

@@ -1,0 +1,33 @@
+name: Feature request
+description: Suggest a capability, algorithm, or benchmark to add
+labels: ["enhancement"]
+
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem would this solve?
+      description: Describe the use case rather than the implementation.
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+      description: What should the API look like from a caller's point of view?
+    validations:
+      required: true
+
+  - type: input
+    id: reference
+    attributes:
+      label: Reference
+      description: >
+        A paper, DOI, or existing implementation, if the request is for a
+        published method.
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered

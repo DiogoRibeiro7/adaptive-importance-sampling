@@ -1,0 +1,73 @@
+name: Bug report
+description: Something behaves differently from what the documentation says
+labels: ["bug"]
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to file a report.
+
+        If your issue is that an estimate looks wrong rather than that the code
+        crashed, please read the "Known limitations" section of the README
+        first — some accuracy gaps are already recorded there.
+
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: What did you expect, and what did you get instead?
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Minimal reproduction
+      description: >
+        The shortest script that shows the problem. Please set `random_state`
+        so the run is reproducible.
+      render: python
+      value: |
+        import numpy as np
+        from safe_ice import SafeICE
+
+
+        def g(u):
+            return 3.0 - np.linalg.norm(u, axis=-1)
+
+
+        ice = SafeICE(limit_state_function=g, dimension=2, N=1000, random_state=0)
+        pf, results = ice.run(verbose=False)
+        print(pf)
+    validations:
+      required: true
+
+  - type: textarea
+    id: traceback
+    attributes:
+      label: Traceback or output
+      description: Paste the full traceback, if there is one.
+      render: text
+
+  - type: input
+    id: version
+    attributes:
+      label: Safe-ICE version
+      description: "Output of: python -c \"import safe_ice; print(safe_ice.__version__)\""
+    validations:
+      required: true
+
+  - type: input
+    id: environment
+    attributes:
+      label: Python, NumPy and SciPy versions
+      placeholder: "Python 3.12.4, NumPy 2.1.0, SciPy 1.14.0"
+    validations:
+      required: true
+
+  - type: input
+    id: os
+    attributes:
+      label: Operating system
+      placeholder: "Ubuntu 24.04 / macOS 15 / Windows 11"

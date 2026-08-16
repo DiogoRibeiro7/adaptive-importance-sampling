@@ -1,248 +1,292 @@
-# Adaptive Importance Sampling ICE
+# Safe-ICE
 
-[![Python 3.9+](https://img.shields.io/badge/python-3.9+-blue.svg)](https://www.python.org/downloads/)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![CI](https://github.com/DiogoRibeiro7/adaptive-importance-sampling-ice/actions/workflows/ci.yml/badge.svg)](https://github.com/DiogoRibeiro7/adaptive-importance-sampling-ice/actions/workflows/ci.yml)
+[![Python 3.11+](https://img.shields.io/badge/python-3.11%20%7C%203.12%20%7C%203.13%20%7C%203.14-blue.svg)](https://www.python.org/downloads/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![Checked with mypy](https://img.shields.io/badge/mypy-strict-2a6db2.svg)](https://mypy-lang.org/)
+[![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
 [![arXiv](https://img.shields.io/badge/arXiv-2509.07160-b31b1b.svg)](https://arxiv.org/abs/2509.07160)
 
-Complete Python implementation of **Safe Cross-Entropy-Based Importance Sampling** for rare event simulations in reliability analysis.
+A Python implementation of **Safe Cross-Entropy-Based Importance Sampling** for
+rare event simulation in reliability analysis.
 
-## 📖 Overview
+Safe-ICE estimates failure probabilities `P_F = P(g(U) ≤ 0)` where `U ~ N(0, I)`
+and `g` is a limit-state function. It targets problems where the failure
+probability is far too small for crude Monte Carlo to resolve at a practical
+sample count.
 
-This repository provides a rigorous implementation of the Safe-ICE algorithm from:
+> **Status: alpha.** The algorithm runs end to end and the numerics are covered
+> by tests, but the estimator does not yet reproduce the reference
+> probabilities from the paper reliably. Please read
+> [Known limitations](#known-limitations) before depending on the results.
 
-> **Gao, Z., & Karniadakis, G. (2025).** Safe Cross-Entropy-Based Importance Sampling for Rare Event Simulations. *arXiv preprint arXiv:2509.07160*.
+Implements the method described in:
 
-Safe-ICE addresses the challenge of estimating extremely small failure probabilities (down to 10⁻¹⁰ and beyond) in high-dimensional reliability problems through three key innovations:
+> Gao, Z., & Karniadakis, G. (2025). *Safe Cross-Entropy-Based Importance
+> Sampling for Rare Event Simulations.* arXiv:2509.07160.
 
-1. **Penalized EM Algorithm**: Automatically determines the optimal number of mixture components
-2. **Heavy-Tailed Exploration**: Uses inverse Nakagami distributions to explore rare failure regions
-3. **Adaptive Annealing**: Smoothly transitions from exploration to exploitation via cosine annealing
+## Contents
 
-## ✨ Key Features
+- [Installation](#installation)
+- [Quick start](#quick-start)
+- [How it works](#how-it-works)
+- [Reproducibility](#reproducibility)
+- [Further usage](#further-usage)
+- [Known limitations](#known-limitations)
+- [Development](#development)
+- [Citation](#citation)
+- [License](#license)
 
-- ✅ **Complete vMFNM Implementation**: von Mises-Fisher-Nakagami mixture with exact sampling
-- ✅ **Automatic Component Selection**: Penalized EM removes redundant components during optimization
-- ✅ **Heavy-Tailed Sampling**: Inverse Nakagami distribution for extreme tail exploration
-- ✅ **Robust Numerical Methods**: Stable Bessel function evaluations and log-space computations
-- ✅ **Comprehensive Benchmarks**: All test problems from the paper
-- ✅ **PDE Solver Integration**: Heat transfer problem with Karhunen-Loève expansion
-- ✅ **Advanced Analysis Tools**: Convergence visualization and performance metrics
+## Installation
 
-## 🚀 Quick Start
-
-### Installation
+Requires Python 3.11 or newer.
 
 ```bash
-# Clone the repository
-git clone https://github.com/diogoribeiro7/adaptive-importance-sampling-ice.git
-cd adaptive-importance-sampling-ice
-
-# Install in development mode
-pip install -e .
-
-# With development/testing extras
-pip install -e ".[dev]"
+pip install git+https://github.com/DiogoRibeiro7/adaptive-importance-sampling-ice.git
 ```
 
-### Basic Usage
+The package is not on PyPI yet. For a local checkout:
+
+```bash
+git clone https://github.com/DiogoRibeiro7/adaptive-importance-sampling-ice.git
+cd adaptive-importance-sampling-ice
+pip install -e .
+```
+
+### Optional extras
+
+| Extra  | Adds                           | For                                                     |
+| ------ | ------------------------------ | ------------------------------------------------------- |
+| `viz`  | plotly, seaborn, pandas        | `safe_ice.analysis.interactive_visualization`           |
+| `perf` | numba, psutil, memory-profiler | `OptimizedSafeICE` JIT paths, memory instrumentation    |
+| `all`  | everything above               |                                                         |
+
+```bash
+pip install -e ".[viz]"
+```
+
+## Quick start
 
 ```python
-from safe_ice import SafeICE, BenchmarkProblems
+from safe_ice import BenchmarkProblems, SafeICE
 
-# Define a limit state function (failure when g(u) ≤ 0)
-problem = BenchmarkProblems.four_mode_series_system(z=2.0)
+# A limit-state function: failure occurs where g(u) <= 0.
+g = BenchmarkProblems.four_mode_series_system(z=2.0)
 
-# Initialize Safe-ICE
-safe_ice = SafeICE(
-    limit_state_function=problem,
+ice = SafeICE(
+    limit_state_function=g,
     dimension=2,
-    K0=8,              # Initial mixture components
-    N=1000,            # Samples per iteration
-    delta_star=1.5     # CV stopping criterion
+    K0=8,  # initial mixture components
+    N=1000,  # samples per iteration
+    delta_star=1.5,  # CV stopping threshold
+    random_state=0,  # omit for non-deterministic runs
 )
 
-# Run the algorithm
-pf_estimate, results = safe_ice.run(verbose=True)
+pf, results = ice.run(verbose=True)
 
-print(f"Failure Probability: {pf_estimate:.6e}")
-print(f"Converged in {results['iterations']} iterations")
-print(f"Final components: {results['final_components']}")
+print(f"Failure probability: {pf:.6e}")
+print(f"Iterations run:      {len(results['iterations'])}")
+print(f"Final components:    {results['final_components']}")
 ```
 
-### Example Output
+### Using your own limit-state function
 
-```
-Safe-ICE Algorithm
-Problem dimension: 2
-Initial components: 8
-Samples per iteration: 1000
---------------------------------------------------
-Iteration  1: σ=0.850000, λ=0.146, K=8
-           CV=4.2341
-Iteration  2: σ=0.642000, λ=0.345, K=6
-           CV=3.8124
-...
-Iteration  5: σ=0.128000, λ=0.891, K=3
-           CV=1.4523
-Converged: CV 1.4523 ≤ 1.5
---------------------------------------------------
-Final Results:
-Failure Probability: 2.35e-04
-Total Iterations: 5
-Final Components: 3
-Final CV: 1.4523
-```
-
-## 🔬 Advanced Features
-
-### Performance Comparison
+`g` receives an `(n, d)` array of points and should return the matching `(n,)`
+array of values. Failure is `g(u) <= 0`.
 
 ```python
-from safe_ice import PerformanceEvaluator
+import numpy as np
 
+from safe_ice import SafeICE
+
+
+def my_limit_state(u: np.ndarray) -> np.ndarray:
+    """Fails when the point leaves a radius-3 ball."""
+    return 3.0 - np.linalg.norm(u, axis=-1)
+
+
+pf, results = SafeICE(my_limit_state, dimension=10, random_state=0).run()
+```
+
+Scalar-only functions also work: if a batch call fails, Safe-ICE falls back to
+evaluating one row at a time. That fallback is far slower, so prefer a
+vectorised function.
+
+### What `run()` returns
+
+`run()` returns `(pf, results)`, where `results` contains:
+
+| Key                   | Type             | Meaning                                           |
+| --------------------- | ---------------- | ------------------------------------------------- |
+| `iterations`          | `list[dict]`     | One record per iteration (`K`, `sigma`, `lambda`) |
+| `final_components`    | `int`            | Mixture components remaining at convergence       |
+| `final_samples`       | `ndarray (n, d)` | Samples from the final proposal                   |
+| `final_weights`       | `ndarray (n,)`   | Importance weights for those samples              |
+| `final_g_values`      | `ndarray (n,)`   | Limit-state values for those samples              |
+| `convergence_metrics` | `dict`           | `cv_values` and `delta_values` per iteration      |
+
+`iterations` is a list of records, so the iteration *count* is
+`len(results["iterations"])`.
+
+## How it works
+
+Safe-ICE combines three ideas:
+
+1. **A vMF-Nakagami mixture proposal.** Points are decomposed into a radius and
+   a direction. The radius follows a Nakagami distribution, the direction a
+   von Mises-Fisher distribution.
+2. **Penalized EM.** A cross-entropy penalty on the mixture weights drives
+   redundant components toward zero, so the component count adapts instead of
+   being fixed up front.
+3. **A heavy-tailed safety component.** The proposal is
+   `q_safe = λ·q_vMFNM + (1-λ)·q_heavy`, where `q_heavy` uses an inverse
+   Nakagami radius. It keeps mass in the far tail so the search cannot collapse
+   onto a single mode. A cosine annealing schedule moves `λ` from exploration
+   toward exploitation.
+
+Each iteration samples from `q_safe`, evaluates `g`, compares the coefficient
+of variation of the importance weights against `delta_star`, adapts the
+smoothing parameter `σ`, and refits the mixture by penalized EM.
+
+## Reproducibility
+
+Every estimator accepts `random_state`, which takes an `int`, a
+`numpy.random.Generator`, or `None`:
+
+```python
+import numpy as np
+
+from safe_ice import SafeICE
+
+SafeICE(g, dimension=2, random_state=42)  # seeded
+SafeICE(g, dimension=2, random_state=np.random.default_rng(0))  # your generator
+SafeICE(g, dimension=2)  # global NumPy state
+```
+
+`None` uses NumPy's global random state, so results then depend on whatever
+else has drawn random numbers in the same process. Seed your runs when
+comparing results.
+
+`PerformanceEvaluator.run_monte_carlo_reference` accepts `random_state` too.
+
+## Further usage
+
+### Comparing against crude Monte Carlo
+
+```python
+from safe_ice import BenchmarkProblems, PerformanceEvaluator
+
+g = BenchmarkProblems.four_mode_series_system()
 evaluator = PerformanceEvaluator()
 
-# Compare with Monte Carlo
+pf_mc, std_mc = evaluator.run_monte_carlo_reference(
+    limit_state_func=g, dimension=2, n_samples=1_000_000, random_state=0
+)
+
 comparison = evaluator.compare_methods(
-    limit_state_func=problem,
+    limit_state_func=g,
     dimension=2,
+    reference_pf=pf_mc,
     n_runs=10,
-    safe_ice_params={'K0': 6, 'N': 1000}
+    safe_ice_params={"K0": 6, "N": 1000},
 )
 ```
 
-### Convergence Analysis
+### Convergence analysis
 
 ```python
 from safe_ice import AdvancedAnalysis
 
 analyzer = AdvancedAnalysis()
-
-# Analyze component evolution
 analyzer.analyze_component_evolution(results)
-
-# Visualize sample distribution (2D only)
-analyzer.analyze_sample_distribution(results, problem)
+analyzer.analyze_sample_distribution(results, g)  # 2D problems only
 ```
 
-### Custom Limit State Functions
-
-```python
-def my_limit_state(u):
-    """
-    Custom failure criterion
-    Returns: g(u) where failure occurs when g(u) ≤ 0
-    """
-    # Your custom implementation
-    return some_complex_function(u)
-
-safe_ice = SafeICE(my_limit_state, dimension=10)
-pf_estimate, results = safe_ice.run()
-```
-
-
-## 🎯 Algorithm Overview
-
-### The Safe-ICE Method
-
-Safe-ICE estimates failure probabilities P_F = P(g(U) ≤ 0) where:
-
-- U ~ N(0, I) is a random input vector
-- g(U) is the limit state function
-- Failure occurs when g(U) ≤ 0
-
-**Key Algorithm Steps:**
-
-1. **Initialize** mixture parameters with K₀ components
-2. **Generate samples** from safe mixture: q_safe = λ·q_vMFNM + (1-λ)·q_heavy
-3. **Evaluate** limit state function g(u) for all samples
-4. **Check convergence** using coefficient of variation of importance weights
-5. **Adapt smoothing** parameter σ to control intermediate distributions
-6. **Update parameters** using penalized EM to fit vMFNM mixture
-7. **Repeat** until convergence
-
-### Penalized EM Update (Equation 21)
-
-The mixture weights are updated with a cross-entropy penalty term:
-
-```
-π_k^(new) = π_k^(EM) + β · (sum W_i) / (sum sum γ_s W_i) · π_k^(old) · [ln π_k^(old) - Σ π_s ln π_s]
-```
-
-This automatically removes redundant components during optimization.
-
-### Heavy-Tailed Component (Equation 34)
-
-The inverse Nakagami parameters are matched to ensure efficient exploration:
-
-```
-Ω^(IN) = (2m^(IN))/(2m^(IN) + 1) · [Γ(m^N) / Γ(m^N + 0.5)]² · (m^N / Ω^N)
-```
-
-
-
-## 🧪 Testing
+### Command line
 
 ```bash
-# Run all tests
-pytest tests/
-
-# Run with coverage
-pytest tests/ --cov=safe_ice --cov-report=html
-
-# Run specific test
-pytest tests/test_safe_ice.py::test_four_mode_convergence -v
+safe-ice --version
+safe-ice demo
+safe-ice benchmark --problem four-mode
 ```
 
+### Available benchmark problems
 
-## 🤝 Contributing
+`four_mode_series_system`, `three_mode_problem`,
+`two_mode_opposite_directions`, `nonlinear_oscillator`,
+`nonlinear_oscillator_simplified`, and `nakagami_ratio_problem`, plus
+`HeatTransferProblem` — a PDE problem using a Karhunen-Loève expansion.
 
-Contributions are welcome! Please:
+## Known limitations
 
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
+These are measured, reproducible gaps between this implementation and the
+behaviour the method should have. They are recorded as strict `xfail` tests
+rather than hidden, so they will announce themselves the moment they are fixed.
 
-See [CONTRIBUTING.md](CONTRIBUTING.md) for detailed guidelines.
+- **Accuracy on the headline benchmark is unreliable.** On the four-mode series
+  system (reference `P_F ≈ 1.22e-5`), a sweep over 12 seeds at `N=500`,
+  `max_iterations=10` lands inside `[1e-6, 1e-4]` only 6 times, with estimates
+  ranging from `6e-6` to `5e-1`. See
+  `tests/test_safe_ice.py::TestBenchmarkProblems::test_four_mode_series_system`.
+- **Systematic bias on a linear limit state.** Where the answer is known in
+  closed form (`Φ(-a₀/‖a‖)`), the estimate sits at roughly `0.54x` the
+  analytical value, and the gap does not shrink as `N` grows from `1e3` to
+  `8e3` — so it is bias, not Monte Carlo noise.
+- **Estimates are not constrained to `[0, 1]`.** For a limit state that fails
+  everywhere (true probability exactly 1), the estimator can return values
+  above 1. See
+  `tests/test_integration.py::TestEdgeCases::test_certain_failure`.
+- **High-dimensional variance is large.** At `d=10` with a small iteration
+  budget, estimates span several orders of magnitude across seeds.
 
-## 📄 Citation
+Contributions that close any of these are very welcome.
 
-If you use this code in your research, please cite:
+## Development
+
+```bash
+git clone https://github.com/DiogoRibeiro7/adaptive-importance-sampling-ice.git
+cd adaptive-importance-sampling-ice
+
+pip install -e .
+pip install --group dev          # pip >= 25.1; or: uv sync --group dev
+pre-commit install
+```
+
+| Task       | Command                                   |
+| ---------- | ----------------------------------------- |
+| Fast tests | `pytest`                                  |
+| All tests  | `pytest -m ""`                            |
+| Lint       | `ruff check .`                            |
+| Format     | `ruff format .`                           |
+| Type check | `mypy`                                    |
+| Coverage   | `pytest --cov=safe_ice --cov-report=html` |
+
+`pytest` skips tests marked `slow` by default so the common case stays quick;
+CI runs the full set. Ruff replaces black, isort, and flake8 — there is no
+separate formatter to install.
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for the full workflow.
+
+## Citation
+
+If you use this software, please cite both the implementation (see
+[CITATION.cff](CITATION.cff)) and the original paper:
 
 ```bibtex
 @article{gao2025safe,
-  title={Safe Cross-Entropy-Based Importance Sampling for Rare Event Simulations},
-  author={Gao, Zhiwei and Karniadakis, George},
-  journal={arXiv preprint arXiv:2509.07160},
-  year={2025}
+  title   = {Safe Cross-Entropy-Based Importance Sampling for Rare Event Simulations},
+  author  = {Gao, Zhiwei and Karniadakis, George},
+  journal = {arXiv preprint arXiv:2509.07160},
+  year    = {2025}
 }
 ```
 
-## 📝 License
+## License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+MIT — see [LICENSE](LICENSE).
 
-## 🙏 Acknowledgments
+## Acknowledgments
 
-- Original paper by Zhiwei Gao and George Karniadakis
-- Built upon the ICE method by Papaioannou et al. (2019)
-- Inspired by the cross-entropy method of Rubinstein & Kroese (2004)
-
-## 📧 Contact
-
-- **Issues**: [GitHub Issues](https://github.com/diogoribeiro7/adaptive-importance-sampling-ice/issues)
-- **Discussions**: [GitHub Discussions](https://github.com/diogoribeiro7/adaptive-importance-sampling-ice/discussions)
-- **Author**: Diogo Ribeiro
-- **GitHub**: [@diogoribeiro7](https://github.com/diogoribeiro7)
-
-## 🔗 Related Work
-
-- [Original ICE Paper](https://arxiv.org/abs/2509.07160)
-- [Cross-Entropy Method](https://link.springer.com/article/10.1007/s10479-005-5724-z)
-- [Subset Simulation](https://doi.org/10.1016/S0266-8920(01)00019-4)
-
----
-
-**⭐ If you find this useful, please star the repository!**
+- The original method is by Zhiwei Gao and George Karniadakis.
+- Builds on the ICE method of Papaioannou et al. (2019) and the cross-entropy
+  method of Rubinstein & Kroese (2004).

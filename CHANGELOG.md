@@ -2,24 +2,110 @@
 
 All notable changes to this project will be documented in this file.
 
-The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
+and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
 ### Added
 
-- Initial implementation of Safe-ICE algorithm
-- Complete vMFNM distribution implementation
-- Penalized EM optimizer for automatic component selection
-- Benchmark problems from the paper
-- Heat transfer problem with KL expansion
-- Performance evaluation utilities
-- Advanced analysis tools
+- `random_state` on `PerformanceEvaluator.run_monte_carlo_reference`, so
+  reference runs are reproducible.
+- `safe_ice/typing.py` with shared `LimitStateFunction`, `NDArrayF`, `RNGLike`
+  and `SeedLike` aliases.
+- `tests/conftest.py` providing seeded `rng` and `seed` fixtures; every test
+  that draws random numbers now uses them instead of NumPy's global state.
+- `tests/test_numeric_helpers.py` pinning the vectorised density code to the
+  scalar reference formulas.
+- `SECURITY.md`, `CODE_OF_CONDUCT.md`, `CITATION.cff`, issue templates and a
+  pull request template.
+- A "Known limitations" section in the README recording measured accuracy gaps.
+
+### Changed
+
+- **Packaging consolidated onto `pyproject.toml`.** Metadata moved to PEP 621
+  `[project]`; `setup.py`, `setup.cfg`, `mypy.ini` and `MANIFEST.in` are gone.
+  They disagreed with each other on version, classifiers, and dependency
+  floors, and `MANIFEST.in` was ignored by the build backend anyway.
+- **Supported Python is now 3.11 - 3.14** (was 3.9 - 3.12). Dependency floors
+  moved to `numpy>=1.26`, `scipy>=1.11`, `matplotlib>=3.8`. The previous
+  `numpy ^2.4.1` pin could not be satisfied on the Python versions the package
+  claimed to support.
+- Benchmark and profiling packages (`pytest-benchmark`, `memory-profiler`,
+  `psutil`) moved out of the runtime dependencies into dev/optional groups.
+- Development dependencies are declared as PEP 735 `[dependency-groups]`.
+- `__version__` is now read from installed package metadata, so the version is
+  stated once in `pyproject.toml` rather than in three places.
+- Ruff replaces black, isort and flake8 for both linting and formatting.
+- CI now runs ruff, `ruff format --check`, mypy, the full test suite on four
+  Python versions, a packaging check that installs the built wheel, and the
+  security scanners. It previously ran only a syntax-level ruff subset.
+- The release workflow builds and publishes a GitHub Release, and verifies the
+  tag matches the packaged version. PyPI publishing is intentionally not wired
+  up yet.
+- Version bumping moved from an automatic push-to-`main` job to a manual
+  workflow that opens a pull request.
+- `Dockerfile` no longer installs Poetry to export requirements; it installs the
+  package with pip into a virtualenv.
+- Slow tests are marked `slow` and excluded from the default `pytest` run.
+
+### Fixed
+
+- **`PerformanceEvaluator.compare_methods` crashed** with `TypeError` because it
+  treated `results["iterations"]` (a list of per-iteration records) as a count.
+- **The README's quick-start example printed a list of dicts** where it claimed
+  to print an iteration count.
+- A duplicated `'y'` key in the plotly slider configuration silently discarded
+  the first value.
+- `scripts/pyproject_editor.py` detected the wrong layout for a pyproject that
+  has both `[project]` and `[tool.poetry]`, which is the standard Poetry 2.x
+  shape; it also crashed printing non-ASCII on legacy Windows code pages.
+- `scripts/pyproject_updater.py` contained a `return latest.major ==
+  latest.major` tautology and an if/else whose branches were identical.
+- `Dockerfile`, `Dockerfile.docs` and `Dockerfile.jupyter` all referenced files
+  or commands that no longer exist (`setup.py`, `poetry export`, a `notebooks/`
+  directory, `jupyter labextension install`).
+- Tests no longer depend on NumPy's global random state, so results do not
+  change with test ordering. One test was passing only because an unrelated
+  test had called `np.random.seed(42)` earlier in the session.
+
+### Performance
+
+- **Roughly 200x faster.** `vMFNMDistribution.pdf`, the penalized-EM E-step and
+  the heavy-tailed density each looped in Python over every (sample, component)
+  pair, calling scalar PDFs; `NakagamiDistribution.pdf` alone was called 4.2
+  million times in a single two-iteration run. They now evaluate one vectorised
+  pass per component. A 2-D problem at `N=1000, max_iterations=5` went from
+  108.7 s to 0.5 s, and the full test suite from over 20 minutes (never
+  completing) to about 70 s.
+- Results are unchanged to within ~1e-13 relative, verified against captured
+  baselines from the previous implementation across 48 parameter combinations
+  and separately for the heavy-tailed density across 45 more.
+- The inverse-Nakagami `Omega` in the heavy-tailed density was recomputed once
+  per sample although it only depends on the component; it is now hoisted.
+
+### Known limitations
+
+Recorded as strict `xfail` tests, not silenced:
+
+- The estimator does not reliably reproduce the reference probability on the
+  four-mode series benchmark (6 of 12 seeds land in range; estimates span
+  `6e-6` to `5e-1` against a reference of `1.22e-5`).
+- On a linear limit state with a closed-form answer, the estimate is
+  systematically about `0.54x` the analytical value, and the gap does not
+  shrink with more samples.
+- Estimates are not constrained to `[0, 1]`.
 
 ## [0.1.0] - 2025-01-27
 
 ### Added
 
-- First public release
-- Core Safe-ICE algorithm implementation
-- Documentation and examples
+- First public release.
+- Core Safe-ICE algorithm with penalized EM component selection.
+- vMF-Nakagami mixture distribution and inverse Nakagami heavy tails.
+- Benchmark problems from the paper and a heat transfer problem using a
+  Karhunen-Loève expansion.
+- Performance evaluation and convergence analysis utilities.
+
+[Unreleased]: https://github.com/DiogoRibeiro7/adaptive-importance-sampling-ice/compare/v0.1.0...HEAD
+[0.1.0]: https://github.com/DiogoRibeiro7/adaptive-importance-sampling-ice/releases/tag/v0.1.0
