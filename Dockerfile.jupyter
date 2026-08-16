@@ -1,44 +1,31 @@
-# Dockerfile for Jupyter Lab with Safe-ICE
+# Jupyter Lab image with Safe-ICE preinstalled.
+#
+#   docker build -f Dockerfile.jupyter -t safe-ice-jupyter .
+#   docker run --rm -p 8888:8888 safe-ice-jupyter
 
-FROM jupyter/scipy-notebook:latest
+# The jupyter/* images on Docker Hub are no longer updated; quay.io is the
+# maintained home for the Jupyter Docker Stacks.
+FROM quay.io/jupyter/scipy-notebook:latest
 
-USER root
-
-# Install system dependencies
-RUN apt-get update && apt-get install -y \
-    gcc \
-    g++ \
-    && rm -rf /var/lib/apt/lists/*
-
-# Switch back to jovyan user
 USER ${NB_UID}
 
-# Copy and install Safe-ICE
 WORKDIR /tmp/safe-ice
-COPY --chown=${NB_UID}:${NB_GID} . .
+COPY --chown=${NB_UID}:${NB_GID} pyproject.toml README.md LICENSE ./
+COPY --chown=${NB_UID}:${NB_GID} safe_ice ./safe_ice
 
-# Install Safe-ICE with all extras
-RUN pip install --no-cache-dir -e .[all] && \
-    pip install --no-cache-dir \
-    jupyterlab-execute-time \
-    jupyterlab-git \
-    ipywidgets \
-    plotly
+# JupyterLab 4 ships prebuilt extensions as ordinary pip packages, so there is
+# no `jupyter labextension install` step any more.
+RUN pip install --no-cache-dir ".[all]" \
+    && pip install --no-cache-dir \
+        jupyterlab-execute-time \
+        jupyterlab-git \
+        ipywidgets \
+    && jupyter lab clean \
+    && fix-permissions "${CONDA_DIR}" \
+    && fix-permissions "/home/${NB_USER}"
 
-# Install Jupyter extensions
-RUN jupyter labextension install @jupyter-widgets/jupyterlab-manager --no-build && \
-    jupyter labextension install jupyterlab-plotly --no-build && \
-    jupyter lab build --dev-build=False --minimize=False
-
-# Set working directory
 WORKDIR /home/jovyan/work
 
-# Copy example notebooks
 COPY --chown=${NB_UID}:${NB_GID} examples /home/jovyan/work/examples
-COPY --chown=${NB_UID}:${NB_GID} notebooks /home/jovyan/work/notebooks
 
-# Create sample notebook
-RUN echo 'import safe_ice\nprint(f"Safe-ICE version: {safe_ice.__version__}")' | \
-    jupyter nbconvert --to notebook --stdin --output=/home/jovyan/work/welcome.ipynb
-
-CMD ["start.sh", "jupyter", "lab", "--LabApp.default_url=/lab/tree/welcome.ipynb"]
+CMD ["start-notebook.py", "--LabApp.default_url=/lab/tree/examples"]

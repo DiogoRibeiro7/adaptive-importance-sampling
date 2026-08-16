@@ -1,38 +1,31 @@
-# Dockerfile for building Safe-ICE documentation
+# Builds and serves the Safe-ICE documentation.
+#
+#   docker build -f Dockerfile.docs -t safe-ice-docs .
+#   docker run --rm -p 8000:8000 safe-ice-docs
 
-FROM python:3.11-slim
+FROM python:3.12-slim
 
-# Install system dependencies
-RUN apt-get update && apt-get install -y \
+RUN apt-get update && apt-get install -y --no-install-recommends \
     make \
     git \
     && rm -rf /var/lib/apt/lists/*
 
-# Set working directory
 WORKDIR /workspace
 
-# Copy documentation requirements
 COPY docs/requirements.txt /tmp/docs-requirements.txt
+RUN pip install --no-cache-dir --upgrade pip \
+    && pip install --no-cache-dir -r /tmp/docs-requirements.txt
 
-# Install documentation dependencies
-RUN pip install --no-cache-dir -r /tmp/docs-requirements.txt
-
-# Copy package for API documentation
+# Package metadata lives entirely in pyproject.toml.
+COPY pyproject.toml README.md LICENSE /workspace/
 COPY safe_ice /workspace/safe_ice
-COPY setup.py README.md LICENSE pyproject.toml /workspace/
-
-# Install Safe-ICE
 RUN pip install --no-cache-dir -e .
 
-# Copy documentation source
 COPY docs /workspace/docs
 
-# Build documentation
 WORKDIR /workspace/docs
 RUN make clean && make html
 
-# Expose port for serving docs
 EXPOSE 8000
 
-# Serve documentation
 CMD ["python", "-m", "http.server", "8000", "--directory", "build/html"]
