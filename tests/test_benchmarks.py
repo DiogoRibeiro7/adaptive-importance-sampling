@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import numpy as np
 import pytest
-from typing import Callable
 
 from safe_ice.problems.benchmarks import BenchmarkProblems
 from safe_ice.problems.heat_transfer import HeatTransferProblem
@@ -37,7 +36,7 @@ class TestBenchmarkProblemsStructure:
         diff = abs(g(u1) - g(u2))
         assert diff < 0.5  # Reasonable continuity
 
-    def test_three_mode_problem_properties(self):
+    def test_three_mode_problem_properties(self, rng):
         """Test properties of three-mode problem."""
         g = self.problems.three_mode_problem()
 
@@ -46,40 +45,40 @@ class TestBenchmarkProblemsStructure:
         result_single = g(u_single)
         assert isinstance(result_single, (float, np.floating))
 
-        u_batch = np.random.randn(10, 2)
+        u_batch = rng.standard_normal((10, 2))
         result_batch = g(u_batch)
         assert result_batch.shape == (10,)
 
-    def test_two_mode_opposite_directions(self):
+    def test_two_mode_opposite_directions(self, rng):
         """Test two-mode opposite directions problem."""
         # Test different dimensions
         for d in [2, 5, 10]:
             g = self.problems.two_mode_opposite_directions(dimension=d)
 
-            u_test = np.random.randn(5, d)
+            u_test = rng.standard_normal((5, d))
             results = g(u_test)
 
             assert results.shape == (5,)
             assert not np.any(np.isnan(results))
             assert not np.any(np.isinf(results))
 
-    def test_nonlinear_oscillator(self):
+    def test_nonlinear_oscillator(self, rng):
         """Test nonlinear oscillator problem."""
         g = self.problems.nonlinear_oscillator()
 
         # Should work with 10D input
-        u_test = np.random.randn(10, 10)
+        u_test = rng.standard_normal((10, 10))
         results = g(u_test)
 
         assert results.shape == (10,)
         assert not np.any(np.isnan(results))
 
-    def test_nakagami_ratio_problem(self):
+    def test_nakagami_ratio_problem(self, rng):
         """Test Nakagami ratio problem."""
         g = self.problems.nakagami_ratio_problem()
 
         # Test with 2D input (two Nakagami variables)
-        u_test = np.random.randn(20, 2)
+        u_test = rng.standard_normal((20, 2))
         results = g(u_test)
 
         assert results.shape == (20,)
@@ -165,6 +164,7 @@ class TestBenchmarkProblemsBehavior:
         assert np.sum(np.sign(differences) == dominant_sign) > len(differences) / 2
 
 
+@pytest.mark.slow
 class TestHeatTransferProblem:
     """Test heat transfer problem with KL expansion."""
 
@@ -180,10 +180,7 @@ class TestHeatTransferProblem:
     def test_initialization_custom(self):
         """Test custom initialization of heat transfer problem."""
         problem = HeatTransferProblem(
-            n_terms=5,
-            correlation_length=1.0,
-            field_std=0.5,
-            threshold=150.0
+            n_terms=5, correlation_length=1.0, field_std=0.5, threshold=150.0
         )
 
         assert problem.n_terms == 5
@@ -205,13 +202,13 @@ class TestHeatTransferProblem:
         # Check eigenvectors
         assert problem.eigenvectors.shape == (50, 5)  # 50 grid points, 5 terms
 
-    def test_limit_state_function(self):
+    def test_limit_state_function(self, rng):
         """Test heat transfer limit state function."""
         problem = HeatTransferProblem(n_terms=5)
         g = problem.get_limit_state_function()
 
         # Test with random input
-        u_test = np.random.randn(10, 5)
+        u_test = rng.standard_normal((10, 5))
         results = g(u_test)
 
         assert results.shape == (10,)
@@ -234,12 +231,12 @@ class TestHeatTransferProblem:
         assert np.isfinite(result_nonzero)
 
     @pytest.mark.parametrize("n_terms", [5, 10, 20])
-    def test_different_truncations(self, n_terms):
+    def test_different_truncations(self, n_terms, rng):
         """Test heat transfer problem with different KL truncations."""
         problem = HeatTransferProblem(n_terms=n_terms)
         g = problem.get_limit_state_function()
 
-        u_test = np.random.randn(5, n_terms)
+        u_test = rng.standard_normal((5, n_terms))
         results = g(u_test)
 
         assert results.shape == (5,)
@@ -273,28 +270,27 @@ class TestHeatTransferProblem:
 class TestBenchmarkComparison:
     """Test comparison between different benchmark problems."""
 
-    def test_relative_difficulty(self):
+    def test_relative_difficulty(self, seed):
         """Test that SafeICE produces finite probability estimates."""
         from safe_ice import SafeICE
 
-        np.random.seed(42)
         problems = BenchmarkProblems()
 
         # Four-mode series
         g1 = problems.four_mode_series_system()
-        ice1 = SafeICE(g1, dimension=2, N=1000, max_iterations=5)
+        ice1 = SafeICE(g1, dimension=2, N=1000, max_iterations=5, random_state=seed)
         pf1, _ = ice1.run(verbose=False)
 
         # Three-mode
         g2 = problems.three_mode_problem()
-        ice2 = SafeICE(g2, dimension=2, N=1000, max_iterations=5)
+        ice2 = SafeICE(g2, dimension=2, N=1000, max_iterations=5, random_state=seed)
         pf2, _ = ice2.run(verbose=False)
 
         # Both estimates must be non-negative finite values
         assert np.isfinite(pf1) and pf1 >= 0
         assert np.isfinite(pf2) and pf2 >= 0
 
-    def test_dimension_scaling(self):
+    def test_dimension_scaling(self, seed):
         """Test how failure probability scales with dimension."""
         problems = BenchmarkProblems()
 
@@ -306,11 +302,13 @@ class TestBenchmarkComparison:
             g = problems.two_mode_opposite_directions(dimension=d)
 
             from safe_ice import SafeICE
+
             ice = SafeICE(
                 limit_state_function=g,
                 dimension=d,
                 N=1000,
-                max_iterations=5
+                max_iterations=5,
+                random_state=seed,
             )
             pf, _ = ice.run(verbose=False)
             pf_values.append(pf)
@@ -343,13 +341,13 @@ class TestBenchmarkRobustness:
         result_mixed = g(u_mixed)
         assert np.isfinite(result_mixed)
 
-    def test_vectorization_consistency(self):
+    def test_vectorization_consistency(self, rng):
         """Test that vectorized evaluation is consistent with single evaluation."""
         problems = BenchmarkProblems()
         g = problems.four_mode_series_system()
 
         # Generate test points
-        test_points = np.random.randn(5, 2)
+        test_points = rng.standard_normal((5, 2))
 
         # Evaluate individually
         individual_results = np.array([g(u) for u in test_points])
@@ -360,7 +358,7 @@ class TestBenchmarkRobustness:
         # Should give same results
         np.testing.assert_allclose(individual_results, batch_results, rtol=1e-10)
 
-    def test_numerical_stability(self):
+    def test_numerical_stability(self, rng):
         """Test numerical stability of limit state functions."""
         problems = BenchmarkProblems()
 
@@ -369,16 +367,16 @@ class TestBenchmarkRobustness:
             problems.four_mode_series_system(),
             problems.three_mode_problem(),
             problems.nonlinear_oscillator(),
-            problems.nakagami_ratio_problem()
+            problems.nakagami_ratio_problem(),
         ]
 
         for g in test_functions:
             # Test with various scales of input
             for scale in [1e-3, 1.0, 1e3]:
                 if g == problems.nonlinear_oscillator():
-                    u_test = np.random.randn(10, 10) * scale
+                    u_test = rng.standard_normal((10, 10)) * scale
                 else:
-                    u_test = np.random.randn(10, 2) * scale
+                    u_test = rng.standard_normal((10, 2)) * scale
 
                 results = g(u_test)
 
