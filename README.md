@@ -226,6 +226,12 @@ Two correctness bugs that biased every estimate have been fixed:
   denominator, every estimate was scaled by that error, which is why results
   came out at roughly `0.54x` the analytical answer no matter how large `N`
   was.
+- The mixture was initialised with fixed Nakagami parameters, independent of
+  dimension. The target is the standard normal in `R^d`, whose radius follows
+  `chi_d`, and `chi_d` is exactly `Nakagami(m = d/2, Ω = d)` — so the old fixed
+  values were only right near `d=2`. At `d=20` the proposal started at radius
+  `~1.1` while the target sits at `~4.4`, so the two barely overlapped and the
+  run could not recover. Initialisation now scales with `d`.
 - The cross-entropy penalty in the EM step had its sign inverted. Equation 21
   uses `[ln π_k − Σ π_s ln π_s]`, and `Σ π_s ln π_s` is minus the entropy; the
   code subtracted the entropy instead. At uniform weights the bracket should be
@@ -247,7 +253,8 @@ Current accuracy against problems with known answers, median over seeds:
 | --- | --- | --- |
 | Linear limit state, closed form | `1.69e-2` | `1.02` |
 | Sphere `d=2`, closed form | `1.11e-2` | `1.01` |
-| Sphere `d=10`, closed form | `5.35e-3` | `0.94` |
+| Sphere `d=10`, closed form | `5.35e-3` | `0.86` |
+| Sphere `d=20`, closed form | `1.54e-2` | `0.54` |
 | Four-mode series system, 2e7-sample MC | `5.8e-5` | `1.01` |
 
 `tests/test_proposal_normalisation.py` pins this down: it integrates each
@@ -259,15 +266,12 @@ proposal component numerically and fails if the Jacobian is dropped again.
   unconstrained, so for a limit state that fails everywhere (true probability
   exactly 1) it scatters around 1 and can land slightly above. Clamping would
   fix it, but that is a modelling decision rather than a bug.
-- **It breaks down somewhere between `d=10` and `d=20`.** The sphere problem
-  is accurate and stable through `d=10` (ratio `0.94`, estimates within `1.3x`
-  of each other across seeds). At `d=20` it fails badly: for a true value of
-  `1.54e-2`, only 1 of 6 seeds lands within `3x`, and the others return
-  `1e-20` or smaller. The cause is importance-weight degeneracy, not a coding
-  error — the ratio of largest to median weight grows from `~10` at `d=2` to
-  `~8e11` at `d=20`, so a handful of samples carry the estimate. Raising `N`
-  from 2000 to 10000 helps but does not fix it. Treat `d > 10` as unsupported
-  for now.
+- **It still breaks down above roughly `d=20`.** On the sphere problem, `d=20`
+  now works (6 of 6 seeds within `3x`, ratio `0.54`), but `d=30` does not —
+  every seed collapses. Importance weights become extremely heavy-tailed as
+  dimension grows: the ratio of largest to median weight goes from `~10` at
+  `d=2` to `~8e11` at `d=20`, so a few samples carry the estimate. Raising `N`
+  helps but does not fix it. Treat `d > 20` as unsupported.
 - The reference value quoted for the four-mode problem used to be `1.22e-5`.
   Crude Monte Carlo over 2e7 samples puts it at `5.8e-5 ± 1.7e-6` for the
   default `z=3.8`.
