@@ -1,24 +1,43 @@
 version: 2
 updates:
-  # Python dependencies
+  # Python dependencies (pyproject.toml + poetry.lock)
   - package-ecosystem: "pip"
     directory: "/"
     schedule:
       interval: "weekly"
-    open-pull-requests-limit: 10
+    open-pull-requests-limit: 5
     reviewers:
       - "diogoribeiro7"
     labels:
       - "dependencies"
       - "python"
+    # Runtime floors in [project] record the oldest versions the package is
+    # tested against, so they should only move when a new release genuinely
+    # requires it. This keeps the lock current without rewriting constraints
+    # that were chosen deliberately.
+    versioning-strategy: increase-if-necessary
+    groups:
+      # Routine minor and patch bumps arrive as a single PR; majors stay
+      # separate so they can be reviewed on their own.
+      python-minor-and-patch:
+        patterns:
+          - "*"
+        update-types:
+          - "minor"
+          - "patch"
 
   # GitHub Actions
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
       interval: "monthly"
+    open-pull-requests-limit: 5
     reviewers:
       - "diogoribeiro7"
     labels:
       - "dependencies"
       - "github-actions"
+    groups:
+      github-actions:
+        patterns:
+          - "*"
