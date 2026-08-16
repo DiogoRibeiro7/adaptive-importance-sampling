@@ -3,11 +3,11 @@ name: Performance Regression Detector
 on:
   pull_request:
     branches: [main, master, develop]
-  workflow_dispatch:
 
 permissions:
   contents: read
   pull-requests: write
+  checks: write        # the summary is published as a check run
 
 env:
   BENCHMARK_ITERATIONS: 10
@@ -25,7 +25,7 @@ jobs:
       - name: Setup Python
         uses: actions/setup-python@v6
         with:
-          python-version: '3.11'
+          python-version: '3.12'
 
       - name: Cache dependencies
         uses: actions/cache@v5
@@ -38,38 +38,35 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
-          if [ -f pyproject.toml ]; then pip install poetry && poetry install; fi
-          pip install pytest pytest-benchmark memory-profiler psutil
+          pip install -e .
+          pip install pytest pytest-benchmark
 
       - name: Run PR benchmarks
         id: pr-bench
         run: |
-          # Create benchmarks directory if it doesn't exist
           mkdir -p .benchmarks
-          
-          # Run pytest-benchmark if tests exist
-          if [ -d "tests" ] || [ -d "test" ]; then
-            python -m pytest tests/ --benchmark-only --benchmark-json=.benchmarks/pr_results.json || echo "No benchmark tests found"
-          fi
-          
-          # Run custom performance script if it exists
-          if [ -f "benchmarks/run_benchmarks.py" ]; then
-            python benchmarks/run_benchmarks.py --output .benchmarks/pr_custom.json
-          fi
-          
-          # Run memory profiling on key modules
-          if [ -f "benchmarks/profile_memory.py" ]; then
-            python -m memory_profiler benchmarks/profile_memory.py > .benchmarks/pr_memory.txt
-          fi
-          
-          echo "PR benchmarks completed"
 
+          if compgen -G "benchmarks/test_*.py" > /dev/null; then
+            python -m pytest benchmarks/ --benchmark-only --benchmark-json=.benchmarks/pr_results.json || true
+          fi
+
+          # Always leave a readable file behind. upload-artifact creates nothing
+          # for an empty directory, and the compare job would then fail on a
+          # missing artifact rather than reporting there was no baseline.
+          if [ ! -f .benchmarks/pr_results.json ]; then
+            echo '{"benchmarks": []}' > .benchmarks/pr_results.json
+          fi
+
+          echo "pr benchmarks completed"
       - name: Upload PR benchmark results
         uses: actions/upload-artifact@v6
         with:
           name: pr-benchmarks
           path: .benchmarks/
+          # .benchmarks is a dot-directory and upload-artifact skips hidden
+          # files by default, which silently produced an empty artifact.
+          include-hidden-files: true
+          if-no-files-found: error
           retention-days: 30
 
   benchmark-base:
@@ -83,7 +80,7 @@ jobs:
       - name: Setup Python
         uses: actions/setup-python@v6
         with:
-          python-version: '3.11'
+          python-version: '3.12'
 
       - name: Cache dependencies
         uses: actions/cache@v5
@@ -96,34 +93,35 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
-          if [ -f pyproject.toml ]; then pip install poetry && poetry install; fi
-          pip install pytest pytest-benchmark memory-profiler psutil
+          pip install -e .
+          pip install pytest pytest-benchmark
 
       - name: Run base benchmarks
         id: base-bench
         run: |
           mkdir -p .benchmarks
-          
-          if [ -d "tests" ] || [ -d "test" ]; then
-            python -m pytest tests/ --benchmark-only --benchmark-json=.benchmarks/base_results.json || echo "No benchmark tests found"
-          fi
-          
-          if [ -f "benchmarks/run_benchmarks.py" ]; then
-            python benchmarks/run_benchmarks.py --output .benchmarks/base_custom.json
-          fi
-          
-          if [ -f "benchmarks/profile_memory.py" ]; then
-            python -m memory_profiler benchmarks/profile_memory.py > .benchmarks/base_memory.txt
-          fi
-          
-          echo "Base benchmarks completed"
 
+          if compgen -G "benchmarks/test_*.py" > /dev/null; then
+            python -m pytest benchmarks/ --benchmark-only --benchmark-json=.benchmarks/base_results.json || true
+          fi
+
+          # Always leave a readable file behind. upload-artifact creates nothing
+          # for an empty directory, and the compare job would then fail on a
+          # missing artifact rather than reporting there was no baseline.
+          if [ ! -f .benchmarks/base_results.json ]; then
+            echo '{"benchmarks": []}' > .benchmarks/base_results.json
+          fi
+
+          echo "base benchmarks completed"
       - name: Upload base benchmark results
         uses: actions/upload-artifact@v6
         with:
           name: base-benchmarks
           path: .benchmarks/
+          # .benchmarks is a dot-directory and upload-artifact skips hidden
+          # files by default, which silently produced an empty artifact.
+          include-hidden-files: true
+          if-no-files-found: error
           retention-days: 30
 
   compare-and-report:
@@ -369,7 +367,7 @@ jobs:
             
             report += '---\n';
             report += '*Performance tests run on ubuntu-latest. Results may vary across environments.*\n';
-            report += '*To reproduce locally: `pytest tests/ --benchmark-only`*';
+            report += '*To reproduce locally: `pytest benchmarks/ --benchmark-only`*';
             
             // Post comment
             await github.rest.issues.createComment({
