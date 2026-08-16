@@ -374,6 +374,16 @@ classDiagram
     +test_unreachable_samples_fall_back_to_uniform()
   }
 
+  class TestLambdaCap {
+    +test_lambda_never_reaches_one()
+    +test_lambda_max_is_configurable()
+  }
+
+  class TestKnownAnalyticalAnswers {
+    +test_linear_limit_state_is_unbiased()
+    +limit_state()
+  }
+
   class TestSafeICEInitialization {
     +test_basic_initialization()
     +g()
