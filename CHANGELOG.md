@@ -23,6 +23,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Dependency updates are handled by Dependabot alone. The custom
+  `auto-upgrade-pyproject` workflow duplicated it, had been silently broken
+  since packaging moved to PEP 621, and would have produced PRs competing with
+  Dependabot's over the same constraints. Dependabot now groups routine minor
+  and patch bumps into one PR and uses `increase-if-necessary`, so declared
+  floors only move when a release actually requires it.
+- Added benchmarks under `benchmarks/` covering the vectorised densities and a
+  short end-to-end run, so the performance regression workflow has something to
+  measure. A normal `pytest` run is unaffected.
+
 - **Packaging consolidated onto `pyproject.toml`.** Metadata moved to PEP 621
   `[project]`; `setup.py`, `setup.cfg`, `mypy.ini` and `MANIFEST.in` are gone.
   They disagreed with each other on version, classifiers, and dependency
