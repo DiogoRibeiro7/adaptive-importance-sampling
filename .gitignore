@@ -173,6 +173,7 @@ temp/
 benchmarks/results/
 *.json
 !.github/**/*.json
+!.zenodo.json
 
 # Coverage reports
 .coverage
