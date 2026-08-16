@@ -10,6 +10,7 @@ SafeICE Class
    :members:
    :undoc-members:
    :show-inheritance:
+   :exclude-members: vMFNMParameters
 
 Parameters
 ----------

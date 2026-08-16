@@ -30,17 +30,23 @@ class PenalizedEMOptimizer:
         initial_params: vMFNMParameters,
         beta_init: float = 1.0,
     ) -> tuple[vMFNMParameters, int]:
-        """
-        Fit vMFNM mixture using penalized EM.
+        """Fit vMFNM mixture using penalized EM.
 
-        Args:
-            data: (n, d) sample data.
-            weights: (n,) importance weights.
-            initial_params: initial vMFNM parameters.
-            beta_init: initial penalty parameter.
+        Parameters
+        ----------
+        data : ndarray of shape (n, d)
+            Sample data.
+        weights : ndarray of shape (n,)
+            Importance weights.
+        initial_params : vMFNMParameters
+            Starting point for the fit.
+        beta_init : float
+            Initial penalty parameter.
 
-        Returns:
-            (optimized_params, final_K)
+        Returns
+        -------
+        tuple of (vMFNMParameters, int)
+            The optimised parameters and the final number of components.
         """
         _n, _d = data.shape
         params = self._copy_parameters(initial_params)

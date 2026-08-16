@@ -25,16 +25,22 @@ class HeatTransferProblem:
         threshold: float = 100.0,
         heat_source: float = 2000.0,
     ) -> None:
-        """
-        Initialize heat transfer problem.
+        """Initialize heat transfer problem.
 
-        Args:
-            grid_size: Discretization grid size.
-            correlation_length: Correlation length for random field.
-            n_terms: Number of KL expansion terms.
-            field_std: Standard deviation for lognormal conductivity field.
-            threshold: Failure threshold used in limit state function.
-            heat_source: Heat source magnitude.
+        Parameters
+        ----------
+        grid_size : int
+            Discretization grid size.
+        correlation_length : float
+            Correlation length for the random field.
+        n_terms : int
+            Number of Karhunen-Loeve expansion terms.
+        field_std : float
+            Standard deviation for the lognormal conductivity field.
+        threshold : float
+            Failure threshold used in the limit state function.
+        heat_source : float
+            Heat source magnitude.
         """
         self.grid_size = int(grid_size)
         self.l = float(correlation_length)

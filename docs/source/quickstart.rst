@@ -223,4 +223,4 @@ Next Steps
 * Read the :doc:`theory` section to understand the algorithm
 * Explore :doc:`examples/index` for detailed use cases
 * Check the :doc:`api/core` for complete API reference
-* See :doc:`benchmarks` for problem descriptions
+* See :doc:`api/distributions` for the distributions used by the proposal

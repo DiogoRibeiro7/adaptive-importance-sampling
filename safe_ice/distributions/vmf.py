@@ -31,18 +31,24 @@ class VonMisesFisherSampler:
         n_samples: int = 1,
         rng: RNGLike | None = None,
     ) -> NDArrayF:
-        """
-        Sample from a vMF_d(mu, kappa).
+        """Sample from a vMF_d(mu, kappa).
 
-        Args:
-            mu: Mean direction as a length-d array (need not be unit; we normalize).
-            kappa: Concentration (>= 0).
-            n_samples: Number of samples.
-            rng: Random number generator. If *None*, the global
-                ``np.random`` state is used (backward compatible).
+        Parameters
+        ----------
+        mu : array_like
+            Mean direction, a length-d array. It need not be a unit vector;
+            it is normalised internally.
+        kappa : float
+            Concentration, must be non-negative.
+        n_samples : int
+            Number of samples to draw.
+        rng : numpy random generator, optional
+            If *None*, the global ``np.random`` state is used.
 
-        Returns:
-            (n_samples, d) array of unit vectors on S^{d-1}.
+        Returns
+        -------
+        ndarray of shape (n_samples, d)
+            Unit vectors on S^{d-1}.
         """
         _rng = _default_rng(rng)
         mu_arr: NDArrayF = np.asarray(mu, dtype=np.float64).reshape(-1)
