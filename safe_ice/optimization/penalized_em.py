@@ -223,22 +223,28 @@ class PenalizedEMOptimizer:
             np.float64, copy=False
         )
 
-        # Penalty
-        # Encourage spread based on current entropy of old_pi
+        # Cross-entropy penalty, Equation 21:
+        #   pi_k += beta * pi_k * [ ln pi_k - sum_s pi_s ln pi_s ]
+        #
+        # The bracket is the pointwise surprisal minus the mean surprisal, so it
+        # is negative for components that carry less than average weight and
+        # positive for the rest: the penalty drains small components into large
+        # ones and is exactly zero when the weights are uniform.
+        #
+        # Note the sign. `sum_s pi_s ln pi_s` is negative and equals minus the
+        # entropy. Subtracting the entropy instead, as this once did, makes the
+        # bracket -2 ln K at uniform weights rather than 0, which subtracts a
+        # flat ~0.3 from every weight at K=20 and drives all but the single
+        # largest component to zero on the first EM step. That defeated the
+        # automatic component selection this penalty exists to provide.
         safe_old = np.maximum(old_pi.astype(np.float64, copy=False), 1e-15)
-        entropy_current: float = float(-np.sum(safe_old * np.log(safe_old)))
+        mean_log_pi: float = float(np.sum(safe_old * np.log(safe_old)))
 
-        K = int(old_pi.shape[0])
-        penalty_term: NDArrayF = np.zeros(K, dtype=np.float64)
         # Normalize factor (total_weight/total_weight == 1), kept explicit for clarity
         norm_factor: float = 1.0
-        for k in range(K):
-            penalty_term[k] = (
-                float(beta)
-                * norm_factor
-                * float(old_pi[k])
-                * (float(np.log(max(float(old_pi[k]), 1e-15))) - float(entropy_current))
-            )
+        penalty_term: NDArrayF = (
+            float(beta) * norm_factor * safe_old * (np.log(safe_old) - mean_log_pi)
+        ).astype(np.float64, copy=False)
 
         new_pi: NDArrayF = (pi_em + penalty_term).astype(np.float64, copy=False)
 

@@ -69,6 +69,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   scaled by that error. On a linear limit state with a closed-form answer the
   estimate was 0.54x the analytical value regardless of sample size; it is now
   1.02x. `OptimizedSafeICE` had the same omission in both of its components.
+- **The cross-entropy penalty in the EM step had its sign inverted.**
+  Equation 21 uses `[ln pi_k - sum_s pi_s ln pi_s]`, and `sum_s pi_s ln pi_s`
+  is minus the entropy; the code subtracted the entropy instead. At uniform
+  weights the bracket should be 0 but evaluated to -2 ln K, subtracting a flat
+  0.3 from every weight at K=20 and zeroing all but the largest component on
+  the first EM step. The mixture collapsed to one component every run, which
+  defeats the automatic component selection the penalty exists to provide. It
+  now settles on 2-4 components for the four-mode problem, and the estimate
+  improves from 1.08x to 1.01x of the reference.
 - **Cosine annealing drove lambda to exactly 1.0**, which removed the
   heavy-tailed component from the proposal altogether. That component is what
   keeps the proposal's tails heavier than the target so importance weights stay

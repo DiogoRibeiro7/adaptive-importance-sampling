@@ -178,3 +178,58 @@ class TestKnownAnalyticalAnswers:
         # Before the Jacobian fix this ratio sat at ~0.54 and did not improve
         # with more samples.
         assert 0.75 < mean_estimate / analytical < 1.35
+
+
+class TestPenalizedWeightUpdate:
+    """The cross-entropy penalty must not collapse the mixture on sight."""
+
+    def test_penalty_vanishes_at_uniform_weights(self) -> None:
+        """Uniform weights are the maximum-entropy case, so the penalty is 0.
+
+        With the sign inverted the bracket becomes -2 ln K instead, which
+        subtracts a flat ~0.3 from every weight at K=20 and zeroes all but the
+        largest component on the very first step.
+        """
+        from safe_ice.optimization.penalized_em import PenalizedEMOptimizer
+
+        K, n = 20, 200
+        uniform = np.full(K, 1.0 / K)
+        # Responsibilities that are themselves uniform: EM alone would leave
+        # the weights untouched, so any change is entirely the penalty.
+        weighted_resp = np.full((n, K), 1.0 / K)
+
+        new_pi = PenalizedEMOptimizer()._update_mixture_weights_penalized(
+            weighted_resp, uniform, beta=1.0
+        )
+
+        assert new_pi == pytest.approx(uniform, abs=1e-12)
+
+    def test_penalty_drains_small_components_into_large_ones(self) -> None:
+        """Below-average components shrink, above-average ones grow."""
+        from safe_ice.optimization.penalized_em import PenalizedEMOptimizer
+
+        old_pi = np.array([0.7, 0.1, 0.1, 0.1])
+        weighted_resp = np.tile(old_pi, (200, 1))
+
+        new_pi = PenalizedEMOptimizer()._update_mixture_weights_penalized(
+            weighted_resp, old_pi, beta=1.0
+        )
+
+        assert new_pi[0] > old_pi[0]
+        assert np.all(new_pi[1:] < old_pi[1:])
+        assert new_pi.sum() == pytest.approx(1.0)
+
+    def test_mixture_is_not_collapsed_on_the_first_step(self) -> None:
+        """A K=20 mixture must not be reduced to one surviving component."""
+        from safe_ice.optimization.penalized_em import PenalizedEMOptimizer
+
+        n_components, n_samples = 20, 500
+        uniform = np.full(n_components, 1.0 / n_components)
+        rng = np.random.default_rng(7)
+        weighted_resp = rng.dirichlet(np.ones(n_components), size=n_samples)
+
+        new_pi = PenalizedEMOptimizer()._update_mixture_weights_penalized(
+            weighted_resp, uniform, beta=1.0
+        )
+
+        assert int(np.sum(new_pi > 1e-4)) > 1
