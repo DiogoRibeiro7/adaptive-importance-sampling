@@ -1,10 +1,15 @@
-# Multi-stage Dockerfile for Safe-ICE
+# Multi-stage Dockerfile for Safe-ICE.
+#
+# Build:  docker build -t safe-ice .
+# Run:    docker run --rm -it safe-ice
+#
+# The package uses PEP 621 metadata, so pip installs it directly; there is no
+# need to bring Poetry into the image just to resolve dependencies.
 
-# Stage 1: Build stage
-FROM python:3.11-slim as builder
+# ---------------------------------------------------------------- build stage
+FROM python:3.12-slim AS builder
 
-# Install build dependencies
-RUN apt-get update && apt-get install -y \
+RUN apt-get update && apt-get install -y --no-install-recommends \
     gcc \
     g++ \
     gfortran \
@@ -12,64 +17,46 @@ RUN apt-get update && apt-get install -y \
     liblapack-dev \
     && rm -rf /var/lib/apt/lists/*
 
-# Set working directory
+# Build into a self-contained virtualenv that the runtime stage can copy whole.
+ENV VIRTUAL_ENV=/opt/venv
+RUN python -m venv "$VIRTUAL_ENV"
+ENV PATH="$VIRTUAL_ENV/bin:$PATH"
+
 WORKDIR /build
 
-# Copy dependency files
-COPY pyproject.toml poetry.lock ./
-
-# Install poetry
-RUN pip install --no-cache-dir poetry==1.6.1
-
-# Export requirements
-RUN poetry export -f requirements.txt --output requirements.txt --without-hashes
-
-# Install dependencies
-RUN pip install --no-cache-dir --user -r requirements.txt
-
-# Copy package source
+COPY pyproject.toml README.md LICENSE ./
 COPY safe_ice ./safe_ice
-COPY setup.py README.md LICENSE ./
 
-# Install the package
-RUN pip install --no-cache-dir --user .
+RUN pip install --no-cache-dir --upgrade pip \
+    && pip install --no-cache-dir .
 
-# Stage 2: Runtime stage
-FROM python:3.11-slim
+# -------------------------------------------------------------- runtime stage
+FROM python:3.12-slim
 
-# Install runtime dependencies
-RUN apt-get update && apt-get install -y \
-    libopenblas-base \
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libopenblas0 \
     liblapack3 \
-    && rm -rf /var/lib/apt/lists/*
+    && rm -rf /var/lib/apt/lists/* \
+    && useradd --create-home --shell /bin/bash safeice
 
-# Create non-root user
-RUN useradd -m -s /bin/bash safeice
+ENV VIRTUAL_ENV=/opt/venv
+ENV PATH="$VIRTUAL_ENV/bin:$PATH" \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1
 
-# Copy installed packages from builder
-COPY --from=builder /root/.local /home/safeice/.local
+COPY --from=builder /opt/venv /opt/venv
 
-# Set environment variables
-ENV PATH=/home/safeice/.local/bin:$PATH
-ENV PYTHONPATH=/home/safeice/.local/lib/python3.11/site-packages:$PYTHONPATH
-
-# Set working directory
 WORKDIR /workspace
-
-# Copy examples for demonstration
 COPY --chown=safeice:safeice examples /workspace/examples
 
-# Switch to non-root user
 USER safeice
 
-# Default command
 CMD ["safe-ice", "--help"]
 
-# Labels
-LABEL maintainer="Safe-ICE Contributors"
-LABEL description="Safe Cross-Entropy-Based Importance Sampling for Rare Event Simulations"
-LABEL version="0.1.0"
+LABEL org.opencontainers.image.title="Safe-ICE" \
+      org.opencontainers.image.description="Safe Cross-Entropy-Based Importance Sampling for rare event simulation" \
+      org.opencontainers.image.source="https://github.com/DiogoRibeiro7/adaptive-importance-sampling-ice" \
+      org.opencontainers.image.licenses="MIT"
 
-# Health check
-HEALTHCHECK --interval=30s --timeout=3s \
-    CMD python -c "import safe_ice; print('OK')" || exit 1
+HEALTHCHECK --interval=30s --timeout=5s \
+    CMD python -c "import safe_ice" || exit 1

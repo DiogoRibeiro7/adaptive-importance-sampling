@@ -1,30 +1,36 @@
 """Safe Cross-Entropy-Based Importance Sampling for Rare Event Simulations."""
 
-from .core import SafeICE, OptimizedSafeICE, AdaptiveSafeICE, vMFNMParameters
-from .problems import BenchmarkProblems, HeatTransferProblem
-from .analysis import PerformanceEvaluator, AdvancedAnalysis
+from importlib.metadata import PackageNotFoundError, version
+
+from .analysis import AdvancedAnalysis, PerformanceEvaluator
+from .core import AdaptiveSafeICE, OptimizedSafeICE, SafeICE, vMFNMParameters
 from .distributions import (
-    VonMisesFisherSampler,
-    NakagamiDistribution,
     InverseNakagamiDistribution,
+    NakagamiDistribution,
+    VonMisesFisherSampler,
     vMFNMDistribution,
 )
 from .optimization import PenalizedEMOptimizer
+from .problems import BenchmarkProblems, HeatTransferProblem
 
-__version__ = "0.1.0"
+try:
+    __version__ = version("safe-ice")
+except PackageNotFoundError:  # pragma: no cover - running from a source tree
+    __version__ = "0.0.0.dev0"
+
 __author__ = "Diogo Ribeiro"
 __all__ = [
-    "SafeICE",
-    "OptimizedSafeICE",
     "AdaptiveSafeICE",
-    "vMFNMParameters",
+    "AdvancedAnalysis",
     "BenchmarkProblems",
     "HeatTransferProblem",
-    "PerformanceEvaluator",
-    "AdvancedAnalysis",
-    "VonMisesFisherSampler",
-    "NakagamiDistribution",
     "InverseNakagamiDistribution",
-    "vMFNMDistribution",
+    "NakagamiDistribution",
+    "OptimizedSafeICE",
     "PenalizedEMOptimizer",
+    "PerformanceEvaluator",
+    "SafeICE",
+    "VonMisesFisherSampler",
+    "vMFNMDistribution",
+    "vMFNMParameters",
 ]

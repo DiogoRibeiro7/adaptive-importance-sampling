@@ -1,219 +1,265 @@
 [build-system]
-requires = ["poetry-core>=1.9.0"]
+requires = ["poetry-core>=2.0.0"]
 build-backend = "poetry.core.masonry.api"
 
-[tool.poetry]
+# ============================ PROJECT (PEP 621) ============================
+# This table is the single source of truth for package metadata.
+# There is deliberately no setup.py / setup.cfg: everything lives here.
+
+[project]
 name = "safe-ice"
 version = "0.1.0"
-description = "Safe Cross-Entropy-Based Importance Sampling for Rare Event Simulations"
+description = "Safe Cross-Entropy-Based Importance Sampling for rare event simulation"
 readme = "README.md"
 license = "MIT"
-authors = ["Diogo Ribeiro <dfr@esmad.ipp.pt>"]
-maintainers = ["Diogo Ribeiro <dfr@esmad.ipp.pt>"]
+license-files = ["LICENSE"]
+requires-python = ">=3.11,<3.15"
+authors = [{ name = "Diogo Ribeiro", email = "dfr@esmad.ipp.pt" }]
+maintainers = [{ name = "Diogo Ribeiro", email = "dfr@esmad.ipp.pt" }]
 keywords = [
   "importance-sampling",
   "rare-events",
   "reliability-analysis",
   "monte-carlo",
   "cross-entropy",
-  "structural-reliability"
+  "structural-reliability",
 ]
 classifiers = [
   "Development Status :: 3 - Alpha",
   "Intended Audience :: Science/Research",
-  "License :: OSI Approved :: MIT License",
+  "Natural Language :: English",
+  "Operating System :: OS Independent",
   "Programming Language :: Python :: 3",
-  "Programming Language :: Python :: 3.9",
-  "Programming Language :: Python :: 3.10",
   "Programming Language :: Python :: 3.11",
   "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Programming Language :: Python :: 3.14",
   "Topic :: Scientific/Engineering",
   "Topic :: Scientific/Engineering :: Mathematics",
   "Topic :: Scientific/Engineering :: Physics",
+  "Typing :: Typed",
 ]
 
-# Package layout
-packages = [{ include = "safe_ice" }]
+# Runtime dependencies. Floors are the oldest versions actually exercised;
+# the upper bounds only exclude majors that have not been released yet.
+dependencies = [
+  "numpy>=1.26,<3",
+  "scipy>=1.11,<2",
+  "matplotlib>=3.8,<4",
+]
 
-# Include type marker and any non-code assets if needed
-include = ["safe_ice/py.typed"]
+[project.optional-dependencies]
+# Interactive plotly dashboards (safe_ice.analysis.interactive_visualization).
+viz = [
+  "plotly>=5.18",
+  "seaborn>=0.13",
+  "pandas>=2.0",
+]
+# JIT acceleration for OptimizedSafeICE and memory instrumentation.
+perf = [
+  "numba>=0.59",
+  "psutil>=5.9",
+  "memory-profiler>=0.61",
+]
+# Poetry's resolver rejects self-referential extras, so `all` is expanded.
+all = [
+  "plotly>=5.18",
+  "seaborn>=0.13",
+  "pandas>=2.0",
+  "numba>=0.59",
+  "psutil>=5.9",
+  "memory-profiler>=0.61",
+]
 
-[tool.poetry.urls]
-Homepage = "https://github.com/diogoribeiro7/adaptive-importance-sampling-ice"
-Documentation = "https://github.com/diogoribeiro7/adaptive-importance-sampling-ice#readme"
-Repository = "https://github.com/diogoribeiro7/adaptive-importance-sampling-ice"
-Issues = "https://github.com/diogoribeiro7/adaptive-importance-sampling-ice/issues"
-Changelog = "https://github.com/diogoribeiro7/adaptive-importance-sampling-ice/blob/main/CHANGELOG.md"
-
-[tool.poetry.dependencies]
-python = ">=3.9,<3.13"
-numpy = "^2.4.1"
-scipy = "^1.17.0"
-matplotlib = "^3.10.8"
-pytest-benchmark = "^5.2.3"
-memory-profiler = "^0.61.0"
-psutil = "^7.2.1"
-
-[tool.poetry.scripts]
+[project.scripts]
 safe-ice = "safe_ice.cli:main"
 
-# ---------------- Dependency Groups (Poetry ≥1.2) ----------------
+[project.urls]
+Homepage = "https://github.com/DiogoRibeiro7/adaptive-importance-sampling-ice"
+Documentation = "https://safe-ice.readthedocs.io/"
+Repository = "https://github.com/DiogoRibeiro7/adaptive-importance-sampling-ice"
+Issues = "https://github.com/DiogoRibeiro7/adaptive-importance-sampling-ice/issues"
+Changelog = "https://github.com/DiogoRibeiro7/adaptive-importance-sampling-ice/blob/main/CHANGELOG.md"
 
-[tool.poetry.group.dev.dependencies]
-pytest = "^8.4.2"
-pytest-cov = "^7.0.0"
-pytest-xdist = "^3.8.0"
-mypy = "^1.19.1"
-ruff = "^0.14.14"
-black = "^25.12.0"
-isort = "^7.0.0"
-pre-commit = "^4.5.1"
-bandit = "^1.9.3"
-pip-audit = "^2.10.0"
-tomlkit = "^0.14.0"
+# ==================== DEVELOPMENT GROUPS (PEP 735) ====================
+# Not published with the package. Install with:
+#   pip install --group dev      (pip >= 25.1)
+#   uv sync --group dev
+#   poetry install --with dev    (poetry >= 2.1)
 
-[tool.poetry.group.docs.dependencies]
-sphinx = ">=6.0.0"
-sphinx-rtd-theme = ">=1.3.0"
-sphinx-autodoc-typehints = ">=1.24.0"
-myst-parser = ">=2.0.0"
+[dependency-groups]
+dev = [
+  "pytest>=8.0",
+  "pytest-cov>=5.0",
+  "pytest-xdist>=3.5",
+  "pytest-benchmark>=4.0",
+  "mypy>=1.11",
+  "ruff>=0.6",
+  "pre-commit>=3.7",
+  "bandit>=1.7",
+  "pip-audit>=2.7",
+  "tomlkit>=0.13",
+]
+docs = [
+  "sphinx>=7.2",
+  "sphinx-rtd-theme>=2.0",
+  "sphinx-autodoc-typehints>=2.0",
+  "myst-parser>=3.0",
+]
+benchmark = [
+  "pandas>=2.0",
+  "seaborn>=0.13",
+  "jupyter>=1.0",
+  "ipykernel>=6.29",
+]
 
-[tool.poetry.group.benchmark.dependencies]
-pandas = ">=1.5.0"
-seaborn = ">=0.12.0"
-jupyter = ">=1.0.0"
-ipykernel = ">=6.25.0"
+# ==================== POETRY (build backend only) ====================
+# Poetry reads metadata from [project]; this section configures the build.
 
-# Notes:
-# - Install with groups: `poetry install --with dev,docs,benchmark`
-# - Omit groups:        `poetry install --without docs,benchmark`
-
-# ==================== BLACK ====================
-[tool.black]
-line-length = 88
-target-version = ['py39', 'py310', 'py311', 'py312']
-include = '\.pyi?$'
-extend-exclude = '''
-/(
-  \.eggs
-  | \.git
-  | \.hg
-  | \.mypy_cache
-  | \.tox
-  | \.venv
-  | build
-  | dist
-)/
-'''
-
-# ==================== ISORT ====================
-[tool.isort]
-profile = "black"
-line_length = 88
-multi_line_output = 3
-include_trailing_comma = true
-force_grid_wrap = 0
-use_parentheses = true
-ensure_newline_before_comments = true
-skip_gitignore = true
-known_first_party = ["safe_ice"]
+[tool.poetry]
+packages = [{ include = "safe_ice" }]
+include = [{ path = "safe_ice/py.typed", format = ["sdist", "wheel"] }]
+exclude = ["safe_ice/**/tests"]
 
 # ==================== RUFF ====================
 [tool.ruff]
-target-version = "py39"
+target-version = "py311"
 line-length = 88
+extend-exclude = ["docs/source/conf.py"]
+
+[tool.ruff.lint]
 select = [
-  "E","W","F","I","B","C4","UP","ARG","SIM"
+  "E",    # pycodestyle errors
+  "W",    # pycodestyle warnings
+  "F",    # pyflakes
+  "I",    # isort
+  "B",    # flake8-bugbear
+  "C4",   # flake8-comprehensions
+  "UP",   # pyupgrade
+  "ARG",  # flake8-unused-arguments
+  "SIM",  # flake8-simplify
+  "NPY",  # numpy-specific rules
+  "RUF",  # ruff-specific rules
+  "PIE",  # flake8-pie
+  "PTH",  # flake8-use-pathlib
 ]
 ignore = [
-  "E501",  # long lines handled by black
-  "B008",  # function call in default args
-  "B905",  # zip strict (pre-3.10)
+  "E501",    # line length is enforced by the formatter
+  "B008",    # function call in default argument
+  # Greek letters (σ, λ, κ, Ω, μ) are the notation of the paper this
+  # implements, and are intentional everywhere they appear.
+  "RUF001",  # ambiguous unicode in strings
+  "RUF002",  # ambiguous unicode in docstrings
+  "RUF003",  # ambiguous unicode in comments
 ]
 
-[tool.ruff.per-file-ignores]
-"__init__.py" = ["F401"]
-"tests/**/*.py" = ["ARG", "S101"]
+[tool.ruff.lint.flake8-unused-arguments]
+ignore-variadic-names = true
+
+[tool.ruff.lint.per-file-ignores]
+"__init__.py" = ["F401"]           # re-exports
+"tests/**/*.py" = ["ARG", "S101"]  # fixtures and asserts
+"examples/**/*.py" = ["T201"]      # prints are the point
+"benchmarks/**/*.py" = ["T201"]
+# This module is currently unreferenced by the package, the tests and the docs.
+# It is exempted rather than modernised pending a decision on whether to keep
+# it; if it is revived, drop this entry and give its samplers an `rng` argument
+# like `distributions/nakagami.py` has.
+"safe_ice/distributions/nakagami_stable.py" = ["NPY002"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["safe_ice"]
+
+[tool.ruff.lint.pydocstyle]
+convention = "numpy"
+
+[tool.ruff.format]
+docstring-code-format = true
 
 # ==================== MYPY ====================
 [tool.mypy]
-python_version = "3.9"
-warn_return_any = true
-warn_unused_configs = true
-disallow_untyped_defs = true
-disallow_incomplete_defs = true
-check_untyped_defs = true
-disallow_untyped_decorators = false
-no_implicit_optional = true
-warn_redundant_casts = true
-warn_unused_ignores = true
-warn_no_return = true
-follow_imports = "normal"
-strict_equality = true
-strict_optional = true
+python_version = "3.11"
+files = ["safe_ice"]
+strict = true
+warn_unreachable = true
 show_error_codes = true
+show_column_numbers = true
+pretty = true
+
+# Third-party packages without bundled type information.
+[[tool.mypy.overrides]]
+module = [
+  "matplotlib.*",
+  "mpl_toolkits.*",
+  "numba.*",
+  "pandas.*",
+  "plotly.*",
+  "psutil.*",
+  "scipy.*",
+  "seaborn.*",
+]
 ignore_missing_imports = true
 
+# Numba ships no type information, so its @jit decorator is untyped and would
+# otherwise strip the annotations off every function it wraps.
 [[tool.mypy.overrides]]
-module = ["scipy.*", "matplotlib.*"]
-ignore_missing_imports = true
+module = ["safe_ice.core.safe_ice_optimized"]
+disallow_untyped_decorators = false
+
+# Examples and scripts are illustrative, not part of the typed API surface.
+[[tool.mypy.overrides]]
+module = ["tests.*", "examples.*", "scripts.*", "benchmarks.*"]
+ignore_errors = true
 
 # ==================== PYTEST ====================
 [tool.pytest.ini_options]
-minversion = "7.0"
+minversion = "8.0"
 testpaths = ["tests"]
-python_files = ["test_*.py", "*_test.py"]
-python_classes = ["Test*"]
-python_functions = ["test_*"]
 addopts = [
   "-ra",
   "--strict-markers",
   "--strict-config",
-  "--showlocals",
   "--tb=short",
+  "--import-mode=importlib",
+  # Slow tests are opt-in: run the full suite with `pytest -m ''`.
+  "-m",
+  "not slow",
 ]
 markers = [
-  "slow: marks tests as slow (deselect with '-m \"not slow\"')",
-  "integration: marks tests as integration tests",
-  "benchmark: marks tests as benchmark tests",
+  "slow: long-running statistical tests (deselected by default)",
+  "integration: end-to-end tests across multiple modules",
+  "benchmark: performance benchmarks",
 ]
 filterwarnings = [
   "error",
   "ignore::UserWarning",
   "ignore::DeprecationWarning",
+  "ignore::PendingDeprecationWarning",
 ]
 
 # ==================== COVERAGE ====================
 [tool.coverage.run]
 branch = true
 source = ["safe_ice"]
-omit = ["*/tests/*","*/__pycache__/*","*/site-packages/*"]
+omit = ["*/tests/*", "*/__pycache__/*"]
 
 [tool.coverage.report]
 precision = 2
-exclude_lines = [
-  "pragma: no cover",
-  "def __repr__",
-  "if self.debug:",
+show_missing = true
+exclude_also = [
+  "if TYPE_CHECKING:",
   "if __name__ == .__main__.:",
   "raise AssertionError",
   "raise NotImplementedError",
-  "if 0:",
-  "if False:",
-  "class .*\\bProtocol\\):",
   "@(abc\\.)?abstractmethod",
+  "class .*\\bProtocol\\):",
+  "\\.\\.\\.",
 ]
-show_missing = true
-skip_covered = false
 
 [tool.coverage.html]
 directory = "htmlcov"
 
 # ==================== BANDIT ====================
 [tool.bandit]
-exclude_dirs = ["tests", "scripts"]
-skips = ["B101", "B601"]
-
-# ==================== PIP-AUDIT ====================
-[tool.pip-audit]
-ignore-vulns = []
+exclude_dirs = ["tests", "scripts", "examples", "benchmarks"]
+skips = ["B101"]  # assert_used: asserts are used as internal invariants
