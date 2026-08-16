@@ -349,6 +349,39 @@ classDiagram
     +certain_failure_limit_state()
   }
 
+  class TestRadiiAndDirections {
+    +test_matches_per_row_computation()
+    +test_directions_are_unit_vectors()
+    +test_degenerate_rows_use_first_basis_vector()
+  }
+
+  class TestExpClamped {
+    +test_non_finite_maps_to_zero()
+    +test_underflow_maps_to_zero()
+    +test_saturates_instead_of_overflowing()
+    +test_ordinary_values_pass_through()
+  }
+
+  class TestVmfPdfBatch {
+    +test_matches_reference()
+    +test_zero_concentration_is_uniform()
+    +test_integrates_to_one_over_the_sphere()
+  }
+
+  class TestSphereSurfaceArea {
+    +test_circle_and_sphere()
+  }
+
+  class TestMixturePdfVectorisation {
+    +test_matches_per_sample_loop()
+    +test_single_row_input_is_accepted()
+  }
+
+  class TestEStepVectorisation {
+    +test_rows_sum_to_one()
+    +test_unreachable_samples_fall_back_to_uniform()
+  }
+
   class TestSafeICEInitialization {
     +test_basic_initialization()
     +g()
