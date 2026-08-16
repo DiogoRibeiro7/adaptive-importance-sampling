@@ -12,11 +12,13 @@ We expose precise typing with @overload so mypy understands both cases.
 
 from __future__ import annotations
 
-from typing import overload
+from typing import Any, overload
 
 import numpy as np
 import numpy.typing as npt
-from scipy.special import gamma, gammainc, loggamma  # normalized lower incomplete gamma
+from scipy.special import gammainc, loggamma  # normalized lower incomplete gamma
+
+from ..typing import RNGLike
 
 NDArrayF = npt.NDArray[np.float64]
 
@@ -73,17 +75,19 @@ class NakagamiDistribution:
                 std = np.sqrt(variance)
 
                 # Use normal PDF approximation
-                pdf_values = (1.0 / (std * np.sqrt(2 * np.pi))) * np.exp(-0.5 * ((xm - mode) / std) ** 2)
+                pdf_values = (1.0 / (std * np.sqrt(2 * np.pi))) * np.exp(
+                    -0.5 * ((xm - mode) / std) ** 2
+                )
                 out[mask] = pdf_values
             else:
                 # Standard log-space computation for reasonable m values
                 log_pdf = (
-                    np.log(2.0) +
-                    m * np.log(m) -
-                    loggamma(m) -
-                    m * np.log(Omega) +
-                    (2.0 * m - 1.0) * np.log(xm) -
-                    m * (xm ** 2) / Omega
+                    np.log(2.0)
+                    + m * np.log(m)
+                    - loggamma(m)
+                    - m * np.log(Omega)
+                    + (2.0 * m - 1.0) * np.log(xm)
+                    - m * (xm**2) / Omega
                 )
 
                 # Convert back from log-space, handling potential underflow
@@ -132,6 +136,7 @@ class NakagamiDistribution:
 
                     # Normal CDF
                     from scipy.stats import norm
+
                     out[mask] = norm.cdf(r_arr[mask], loc=mode, scale=std)
                 else:
                     # Handle potential overflow in z
@@ -151,7 +156,7 @@ class NakagamiDistribution:
     # -------------------- Sample --------------------
     @staticmethod
     def sample(
-        m: float, Omega: float, n: int = 1, rng: object = None
+        m: float, Omega: float, n: int = 1, rng: RNGLike | None = None
     ) -> NDArrayF:
         """Draw `n` Nakagami samples as sqrt of a Gamma(m, Omega/m).
 
@@ -160,7 +165,7 @@ class NakagamiDistribution:
         rng : numpy random generator, optional
             If *None*, the global ``np.random`` state is used.
         """
-        _rng = rng if rng is not None else np.random
+        _rng: Any = rng if rng is not None else np.random
         m = float(m)
         Omega = float(Omega)
         n = int(n)
@@ -170,12 +175,10 @@ class NakagamiDistribution:
             variance = Omega * (1 - 1 / (4 * m)) / m if m > 0.25 else Omega
             std = np.sqrt(variance)
             samples = _rng.normal(mean, std, n)
-            return np.abs(samples).astype(np.float64, copy=False)
+            return np.asarray(np.abs(samples), dtype=np.float64)
 
-        x = _rng.gamma(
-            shape=m, scale=(Omega / m), size=n
-        ).astype(np.float64, copy=False)
-        return np.sqrt(x).astype(np.float64, copy=False)
+        x = np.asarray(_rng.gamma(shape=m, scale=(Omega / m), size=n), dtype=np.float64)
+        return np.asarray(np.sqrt(x), dtype=np.float64)
 
 
 # =============================================================================
@@ -219,7 +222,7 @@ class InverseNakagamiDistribution:
         fr = NakagamiDistribution.pdf(r_inv, m, Omega)  # returns ndarray here
 
         # Compute final PDF
-        pdf_values = fr * (1.0 / (ym ** 2))
+        pdf_values = fr * (1.0 / (ym**2))
         # Handle any numerical issues
         pdf_values = np.where(np.isfinite(pdf_values), pdf_values, 0.0)
         out[mask] = pdf_values
@@ -257,7 +260,7 @@ class InverseNakagamiDistribution:
     # -------------------- Sample --------------------
     @staticmethod
     def sample(
-        m: float, Omega: float, n: int = 1, rng: object = None
+        m: float, Omega: float, n: int = 1, rng: RNGLike | None = None
     ) -> NDArrayF:
         """Draw `n` samples via Y = 1/R, R ~ Nakagami(m, Omega).
 

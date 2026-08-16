@@ -1,34 +1,40 @@
+# Install with: pre-commit install
+# Run over everything with: pre-commit run --all-files
+# Refresh pinned versions with: pre-commit autoupdate
+
+default_language_version:
+  python: python3.12
+
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v4.5.0
+    rev: v6.0.0
     hooks:
       - id: trailing-whitespace
       - id: end-of-file-fixer
       - id: check-yaml
+      - id: check-toml
       - id: check-added-large-files
       - id: check-merge-conflict
-      - id: check-toml
+      - id: check-case-conflict
       - id: debug-statements
+      - id: mixed-line-ending
+        args: [--fix=lf]
 
-  - repo: https://github.com/psf/black
-    rev: 23.12.1
-    hooks:
-      - id: black
-
-  - repo: https://github.com/pycqa/isort
-    rev: 5.13.2
-    hooks:
-      - id: isort
-
+  # Ruff replaces black, isort and flake8: one tool for lint and formatting.
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.1.11
+    rev: v0.14.14
     hooks:
-      - id: ruff
+      - id: ruff-check
         args: [--fix, --exit-non-zero-on-fix]
+      - id: ruff-format
 
   - repo: https://github.com/pre-commit/mirrors-mypy
-    rev: v1.8.0
+    rev: v1.19.1
     hooks:
       - id: mypy
-        additional_dependencies: [types-all]
-        args: [--config-file=pyproject.toml]
+        # mypy needs the real dependencies to check against, and `files` in
+        # pyproject.toml already scopes it to the package.
+        additional_dependencies:
+          - numpy>=1.26
+          - scipy>=1.11
+        pass_filenames: false

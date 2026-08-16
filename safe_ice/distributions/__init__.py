@@ -1,12 +1,12 @@
 """Distribution implementations for Safe-ICE."""
 
-from .vmf import VonMisesFisherSampler
-from .nakagami import NakagamiDistribution, InverseNakagamiDistribution
 from .mixture import vMFNMDistribution
+from .nakagami import InverseNakagamiDistribution, NakagamiDistribution
+from .vmf import VonMisesFisherSampler
 
 __all__ = [
-    "VonMisesFisherSampler",
-    "NakagamiDistribution",
     "InverseNakagamiDistribution",
+    "NakagamiDistribution",
+    "VonMisesFisherSampler",
     "vMFNMDistribution",
 ]

@@ -4,7 +4,6 @@
 from __future__ import annotations
 
 import math
-from typing import Optional, Union
 
 import numpy as np
 import numpy.typing as npt
@@ -12,11 +11,11 @@ import numpy.typing as npt
 NDArrayF = npt.NDArray[np.float64]
 
 # Type alias accepted for the ``rng`` parameter.
-RNGLike = Union[np.random.Generator, np.random.RandomState]
+RNGLike = np.random.Generator | np.random.RandomState
 
 
 def _default_rng(
-    rng: Optional[RNGLike] = None,
+    rng: RNGLike | None = None,
 ) -> RNGLike:
     """Return *rng* if given, else the legacy ``np.random`` module."""
     return rng if rng is not None else np.random  # type: ignore[return-value]
@@ -30,7 +29,7 @@ class VonMisesFisherSampler:
         mu: npt.ArrayLike,
         kappa: float,
         n_samples: int = 1,
-        rng: Optional[RNGLike] = None,
+        rng: RNGLike | None = None,
     ) -> NDArrayF:
         """
         Sample from a vMF_d(mu, kappa).
@@ -62,9 +61,9 @@ class VonMisesFisherSampler:
                 dtype=np.float64,
             )
             # normalize each row
-            norms: NDArrayF = np.linalg.norm(
-                samples, axis=1, keepdims=True
-            ).astype(np.float64, copy=False)
+            norms: NDArrayF = np.linalg.norm(samples, axis=1, keepdims=True).astype(
+                np.float64, copy=False
+            )
             eps: float = float(np.finfo(np.float64).tiny)
             norms = np.maximum(norms, eps)
             return (samples / norms).astype(np.float64, copy=False)
@@ -82,24 +81,19 @@ class VonMisesFisherSampler:
         if kappa >= 30.0:
             noise_scale = 0.2 / math.sqrt(float(kappa))
             raw: NDArrayF = np.asarray(
-                mu_unit
-                + _rng.normal(0.0, noise_scale, size=(n_samples, d)),
+                mu_unit + _rng.normal(0.0, noise_scale, size=(n_samples, d)),
                 dtype=np.float64,
             )
-            norms_h: NDArrayF = np.linalg.norm(
-                raw, axis=1, keepdims=True
-            ).astype(np.float64, copy=False)
+            norms_h: NDArrayF = np.linalg.norm(raw, axis=1, keepdims=True).astype(
+                np.float64, copy=False
+            )
             eps_h: float = float(np.finfo(np.float64).tiny)
-            return (
-                raw / np.maximum(norms_h, eps_h)
-            ).astype(np.float64, copy=False)
+            return np.asarray(raw / np.maximum(norms_h, eps_h), dtype=np.float64)
 
         # General case d >= 3
         out: NDArrayF = np.zeros((n_samples, d), dtype=np.float64)
         for i in range(n_samples):
-            w: float = VonMisesFisherSampler._sample_w_wood(
-                float(kappa), d, _rng
-            )
+            w: float = VonMisesFisherSampler._sample_w_wood(float(kappa), d, _rng)
 
             # v ~ Unif(S^{d-2}) in R^{d-1}
             v_raw: NDArrayF = np.asarray(
@@ -108,9 +102,7 @@ class VonMisesFisherSampler:
             )
             v_norm: float = float(np.linalg.norm(v_raw))
             if v_norm > 0.0:
-                v: NDArrayF = (v_raw / v_norm).astype(
-                    np.float64, copy=False
-                )
+                v: NDArrayF = (v_raw / v_norm).astype(np.float64, copy=False)
             else:
                 v = np.zeros(d - 1, dtype=np.float64)
                 v[0] = 1.0
@@ -126,9 +118,7 @@ class VonMisesFisherSampler:
             ).astype(np.float64, copy=False)
 
             # Rotate e_d -> mu via Householder and apply to xy
-            out[i, :] = VonMisesFisherSampler._householder_rotation(
-                xy, mu_unit
-            )
+            out[i, :] = VonMisesFisherSampler._householder_rotation(xy, mu_unit)
 
         return out
 
@@ -148,18 +138,15 @@ class VonMisesFisherSampler:
         )
         mu_angle: float = float(np.arctan2(mu[1], mu[0]))
         angles = (angles + mu_angle).astype(np.float64, copy=False)
-        return np.column_stack(
-            [np.cos(angles), np.sin(angles)]
-        ).astype(np.float64, copy=False)
+        return np.column_stack([np.cos(angles), np.sin(angles)]).astype(
+            np.float64, copy=False
+        )
 
     @staticmethod
-    def _sample_w_wood(
-        kappa: float, d: int, rng: RNGLike
-    ) -> float:
+    def _sample_w_wood(kappa: float, d: int, rng: RNGLike) -> float:
         """Sample the last coordinate w using Wood (1994) rejection sampler."""
         b: float = (d - 1.0) / (
-            2.0 * kappa
-            + math.sqrt(4.0 * kappa * kappa + (d - 1.0) ** 2)
+            2.0 * kappa + math.sqrt(4.0 * kappa * kappa + (d - 1.0) ** 2)
         )
         x0: float = (1.0 - b) / (1.0 + b)
         c: float = kappa * x0 + (d - 1.0) * math.log(1.0 - x0 * x0)
@@ -172,16 +159,12 @@ class VonMisesFisherSampler:
             w: float = (1.0 - (1.0 + b) * z) / (1.0 - (1.0 - b) * z)
             u: float = float(rng.uniform(0.0, 1.0))
 
-            test_val: float = (
-                kappa * w + (d - 1.0) * math.log(1.0 - x0 * w) - c
-            )
+            test_val: float = kappa * w + (d - 1.0) * math.log(1.0 - x0 * w) - c
             if test_val >= math.log(u):
                 return w
 
     @staticmethod
-    def _householder_rotation(
-        x: npt.ArrayLike, mu: npt.ArrayLike
-    ) -> NDArrayF:
+    def _householder_rotation(x: npt.ArrayLike, mu: npt.ArrayLike) -> NDArrayF:
         """Apply Householder reflection that maps e_d to mu."""
         x_arr: NDArrayF = np.asarray(x, dtype=np.float64).reshape(-1)
         mu_arr: NDArrayF = np.asarray(mu, dtype=np.float64).reshape(-1)

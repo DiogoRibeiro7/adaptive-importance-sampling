@@ -2,11 +2,14 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
+from functools import partial
+
 import numpy as np
-from typing import Callable, List, Optional, Tuple, Union
 import numpy.typing as npt
-from scipy.stats import norm, multivariate_normal
 from scipy.linalg import cholesky
+
+from ..typing import LimitStateFunction
 
 NDArrayF = npt.NDArray[np.float64]
 
@@ -22,7 +25,7 @@ class TimeVariantProblem:
         self,
         limit_state_func: Callable[[NDArrayF, float], float],
         time_points: NDArrayF,
-        correlation_func: Optional[Callable[[float, float], float]] = None
+        correlation_func: Callable[[float, float], float] | None = None,
     ):
         """
         Initialize time-variant problem.
@@ -48,7 +51,7 @@ class TimeVariantProblem:
     def _default_correlation(self, t1: float, t2: float) -> float:
         """Default exponential correlation function."""
         correlation_length = 1.0
-        return np.exp(-abs(t1 - t2) / correlation_length)
+        return float(np.exp(-abs(t1 - t2) / correlation_length))
 
     def _build_correlation_matrix(self) -> NDArrayF:
         """Build correlation matrix for time points."""
@@ -58,8 +61,7 @@ class TimeVariantProblem:
         for i in range(n):
             for j in range(n):
                 R[i, j] = self.correlation_func(
-                    self.time_points[i],
-                    self.time_points[j]
+                    self.time_points[i], self.time_points[j]
                 )
 
         # Ensure positive definiteness
@@ -69,7 +71,7 @@ class TimeVariantProblem:
 
         return R
 
-    def get_series_system_limit_state(self) -> Callable:
+    def get_series_system_limit_state(self) -> LimitStateFunction:
         """
         Get limit state function for series system over time.
 
@@ -80,6 +82,7 @@ class TimeVariantProblem:
         callable
             Combined limit state function.
         """
+
         def g_series(u: NDArrayF) -> NDArrayF:
             """Series system: min_t g(u, t)."""
             if u.ndim == 1:
@@ -90,9 +93,7 @@ class TimeVariantProblem:
 
             for i in range(n_samples):
                 # Evaluate at all time points
-                g_t = np.array([
-                    self.g_base(u[i], t) for t in self.time_points
-                ])
+                g_t = np.array([self.g_base(u[i], t) for t in self.time_points])
                 # Series system: take minimum
                 g_values[i] = np.min(g_t)
 
@@ -100,7 +101,7 @@ class TimeVariantProblem:
 
         return g_series
 
-    def get_parallel_system_limit_state(self) -> Callable:
+    def get_parallel_system_limit_state(self) -> LimitStateFunction:
         """
         Get limit state function for parallel system over time.
 
@@ -111,6 +112,7 @@ class TimeVariantProblem:
         callable
             Combined limit state function.
         """
+
         def g_parallel(u: NDArrayF) -> NDArrayF:
             """Parallel system: max_t g(u, t)."""
             if u.ndim == 1:
@@ -121,9 +123,7 @@ class TimeVariantProblem:
 
             for i in range(n_samples):
                 # Evaluate at all time points
-                g_t = np.array([
-                    self.g_base(u[i], t) for t in self.time_points
-                ])
+                g_t = np.array([self.g_base(u[i], t) for t in self.time_points])
                 # Parallel system: take maximum
                 g_values[i] = np.max(g_t)
 
@@ -132,10 +132,8 @@ class TimeVariantProblem:
         return g_parallel
 
     def get_cumulative_damage_limit_state(
-        self,
-        damage_func: Callable[[NDArrayF, float], float],
-        threshold: float = 1.0
-    ) -> Callable:
+        self, damage_func: Callable[[NDArrayF, float], float], threshold: float = 1.0
+    ) -> LimitStateFunction:
         """
         Get limit state function for cumulative damage.
 
@@ -151,6 +149,7 @@ class TimeVariantProblem:
         callable
             Cumulative damage limit state function.
         """
+
         def g_damage(u: NDArrayF) -> NDArrayF:
             """Cumulative damage: threshold - sum_t d(u, t)*dt."""
             if u.ndim == 1:
@@ -189,8 +188,8 @@ class SystemReliabilityProblem:
 
     def __init__(
         self,
-        component_funcs: List[Callable],
-        correlation_matrix: Optional[NDArrayF] = None
+        component_funcs: list[LimitStateFunction],
+        correlation_matrix: NDArrayF | None = None,
     ):
         """
         Initialize system reliability problem.
@@ -208,12 +207,15 @@ class SystemReliabilityProblem:
         if correlation_matrix is not None:
             self.correlation_matrix = np.asarray(correlation_matrix)
             # Validate correlation matrix
-            assert self.correlation_matrix.shape == (self.n_components, self.n_components)
+            assert self.correlation_matrix.shape == (
+                self.n_components,
+                self.n_components,
+            )
             assert np.allclose(self.correlation_matrix, self.correlation_matrix.T)
         else:
             self.correlation_matrix = np.eye(self.n_components)
 
-    def get_series_system(self) -> Callable:
+    def get_series_system(self) -> LimitStateFunction:
         """
         Get series system limit state function.
 
@@ -224,6 +226,7 @@ class SystemReliabilityProblem:
         callable
             Series system limit state function.
         """
+
         def g_series(u: NDArrayF) -> NDArrayF:
             """Series system: min_i g_i(u)."""
             if u.ndim == 1:
@@ -234,9 +237,7 @@ class SystemReliabilityProblem:
 
             for i in range(n_samples):
                 # Evaluate all components
-                g_components = np.array([
-                    func(u[i]) for func in self.component_funcs
-                ])
+                g_components = np.array([func(u[i]) for func in self.component_funcs])
                 # Series: minimum
                 g_values[i] = np.min(g_components)
 
@@ -244,7 +245,7 @@ class SystemReliabilityProblem:
 
         return g_series
 
-    def get_parallel_system(self) -> Callable:
+    def get_parallel_system(self) -> LimitStateFunction:
         """
         Get parallel system limit state function.
 
@@ -255,6 +256,7 @@ class SystemReliabilityProblem:
         callable
             Parallel system limit state function.
         """
+
         def g_parallel(u: NDArrayF) -> NDArrayF:
             """Parallel system: max_i g_i(u)."""
             if u.ndim == 1:
@@ -265,9 +267,7 @@ class SystemReliabilityProblem:
 
             for i in range(n_samples):
                 # Evaluate all components
-                g_components = np.array([
-                    func(u[i]) for func in self.component_funcs
-                ])
+                g_components = np.array([func(u[i]) for func in self.component_funcs])
                 # Parallel: maximum
                 g_values[i] = np.max(g_components)
 
@@ -275,7 +275,7 @@ class SystemReliabilityProblem:
 
         return g_parallel
 
-    def get_k_out_of_n_system(self, k: int) -> Callable:
+    def get_k_out_of_n_system(self, k: int) -> LimitStateFunction:
         """
         Get k-out-of-n system limit state function.
 
@@ -291,6 +291,7 @@ class SystemReliabilityProblem:
         callable
             k-out-of-n system limit state function.
         """
+
         def g_k_out_of_n(u: NDArrayF) -> NDArrayF:
             """k-out-of-n system."""
             if u.ndim == 1:
@@ -301,9 +302,7 @@ class SystemReliabilityProblem:
 
             for i in range(n_samples):
                 # Evaluate all components
-                g_components = np.array([
-                    func(u[i]) for func in self.component_funcs
-                ])
+                g_components = np.array([func(u[i]) for func in self.component_funcs])
 
                 # Sort components
                 g_sorted = np.sort(g_components)
@@ -315,10 +314,7 @@ class SystemReliabilityProblem:
 
         return g_k_out_of_n
 
-    def get_correlated_system(
-        self,
-        system_type: str = "series"
-    ) -> Callable:
+    def get_correlated_system(self, system_type: str = "series") -> LimitStateFunction:
         """
         Get system with correlated components.
 
@@ -353,7 +349,7 @@ class SystemReliabilityProblem:
                 # Generate correlated inputs
                 if d >= self.n_components:
                     # Use first n_components dimensions
-                    z = u[i, :self.n_components]
+                    z = u[i, : self.n_components]
                 else:
                     # Extend with zeros
                     z = np.zeros(self.n_components)
@@ -363,10 +359,12 @@ class SystemReliabilityProblem:
                 u_corr = L @ z
 
                 # Evaluate components with correlated inputs
-                g_components = np.array([
-                    self.component_funcs[j](u_corr[j:j+1])
-                    for j in range(self.n_components)
-                ])
+                g_components = np.array(
+                    [
+                        self.component_funcs[j](u_corr[j : j + 1])
+                        for j in range(self.n_components)
+                    ]
+                )
 
                 # Apply system logic
                 if system_type == "series":
@@ -395,7 +393,7 @@ class StochasticProcessProblem:
         self,
         mean_func: Callable[[float], float],
         cov_func: Callable[[float, float], float],
-        mesh_points: NDArrayF
+        mesh_points: NDArrayF,
     ):
         """
         Initialize stochastic process problem.
@@ -426,14 +424,13 @@ class StochasticProcessProblem:
 
         for i in range(self.n_points):
             for j in range(self.n_points):
-                C[i, j] = self.cov_func(
-                    self.mesh_points[i],
-                    self.mesh_points[j]
-                )
+                C[i, j] = self.cov_func(self.mesh_points[i], self.mesh_points[j])
 
         return C
 
-    def _compute_kl_expansion(self, n_terms: Optional[int] = None) -> Tuple[NDArrayF, NDArrayF]:
+    def _compute_kl_expansion(
+        self, n_terms: int | None = None
+    ) -> tuple[NDArrayF, NDArrayF]:
         """Compute Karhunen-Loève expansion."""
         # Eigendecomposition
         eigvals, eigvecs = np.linalg.eigh(self.cov_matrix)
@@ -456,9 +453,7 @@ class StochasticProcessProblem:
         return eigvals, eigvecs
 
     def generate_random_field(
-        self,
-        xi: NDArrayF,
-        n_kl_terms: Optional[int] = None
+        self, xi: NDArrayF, n_kl_terms: int | None = None
     ) -> NDArrayF:
         """
         Generate random field realization using KL expansion.
@@ -476,9 +471,7 @@ class StochasticProcessProblem:
             Random field values at mesh points.
         """
         # Mean field
-        mean_field = np.array([
-            self.mean_func(x) for x in self.mesh_points
-        ])
+        mean_field = np.array([self.mean_func(x) for x in self.mesh_points])
 
         # Determine number of terms
         if n_kl_terms is None:
@@ -494,10 +487,8 @@ class StochasticProcessProblem:
         return field
 
     def get_excursion_limit_state(
-        self,
-        threshold: float,
-        n_kl_terms: Optional[int] = None
-    ) -> Callable:
+        self, threshold: float, n_kl_terms: int | None = None
+    ) -> LimitStateFunction:
         """
         Get limit state function for excursion over threshold.
 
@@ -513,6 +504,7 @@ class StochasticProcessProblem:
         callable
             Excursion limit state function.
         """
+
         def g_excursion(u: NDArrayF) -> NDArrayF:
             """Excursion: threshold - max(field)."""
             if u.ndim == 1:
@@ -543,8 +535,8 @@ class NetworkReliabilityProblem:
     def __init__(
         self,
         adjacency_matrix: NDArrayF,
-        edge_reliability_funcs: Optional[List[Callable]] = None
-    ):
+        edge_reliability_funcs: list[LimitStateFunction] | None = None,
+    ) -> None:
         """
         Initialize network reliability problem.
 
@@ -565,12 +557,12 @@ class NetworkReliabilityProblem:
             self.edge_funcs = edge_reliability_funcs
         else:
             # Default: all edges have same reliability
-            self.edge_funcs = [
-                lambda u, i=i: 3.0 - u[i] if i < len(u) else 3.0
-                for i in range(self.n_edges)
-            ]
+            def _edge_func(u: NDArrayF, i: int = 0) -> float:
+                return float(3.0 - u[i]) if i < len(u) else 3.0
 
-    def _extract_edges(self) -> List[Tuple[int, int]]:
+            self.edge_funcs = [partial(_edge_func, i=i) for i in range(self.n_edges)]
+
+    def _extract_edges(self) -> list[tuple[int, int]]:
         """Extract edge list from adjacency matrix."""
         edges = []
         for i in range(self.n_nodes):
@@ -580,10 +572,8 @@ class NetworkReliabilityProblem:
         return edges
 
     def get_connectivity_limit_state(
-        self,
-        source: int,
-        target: int
-    ) -> Callable:
+        self, source: int, target: int
+    ) -> LimitStateFunction:
         """
         Get limit state function for s-t connectivity.
 
@@ -599,6 +589,7 @@ class NetworkReliabilityProblem:
         callable
             Connectivity limit state function.
         """
+
         def g_connectivity(u: NDArrayF) -> NDArrayF:
             """Connectivity: 1 if connected, -1 if disconnected."""
             if u.ndim == 1:
@@ -621,9 +612,7 @@ class NetworkReliabilityProblem:
                         operational[node2, node1] = 1
 
                 # Check connectivity using BFS
-                connected = self._check_connectivity(
-                    operational, source, target
-                )
+                connected = self._check_connectivity(operational, source, target)
 
                 g_values[i] = 1.0 if connected else -1.0
 
@@ -631,12 +620,7 @@ class NetworkReliabilityProblem:
 
         return g_connectivity
 
-    def _check_connectivity(
-        self,
-        adj: NDArrayF,
-        source: int,
-        target: int
-    ) -> bool:
+    def _check_connectivity(self, adj: NDArrayF, source: int, target: int) -> bool:
         """Check if source and target are connected."""
         visited = np.zeros(self.n_nodes, dtype=bool)
         queue = [source]

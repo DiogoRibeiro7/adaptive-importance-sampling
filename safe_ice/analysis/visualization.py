@@ -1,21 +1,24 @@
 """Visualization and advanced analysis tools for Safe-ICE."""
+
 from __future__ import annotations
 
-from typing import Any, Callable, Dict, Optional, Tuple, cast
-import numpy as np
-import numpy.typing as npt
+from typing import Any
+
 import matplotlib.pyplot as plt
+import numpy as np
+
+from ..typing import LimitStateFunction
 
 
 class AdvancedAnalysis:
     """Advanced analysis tools for Safe-ICE results"""
 
     @staticmethod
-    def analyze_component_evolution(results: Dict[str, Any]) -> None:
+    def analyze_component_evolution(results: dict[str, Any]) -> None:
         """Analyze how mixture components evolve during optimization"""
         history = results["history"]
 
-        fig, axes = plt.subplots(2, 2, figsize=(12, 8))
+        _fig, axes = plt.subplots(2, 2, figsize=(12, 8))
 
         # Component count evolution
         axes[0, 0].plot(history["components"], "b-o")
@@ -52,7 +55,7 @@ class AdvancedAnalysis:
 
     @staticmethod
     def analyze_sample_distribution(
-        results: Dict[str, Any], problem_func: Callable
+        results: dict[str, Any], problem_func: LimitStateFunction
     ) -> None:
         """Analyze final sample distribution (for 2D problems)"""
         if results["final_samples"].shape[1] != 2:
@@ -66,7 +69,7 @@ class AdvancedAnalysis:
         failure_samples = samples[g_values <= 0]
         safe_samples = samples[g_values > 0]
 
-        fig, axes = plt.subplots(1, 2, figsize=(12, 5))
+        _fig, axes = plt.subplots(1, 2, figsize=(12, 5))
 
         # Sample scatter plot
         axes[0].scatter(
@@ -123,7 +126,7 @@ class AdvancedAnalysis:
 
         # Statistics
         failure_rate = len(failure_samples) / len(samples)
-        print(f"Final sample statistics:")
+        print("Final sample statistics:")
         print(f"  Total samples: {len(samples)}")
         print(f"  Failure samples: {len(failure_samples)} ({failure_rate:.1%})")
         print(f"  G-function range: [{np.min(g_values):.3f}, {np.max(g_values):.3f}]")

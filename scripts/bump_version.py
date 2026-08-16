@@ -5,7 +5,6 @@ import argparse
 import re
 import sys
 from pathlib import Path
-from typing import Optional, Tuple
 
 
 def get_current_version(root_dir: Path) -> str:
@@ -20,10 +19,10 @@ def get_current_version(root_dir: Path) -> str:
     return match.group(1)
 
 
-def parse_version(version: str) -> Tuple[int, int, int, Optional[str]]:
+def parse_version(version: str) -> tuple[int, int, int, str | None]:
     """Parse version string into components."""
     # Match versions like 0.1.0, 0.1.0rc1, 0.1.0-beta.1
-    match = re.match(r'^(\d+)\.(\d+)\.(\d+)(?:[-.]?(.+))?$', version)
+    match = re.match(r"^(\d+)\.(\d+)\.(\d+)(?:[-.]?(.+))?$", version)
     if not match:
         raise ValueError(f"Invalid version format: {version}")
 
@@ -33,7 +32,9 @@ def parse_version(version: str) -> Tuple[int, int, int, Optional[str]]:
     return major, minor, patch, suffix
 
 
-def format_version(major: int, minor: int, patch: int, suffix: Optional[str] = None) -> str:
+def format_version(
+    major: int, minor: int, patch: int, suffix: str | None = None
+) -> str:
     """Format version components into string."""
     version = f"{major}.{minor}.{patch}"
     if suffix:
@@ -41,7 +42,7 @@ def format_version(major: int, minor: int, patch: int, suffix: Optional[str] = N
     return version
 
 
-def bump_version(current: str, bump_type: str, suffix: Optional[str] = None) -> str:
+def bump_version(current: str, bump_type: str, suffix: str | None = None) -> str:
     """Bump version based on bump type."""
     major, minor, patch, current_suffix = parse_version(current)
 
@@ -58,13 +59,13 @@ def bump_version(current: str, bump_type: str, suffix: Optional[str] = None) -> 
         if current_suffix:
             # Increment prerelease version
             if "rc" in current_suffix:
-                num = int(re.search(r'rc(\d+)', current_suffix).group(1))
+                num = int(re.search(r"rc(\d+)", current_suffix).group(1))
                 suffix = f"rc{num + 1}"
             elif "beta" in current_suffix:
-                num = int(re.search(r'beta(\d+)', current_suffix).group(1))
+                num = int(re.search(r"beta(\d+)", current_suffix).group(1))
                 suffix = f"beta{num + 1}"
             elif "alpha" in current_suffix:
-                num = int(re.search(r'alpha(\d+)', current_suffix).group(1))
+                num = int(re.search(r"alpha(\d+)", current_suffix).group(1))
                 suffix = f"alpha{num + 1}"
             else:
                 suffix = current_suffix
@@ -77,7 +78,11 @@ def bump_version(current: str, bump_type: str, suffix: Optional[str] = None) -> 
     return format_version(major, minor, patch, suffix)
 
 
-def update_file_version(file_path: Path, old_version: str, new_version: str) -> bool:
+def update_file_version(
+    file_path: Path,
+    old_version: str,  # noqa: ARG001 - kept so callers can log the transition
+    new_version: str,
+) -> bool:
     """Update version in a file."""
     if not file_path.exists():
         return False
@@ -111,16 +116,15 @@ def main():
     parser.add_argument(
         "bump_type",
         choices=["major", "minor", "patch", "prerelease"],
-        help="Type of version bump"
+        help="Type of version bump",
     )
     parser.add_argument(
-        "--suffix",
-        help="Suffix for prerelease versions (e.g., rc1, beta1, alpha1)"
+        "--suffix", help="Suffix for prerelease versions (e.g., rc1, beta1, alpha1)"
     )
     parser.add_argument(
         "--dry-run",
         action="store_true",
-        help="Show what would be changed without making changes"
+        help="Show what would be changed without making changes",
     )
 
     args = parser.parse_args()
@@ -177,10 +181,10 @@ def main():
     if not args.dry_run:
         print(f"\nSuccessfully updated {len(updated_files)} files")
         print("\nNext steps:")
-        print(f"1. Review the changes: git diff")
+        print("1. Review the changes: git diff")
         print(f"2. Commit the changes: git commit -am 'Bump version to {new_version}'")
         print(f"3. Create a tag: git tag v{new_version}")
-        print(f"4. Push changes: git push && git push --tags")
+        print("4. Push changes: git push && git push --tags")
 
     return 0
 
