@@ -83,6 +83,7 @@ class SafeICE:
         sigma0: float = 1.0,
         em_max_iter: int = 100,
         cv_tolerance: float = 0.01,
+        lambda_max: float = 0.95,
         random_state: int | np.random.Generator | None = None,
     ) -> None:
         self.g = limit_state_function
@@ -94,6 +95,7 @@ class SafeICE:
         self.N = int(N)
         self.sigma0 = float(sigma0)
         self.cv_tolerance = float(cv_tolerance)
+        self.lambda_max = float(lambda_max)
 
         # Deterministic RNG support
         if random_state is None:
@@ -314,11 +316,21 @@ class SafeICE:
         return vMFNMParameters(pi=pi, m=m, Omega=Omega, mu=mu, kappa=kappa)
 
     def _cosine_annealing_schedule(self, sigma: float, M: float) -> float:
-        """Cosine annealing schedule for lambda parameter."""
+        """Cosine annealing schedule for lambda parameter.
+
+        The raw schedule reaches exactly 1 as sigma goes to 0, which drops the
+        heavy-tailed component from the proposal altogether. That component is
+        the "safe" part of Safe-ICE: it keeps the proposal's tails heavier than
+        the target so the importance weights stay bounded. Without it a single
+        sample from the tail can carry essentially the whole estimate. The
+        result is capped at ``lambda_max`` so some heavy-tailed mass always
+        remains.
+        """
         if sigma > M:
             return 0.0
         # Return Python float to avoid numpy floating[Any]
-        return float(0.5 * (1.0 + math.cos(math.pi * sigma / M)))
+        raw = 0.5 * (1.0 + math.cos(math.pi * sigma / M))
+        return float(min(raw, self.lambda_max))
 
     # -------------------------------------------------------------------------
     # Sampling
@@ -602,9 +614,18 @@ class SafeICE:
     def _evaluate_heavy_tailed_density(
         self, samples: NDArrayF, params: vMFNMParameters
     ) -> NDArrayF:
-        """Evaluate density of the heavy-tailed component for each sample."""
+        """Evaluate density of the heavy-tailed component for each sample.
+
+        The component is written in polar form as a radial density times an
+        angular one. Converting that back to a density on R^d needs the
+        Jacobian of the polar map, ``du = r^(d-1) dr dw``, exactly as
+        :meth:`vMFNMDistribution.pdf` does. Without it the component does not
+        integrate to one, and since it is part of the importance-sampling
+        denominator every estimate is scaled by the error.
+        """
         n_samples = int(samples.shape[0])
         radii, directions = radii_and_directions(samples)
+        jacobian = radii ** (self.d - 1)
 
         # The inverse-Nakagami shape depends only on the problem dimension, so
         # it is hoisted out of the per-component loop.
@@ -628,7 +649,9 @@ class SafeICE:
                 directions, params.mu[k], float(params.kappa[k])
             )
 
-            densities += float(params.pi[k]) * radial_density * angular_density
+            densities += (
+                float(params.pi[k]) * radial_density * angular_density / jacobian
+            )
 
         return densities
 

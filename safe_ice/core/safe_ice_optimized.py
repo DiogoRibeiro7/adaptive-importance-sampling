@@ -61,6 +61,7 @@ class OptimizedSafeICE:
         enable_caching: bool = True,
         enable_parallel: bool = True,
         batch_size: int | None = None,
+        lambda_max: float = 0.95,
         random_state: int | np.random.Generator | None = None,
     ) -> None:
         """
@@ -102,6 +103,7 @@ class OptimizedSafeICE:
         self.N = int(N)
         self.sigma0 = float(sigma0)
         self.em_max_iter = int(em_max_iter)
+        self.lambda_max = float(lambda_max)
 
         # Deterministic RNG support
         if random_state is None:
@@ -536,6 +538,10 @@ class OptimizedSafeICE:
         directions = np.zeros_like(samples)
         directions[valid_mask] = samples[valid_mask] / radii[valid_mask, np.newaxis]
 
+        # See the note in the heavy-tailed density: the polar form needs the
+        # r^(d-1) Jacobian to be a density on R^d.
+        jacobian = np.maximum(radii, 1e-12) ** (self.d - 1)
+
         # For each component
         for k in range(params.K):
             # Radial density (Nakagami)
@@ -552,7 +558,9 @@ class OptimizedSafeICE:
             angular_density *= C_d
 
             # Component contribution
-            densities += float(params.pi[k]) * radial_density * angular_density
+            densities += (
+                float(params.pi[k]) * radial_density * angular_density / jacobian
+            )
 
         return densities
 
@@ -569,6 +577,11 @@ class OptimizedSafeICE:
 
         directions = np.zeros_like(samples)
         directions[valid_mask] = samples[valid_mask] / radii[valid_mask, np.newaxis]
+
+        # Polar-to-Cartesian Jacobian: du = r^(d-1) dr dw. Without it the
+        # component does not integrate to one and, since it sits in the
+        # importance-sampling denominator, biases every estimate.
+        jacobian = np.maximum(radii, 1e-12) ** (self.d - 1)
 
         # For each component
         for k in range(params.K):
@@ -590,7 +603,9 @@ class OptimizedSafeICE:
             angular_density *= C_d
 
             # Component contribution
-            densities += float(params.pi[k]) * radial_density * angular_density
+            densities += (
+                float(params.pi[k]) * radial_density * angular_density / jacobian
+            )
 
         return densities
 
@@ -615,10 +630,15 @@ class OptimizedSafeICE:
         return vMFNMParameters(pi=pi, m=m, Omega=Omega, mu=mu, kappa=kappa)
 
     def _cosine_annealing_schedule(self, sigma: float, M: float) -> float:
-        """Cosine annealing schedule for lambda parameter."""
+        """Cosine annealing schedule for lambda parameter.
+
+        Capped at ``lambda_max`` so the heavy-tailed component never leaves the
+        proposal; see the note on the same method in :class:`SafeICE`.
+        """
         if sigma > M:
             return 0.0
-        return float(0.5 * (1.0 + math.cos(math.pi * sigma / M)))
+        raw = 0.5 * (1.0 + math.cos(math.pi * sigma / M))
+        return float(min(raw, self.lambda_max))
 
     def _adapt_sigma(self, sigma: float, K_old: int, K_new: int) -> float:
         """Adapt sigma based on component evolution."""

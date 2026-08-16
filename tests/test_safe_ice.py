@@ -208,18 +208,6 @@ class TestSafeICEWithInitialParams:
 class TestBenchmarkProblems:
     """Test with benchmark problems."""
 
-    @pytest.mark.xfail(
-        strict=True,
-        reason=(
-            "Known estimator reliability gap on the paper's headline benchmark. "
-            "The reference probability is ~1.22e-5, but at this seed the "
-            "estimate is ~5e-2, four orders of magnitude high. A sweep over 12 "
-            "seeds lands inside the asserted range only 6 times, with estimates "
-            "ranging from 6e-6 to 5e-1. This test previously passed only "
-            "because an unrelated test seeded the global RNG first. Remove this "
-            "marker once the estimator is corrected."
-        ),
-    )
     def test_four_mode_series_system(self, seed):
         """Test the four-mode series system benchmark."""
         problems = BenchmarkProblems()
@@ -235,7 +223,9 @@ class TestBenchmarkProblems:
 
         pf, _results = ice.run(verbose=False)
 
-        # Reference probability is approximately 1.22e-5
+        # Crude Monte Carlo over 2e7 samples puts the reference at
+        # 5.8e-5 +/- 1.7e-6 for the default z=3.8. (An earlier comment here
+        # claimed 1.22e-5, which does not match this problem's parameters.)
         assert pf > 1e-6
         assert pf < 1e-4
 
