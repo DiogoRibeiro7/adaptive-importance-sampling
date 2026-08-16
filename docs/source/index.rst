@@ -65,8 +65,6 @@ Contents
    :caption: User Guide
 
    theory
-   algorithms
-   benchmarks
 
 .. toctree::
    :maxdepth: 2
@@ -74,16 +72,15 @@ Contents
 
    api/core
    api/distributions
-   api/optimization
-   api/problems
-   api/analysis
 
-.. toctree::
-   :maxdepth: 1
-   :caption: Development
+Development
+-----------
 
-   contributing
-   changelog
+Contribution guidelines and the changelog live in the repository:
+`CONTRIBUTING.md
+<https://github.com/DiogoRibeiro7/adaptive-importance-sampling-ice/blob/main/CONTRIBUTING.md>`_
+and `CHANGELOG.md
+<https://github.com/DiogoRibeiro7/adaptive-importance-sampling-ice/blob/main/CHANGELOG.md>`_.
 
 Indices and Tables
 ==================

@@ -3,15 +3,8 @@ Examples
 
 This section provides detailed examples of using Safe-ICE for various applications.
 
-.. toctree::
-   :maxdepth: 2
-   :caption: Examples
-
-   basic_usage
-   benchmark_problems
-   custom_problems
-   advanced_features
-   visualization
+Runnable versions of these live in the ``examples/`` directory of the
+repository.
 
 Quick Examples
 --------------
@@ -72,7 +65,7 @@ Custom Problem with Visualization
 
 .. code-block:: python
 
-   from safe_ice.analysis.visualization import VisualizationTools
+   from safe_ice.analysis.visualization import AdvancedAnalysis
 
    # Define custom problem
    def custom_g(u):
@@ -86,6 +79,6 @@ Custom Problem with Visualization
    pf, results = ice.run()
 
    # Visualize results
-   viz = VisualizationTools()
-   viz.plot_convergence(results)
-   viz.analyze_sample_distribution(results, custom_g)
+   analyzer = AdvancedAnalysis()
+   analyzer.analyze_component_evolution(results)
+   analyzer.analyze_sample_distribution(results, custom_g)

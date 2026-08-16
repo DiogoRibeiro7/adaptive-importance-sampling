@@ -47,12 +47,13 @@ html_theme_options = {
     'sticky_navigation': True,
     'includehidden': True,
     'titles_only': False,
-    'display_version': True,
     'prev_next_buttons_location': 'both',
 }
 
 # Static files
-html_static_path = ['_static']
+# No _static assets are shipped; leaving this empty avoids a
+# build warning about a missing directory.
+html_static_path = []
 
 # Autodoc settings
 autodoc_default_options = {
@@ -71,7 +72,11 @@ napoleon_include_special_with_doc = True
 napoleon_use_admonition_for_examples = True
 napoleon_use_admonition_for_notes = True
 napoleon_use_admonition_for_references = False
-napoleon_use_ivar = False
+# Render 'Attributes' sections as :ivar: fields inside the class body rather
+# than as separate attribute objects. Otherwise a dataclass that documents
+# its fields in the docstring registers each one twice, once from autodoc and
+# once from napoleon, and Sphinx warns about duplicate descriptions.
+napoleon_use_ivar = True
 napoleon_use_param = True
 napoleon_use_rtype = True
 

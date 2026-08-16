@@ -11,7 +11,10 @@ build:
 sphinx:
   configuration: docs/source/conf.py
   builder: html
-  fail_on_warning: false
+  # The build is warning-clean; keep it that way. A broken autodoc reference
+  # or a dangling toctree entry should fail the build rather than quietly
+  # publish a page with missing API documentation.
+  fail_on_warning: true
 
 formats:
   - pdf
