@@ -86,7 +86,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Known limitations
 
-Recorded as strict `xfail` tests, not silenced:
+Recorded as `xfail` tests, not silenced:
 
 - The estimator does not reliably reproduce the reference probability on the
   four-mode series benchmark (6 of 12 seeds land in range; estimates span

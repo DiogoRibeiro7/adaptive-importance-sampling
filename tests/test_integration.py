@@ -402,12 +402,15 @@ class TestEdgeCases:
         assert pf < 1e-6
 
     @pytest.mark.xfail(
-        strict=True,
+        strict=False,
         reason=(
             "Known estimator weakness: for a limit state that fails everywhere "
             "the true probability is exactly 1, but the estimate wanders well "
             "off it and across seeds can even exceed 1, which is not a valid "
-            "probability. Remove this marker once the estimator is corrected."
+            "probability. Not strict: the estimate lands either side of the "
+            "0.99 threshold depending on the platform and NumPy version, so "
+            "the outcome is not stable enough to assert either way. Remove "
+            "this marker once the estimator is corrected."
         ),
     )
     def test_certain_failure(self, seed):
