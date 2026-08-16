@@ -178,7 +178,12 @@ docstring-code-format = true
 
 # ==================== MYPY ====================
 [tool.mypy]
-python_version = "3.11"
+# Analysis targets 3.12 even though the package supports 3.11: numpy >= 2.5
+# ships stubs that use PEP 695 `type` statements, and mypy rejects those
+# outright when told to target 3.11, before it checks any of our code.
+# Ruff still lints against py311, and CI runs the test suite on 3.11, so real
+# incompatibilities are still caught.
+python_version = "3.12"
 files = ["safe_ice"]
 strict = true
 warn_unreachable = true

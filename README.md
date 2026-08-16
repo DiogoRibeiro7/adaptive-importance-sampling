@@ -220,8 +220,8 @@ safe-ice benchmark --problem four-mode
 ## Known limitations
 
 These are measured, reproducible gaps between this implementation and the
-behaviour the method should have. They are recorded as strict `xfail` tests
-rather than hidden, so they will announce themselves the moment they are fixed.
+behaviour the method should have. They are recorded as `xfail` tests rather
+than hidden, so they will announce themselves the moment they are fixed.
 
 - **Accuracy on the headline benchmark is unreliable.** On the four-mode series
   system (reference `P_F ≈ 1.22e-5`), a sweep over 12 seeds at `N=500`,
