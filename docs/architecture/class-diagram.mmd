@@ -384,6 +384,12 @@ classDiagram
     +limit_state()
   }
 
+  class TestPenalizedWeightUpdate {
+    +test_penalty_vanishes_at_uniform_weights()
+    +test_penalty_drains_small_components_into_large_ones()
+    +test_mixture_is_not_collapsed_on_the_first_step()
+  }
+
   class TestSafeICEInitialization {
     +test_basic_initialization()
     +g()
