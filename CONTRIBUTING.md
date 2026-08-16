@@ -36,61 +36,58 @@ git clone https://github.com/YOUR-USERNAME/adaptive-importance-sampling-ice.git
 cd adaptive-importance-sampling-ice
 ```
 
-### 2. Install Poetry
+### 2. Install the project
 
-This project uses Poetry for dependency management. Install it if you haven't:
-
-```bash
-pip install poetry
-```
-
-or follow the official installation guide: https://python-poetry.org/docs/#installation
-
-### 3. Install Dependencies
-
-Install the project and its dependencies:
+Safe-ICE needs Python 3.11 or newer. Development dependencies live in a PEP 735
+group, so any modern installer works:
 
 ```bash
-poetry install
+python -m venv .venv
+source .venv/bin/activate        # Windows: .venv\Scripts\activate
+
+pip install -e .
+pip install --group dev          # requires pip >= 25.1
 ```
 
-This will create a virtual environment and install all required dependencies.
-
-### 4. Install Pre-commit Hooks
-
-We use pre-commit hooks to ensure code quality:
+Alternatively, with `uv`:
 
 ```bash
-poetry run pre-commit install
+uv sync --group dev
 ```
 
-This will automatically run formatters and linters before each commit.
+Poetry also works if you prefer it (`poetry install --with dev`); the project
+keeps a `poetry.lock` for reproducible environments.
 
-### 5. Verify Installation
+### 3. Install Pre-commit Hooks
 
-Run the tests to ensure everything is working:
+We use pre-commit hooks to keep formatting and typing consistent:
 
 ```bash
-poetry run pytest
+pre-commit install
 ```
+
+They run ruff and mypy before each commit.
+
+### 4. Verify Installation
+
+```bash
+pytest
+```
+
+`pytest` skips tests marked `slow`. Run the whole suite with `pytest -m ""`.
 
 ## Code Style
 
 We maintain strict code quality standards:
 
-### Formatting
-- **Black**: Code formatter with line length 88
-- **isort**: Import sorting, Black-compatible
-- Run: `poetry run black .` and `poetry run isort .`
-
-### Linting
-- **ruff**: Fast Python linter
-- Run: `poetry run ruff check .`
+### Formatting and linting
+- **ruff** handles both, replacing black, isort and flake8. Line length is 88.
+- Run: `ruff format .` then `ruff check --fix .`
+- CI runs `ruff check .` and `ruff format --check .`; both must be clean.
 
 ### Type Checking
-- **mypy**: Static type checking in strict mode
-- All functions must have type hints
-- Run: `poetry run mypy safe_ice`
+- **mypy** in strict mode. All functions must have type hints.
+- Run: `mypy` (the files it checks are configured in `pyproject.toml`).
 
 ### Documentation
 - All public functions/classes must have docstrings
@@ -102,8 +99,7 @@ We maintain strict code quality standards:
 
 ```python
 def estimate_failure_probability(
-    self,
-    initial_params: Optional[vMFNMParameters] = None
+    self, initial_params: Optional[vMFNMParameters] = None
 ) -> Tuple[float, NDArrayF, NDArrayF]:
     """Estimate failure probability using Safe-ICE algorithm.
 
@@ -136,23 +132,23 @@ def estimate_failure_probability(
 
 Run all tests:
 ```bash
-poetry run pytest
+pytest
 ```
 
 Run with coverage:
 ```bash
-poetry run pytest --cov=safe_ice --cov-report=html
+pytest --cov=safe_ice --cov-report=html
 ```
 
 Run specific test file:
 ```bash
-poetry run pytest tests/test_distributions.py
+pytest tests/test_distributions.py
 ```
 
 Run with markers:
 ```bash
-poetry run pytest -m "not slow"  # Skip slow tests
-poetry run pytest -m integration  # Run only integration tests
+pytest              # Skips slow tests by default
+pytest -m integration  # Run only integration tests
 ```
 
 ### Writing Tests
@@ -169,8 +165,10 @@ import pytest
 import numpy as np
 from safe_ice import SafeICE
 
+
 def test_safe_ice_dimension():
     """Test SafeICE respects dimension parameter."""
+
     def g(u):
         return 3.5 - np.linalg.norm(u, axis=-1)
 
@@ -241,11 +239,10 @@ Then create a pull request on GitHub:
 ### 5. Pull Request Checklist
 
 Before submitting:
-- [ ] Tests pass locally (`poetry run pytest`)
-- [ ] Code is formatted (`poetry run black .`)
-- [ ] Imports are sorted (`poetry run isort .`)
-- [ ] Linting passes (`poetry run ruff check .`)
-- [ ] Type checking passes (`poetry run mypy safe_ice`)
+- [ ] Tests pass locally (`pytest`)
+- [ ] Code is formatted (`ruff format .`)
+- [ ] Linting passes (`ruff check .`)
+- [ ] Type checking passes (`mypy`)
 - [ ] Documentation is updated
 - [ ] CHANGELOG.md is updated (for significant changes)
 

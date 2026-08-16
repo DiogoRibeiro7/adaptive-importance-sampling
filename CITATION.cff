@@ -1,0 +1,42 @@
+cff-version: 1.2.0
+title: "Safe-ICE: Safe Cross-Entropy-Based Importance Sampling for rare event simulation"
+message: >-
+  If you use this software, please cite both the software itself and the
+  paper describing the underlying method.
+type: software
+authors:
+  - given-names: Diogo
+    family-names: Ribeiro
+    email: dfr@esmad.ipp.pt
+    affiliation: ESMAD, Instituto Politécnico do Porto
+repository-code: "https://github.com/DiogoRibeiro7/adaptive-importance-sampling-ice"
+abstract: >-
+  A Python implementation of the Safe Cross-Entropy-Based Importance Sampling
+  (Safe-ICE) algorithm for estimating small failure probabilities in
+  reliability analysis, including the von Mises-Fisher-Nakagami mixture model,
+  a penalized EM optimizer for automatic component selection, and heavy-tailed
+  exploration via the inverse Nakagami distribution.
+keywords:
+  - importance sampling
+  - rare event simulation
+  - reliability analysis
+  - Monte Carlo
+  - cross-entropy method
+  - structural reliability
+license: MIT
+version: 0.1.0
+references:
+  - type: article
+    title: >-
+      Safe Cross-Entropy-Based Importance Sampling for Rare Event Simulations
+    authors:
+      - given-names: Zhiwei
+        family-names: Gao
+      - given-names: George
+        family-names: Karniadakis
+    year: 2025
+    journal: arXiv
+    identifiers:
+      - type: other
+        value: "arXiv:2509.07160"
+    url: "https://arxiv.org/abs/2509.07160"

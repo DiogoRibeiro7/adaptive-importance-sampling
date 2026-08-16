@@ -1,5 +1,6 @@
 """Sphinx configuration file for Safe-ICE documentation."""
 
+import importlib.metadata
 import os
 import sys
 from datetime import datetime
@@ -9,10 +10,16 @@ sys.path.insert(0, os.path.abspath('../..'))
 
 # Project information
 project = 'Safe-ICE'
-copyright = f'{datetime.now().year}, Safe-ICE Contributors'
-author = 'Safe-ICE Contributors'
-release = '0.1.0'
-version = '0.1.0'
+copyright = f'{datetime.now().year}, Diogo Ribeiro'
+author = 'Diogo Ribeiro'
+
+# Read the version from the installed package so it is stated once, in
+# pyproject.toml, rather than duplicated here.
+try:
+    release = importlib.metadata.version('safe-ice')
+except importlib.metadata.PackageNotFoundError:
+    release = '0.0.0.dev0'
+version = release
 
 # Extensions
 extensions = [

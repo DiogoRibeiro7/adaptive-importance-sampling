@@ -1,198 +1,124 @@
-# Makefile for Safe-ICE development
+# Makefile for Safe-ICE development.
+#
+# Targets assume the package is installed in the active environment:
+#   pip install -e . && pip install --group dev
 
-.PHONY: help install test lint format docs clean build publish docker
+.PHONY: help install dev-setup test test-all test-slow lint format typecheck \
+        check coverage docs docs-serve clean build docker demo examples
 
-# Variables
-PYTHON := python
-POETRY := poetry
-PACKAGE := safe_ice
+PYTHON      := python
+PACKAGE     := safe_ice
 DOCKER_IMAGE := safe-ice
-DOCKER_TAG := latest
+DOCKER_TAG  := latest
 
-# Default target
 help:
-	@echo "Safe-ICE Development Makefile"
+	@echo "Safe-ICE development targets"
 	@echo ""
-	@echo "Available targets:"
-	@echo "  install    Install package and dependencies"
-	@echo "  test       Run tests with coverage"
-	@echo "  lint       Run linting and type checking"
-	@echo "  format     Format code with black and isort"
-	@echo "  docs       Build documentation"
-	@echo "  clean      Clean build artifacts"
-	@echo "  build      Build distribution packages"
-	@echo "  publish    Publish to PyPI"
-	@echo "  docker     Build Docker image"
+	@echo "  install     Install the package and dev dependencies"
+	@echo "  dev-setup   install + install pre-commit hooks"
 	@echo ""
-	@echo "Development workflow:"
-	@echo "  make install  # Set up development environment"
-	@echo "  make test     # Run tests"
-	@echo "  make format   # Format code"
-	@echo "  make lint     # Check code quality"
+	@echo "  test        Run the fast test suite (skips 'slow' tests)"
+	@echo "  test-all    Run every test, including slow ones"
+	@echo "  coverage    Run tests and write an HTML coverage report"
+	@echo ""
+	@echo "  lint        Check style with ruff"
+	@echo "  format      Reformat with ruff"
+	@echo "  typecheck   Run mypy"
+	@echo "  check       format + lint + typecheck + test-all"
+	@echo ""
+	@echo "  docs        Build the Sphinx documentation"
+	@echo "  build       Build the sdist and wheel"
+	@echo "  clean       Remove build and cache artifacts"
 
-# Installation
+# ---------------------------------------------------------------- environment
+
 install:
-	@echo "Installing Safe-ICE and dependencies..."
-	$(POETRY) install --with dev,docs
+	$(PYTHON) -m pip install -e .
+	$(PYTHON) -m pip install --group dev
 
-install-all:
-	@echo "Installing Safe-ICE with all extras..."
-	$(POETRY) install --with dev,docs --all-extras
+dev-setup: install
+	pre-commit install
+	@echo "Development environment ready."
 
-# Testing
+# --------------------------------------------------------------------- tests
+
 test:
-	@echo "Running tests..."
-	$(POETRY) run pytest tests/ -v --cov=$(PACKAGE) --cov-report=term --cov-report=html
+	pytest
 
-test-quick:
-	@echo "Running quick tests..."
-	$(POETRY) run pytest tests/ -v -m "not slow"
+test-all:
+	pytest -m ""
 
-test-integration:
-	@echo "Running integration tests..."
-	$(POETRY) run pytest tests/test_integration.py -v
+test-slow:
+	pytest -m slow
 
-benchmark:
-	@echo "Running benchmarks..."
-	$(POETRY) run python examples/performance_benchmark.py
+coverage:
+	pytest -m "" --cov=$(PACKAGE) --cov-report=term-missing --cov-report=html
+	@echo "Coverage report written to htmlcov/index.html"
 
-# Code Quality
+# ------------------------------------------------------------- code quality
+
 lint:
-	@echo "Running linters..."
-	$(POETRY) run ruff check $(PACKAGE)
-	$(POETRY) run mypy $(PACKAGE) --strict
+	ruff check .
+	ruff format --check .
 
 format:
-	@echo "Formatting code..."
-	$(POETRY) run black $(PACKAGE) tests examples
-	$(POETRY) run isort $(PACKAGE) tests examples
+	ruff check --fix .
+	ruff format .
 
-check: format lint test
-	@echo "All checks passed!"
+typecheck:
+	mypy
 
-# Documentation
+check: format lint typecheck test-all
+	@echo "All checks passed."
+
+# ---------------------------------------------------------------------- docs
+
 docs:
-	@echo "Building documentation..."
-	cd docs && $(MAKE) clean && $(MAKE) html
+	$(MAKE) -C docs clean
+	$(MAKE) -C docs html
 	@echo "Documentation built at docs/build/html/index.html"
 
-docs-serve:
-	@echo "Serving documentation..."
+docs-serve: docs
 	cd docs/build/html && $(PYTHON) -m http.server 8000
 
-docs-watch:
-	@echo "Watching documentation for changes..."
-	$(POETRY) run sphinx-autobuild docs/source docs/build/html
+# ------------------------------------------------------------------ packaging
 
-# Building
 clean:
-	@echo "Cleaning build artifacts..."
 	rm -rf dist/ build/ *.egg-info
-	rm -rf .pytest_cache .ruff_cache .mypy_cache
-	rm -rf htmlcov/ .coverage
+	rm -rf .pytest_cache .ruff_cache .mypy_cache .benchmarks
+	rm -rf htmlcov/ .coverage coverage.xml
 	find . -type d -name __pycache__ -exec rm -rf {} + 2>/dev/null || true
 	find . -type f -name "*.pyc" -delete
 
 build: clean
-	@echo "Building distribution packages..."
-	$(POETRY) build
-	@echo "Checking packages..."
-	$(POETRY) run twine check dist/*
+	$(PYTHON) -m pip install --upgrade build twine
+	$(PYTHON) -m build
+	$(PYTHON) -m twine check --strict dist/*
 
-# Publishing
-publish-test: build
-	@echo "Publishing to Test PyPI..."
-	$(POETRY) run twine upload --repository testpypi dist/*
+# Releases are cut by tagging; see .github/workflows/release.yml.
+# Bump the version with: python scripts/pyproject_editor.py bump-version patch
 
-publish: build
-	@echo "Publishing to PyPI..."
-	@echo "Are you sure? This will upload to the real PyPI! [y/N]"
-	@read -r REPLY; \
-	if [ "$$REPLY" = "y" ] || [ "$$REPLY" = "Y" ]; then \
-		$(POETRY) run twine upload dist/*; \
-	else \
-		echo "Aborted."; \
-	fi
+# -------------------------------------------------------------------- docker
 
-# Docker
-docker-build:
-	@echo "Building Docker image..."
+docker:
 	docker build -t $(DOCKER_IMAGE):$(DOCKER_TAG) .
 
-docker-run:
-	@echo "Running Docker container..."
+docker-run: docker
 	docker run --rm -it $(DOCKER_IMAGE):$(DOCKER_TAG)
 
 docker-jupyter:
-	@echo "Building Jupyter Docker image..."
 	docker build -f Dockerfile.jupyter -t $(DOCKER_IMAGE)-jupyter:$(DOCKER_TAG) .
-	@echo "Starting Jupyter Lab..."
 	docker run --rm -p 8888:8888 $(DOCKER_IMAGE)-jupyter:$(DOCKER_TAG)
 
 docker-docs:
-	@echo "Building docs Docker image..."
 	docker build -f Dockerfile.docs -t $(DOCKER_IMAGE)-docs:$(DOCKER_TAG) .
-	@echo "Serving documentation..."
 	docker run --rm -p 8000:8000 $(DOCKER_IMAGE)-docs:$(DOCKER_TAG)
 
-docker-compose-up:
-	@echo "Starting all services with docker-compose..."
-	docker-compose up -d
-
-docker-compose-down:
-	@echo "Stopping all services..."
-	docker-compose down
-
-# Version Management
-version-patch:
-	@echo "Bumping patch version..."
-	$(PYTHON) scripts/bump_version.py patch
-
-version-minor:
-	@echo "Bumping minor version..."
-	$(PYTHON) scripts/bump_version.py minor
-
-version-major:
-	@echo "Bumping major version..."
-	$(PYTHON) scripts/bump_version.py major
-
-# Development Helpers
-dev-setup: install
-	@echo "Setting up development environment..."
-	$(POETRY) run pre-commit install
-	@echo "Development environment ready!"
-
-examples:
-	@echo "Running example scripts..."
-	$(POETRY) run python examples/basic_usage.py
-	$(POETRY) run python examples/high_dimensional.py
+# ------------------------------------------------------------------- running
 
 demo:
-	@echo "Running Safe-ICE demo..."
-	$(POETRY) run safe-ice demo
+	safe-ice demo
 
-# CI/CD Helpers
-ci-test:
-	@echo "Running CI tests..."
-	$(POETRY) run pytest tests/ -v --cov=$(PACKAGE) --cov-report=xml --cov-report=term
-
-ci-lint:
-	@echo "Running CI linting..."
-	$(POETRY) run ruff check $(PACKAGE) --format=github
-	$(POETRY) run mypy $(PACKAGE)
-
-# Release Process
-release: check build
-	@echo "Preparing release..."
-	@echo "1. Update CHANGELOG.md"
-	@echo "2. Bump version: make version-[patch|minor|major]"
-	@echo "3. Commit changes"
-	@echo "4. Tag release: git tag v0.1.0"
-	@echo "5. Push: git push && git push --tags"
-	@echo "6. Publish: make publish"
-	@echo ""
-	@echo "See scripts/release_checklist.md for detailed instructions"
-
-.PHONY: all
-all: clean install test lint docs build
-	@echo "Full build completed successfully!"
+examples:
+	$(PYTHON) examples/basic_usage.py
+	$(PYTHON) examples/high_dimensional.py
