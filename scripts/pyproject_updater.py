@@ -44,7 +44,16 @@ from urllib.parse import urlparse
 
 import tomlkit
 from packaging.requirements import Requirement
+from packaging.specifiers import SpecifierSet
 from packaging.version import InvalidVersion, Version
+
+
+@dataclass(frozen=True)
+class ReleaseInfo:
+    """What we need to know about one release on PyPI."""
+
+    usable: bool  # False when every distribution of the release is yanked
+    requires_python: str | None  # the release's own Python requirement
 
 
 @dataclass(frozen=True)
@@ -84,11 +93,26 @@ def _write_or_diff(path: Path, before: str, after: str, check: bool) -> int:
 
 
 def _layout(doc) -> str:
-    # Prefer Poetry if both exist
-    if "tool" in doc and isinstance(doc["tool"], dict) and "poetry" in doc["tool"]:
+    """Return which layout actually declares the dependencies.
+
+    Poetry 2.x projects commonly have both tables: [project] carries the
+    metadata while [tool.poetry] is reduced to build settings such as
+    `packages`. Preferring [tool.poetry] on sight would then find no
+    dependencies at all and silently do nothing, so it only wins when it
+    really does declare them.
+    """
+    tool = doc.get("tool")
+    poetry = tool.get("poetry") if isinstance(tool, dict) else None
+    poetry_declares_deps = isinstance(poetry, dict) and any(
+        key in poetry for key in ("dependencies", "dev-dependencies", "group")
+    )
+
+    if poetry_declares_deps:
         return "poetry"
-    if "project" in doc:
+    if doc.get("project") is not None:
         return "pep621"
+    if poetry is not None:
+        return "poetry"
     raise ValueError(
         "Unsupported pyproject: neither [tool.poetry] nor [project] found."
     )
@@ -105,8 +129,8 @@ def _normalize_pkg_name(name: str) -> str:
     return base.lower().replace("_", "-").replace(".", "-")
 
 
-def _fetch_pypi_versions(name: str, timeout: float) -> dict[str, bool]:
-    """Return ``{version_str: is_yanked}`` for package *name* from PyPI."""
+def _fetch_pypi_versions(name: str, timeout: float) -> dict[str, ReleaseInfo]:
+    """Return ``{version_str: ReleaseInfo}`` for package *name* from PyPI."""
     url = f"https://pypi.org/pypi/{_normalize_pkg_name(name)}/json"
     try:
         parsed = urlparse(url)
@@ -122,26 +146,75 @@ def _fetch_pypi_versions(name: str, timeout: float) -> dict[str, bool]:
     ):
         return {}
 
-    versions: dict[str, bool] = {}
+    versions: dict[str, ReleaseInfo] = {}
     releases = data.get("releases", {}) or {}
     for ver_str, files in releases.items():
         # files is a list of distributions; consider version yanked if all files are yanked
         if not isinstance(files, list) or len(files) == 0:
             continue
-        all_yanked = all(
-            bool(f.get("yanked", False)) for f in files if isinstance(f, dict)
+        dists = [f for f in files if isinstance(f, dict)]
+        all_yanked = all(bool(f.get("yanked", False)) for f in dists)
+        # Every distribution of a release carries the same requires_python.
+        requires_python = next(
+            (f.get("requires_python") for f in dists if f.get("requires_python")),
+            None,
         )
-        versions[ver_str] = not all_yanked
+        versions[ver_str] = ReleaseInfo(
+            usable=not all_yanked, requires_python=requires_python
+        )
     return versions
 
 
+def _supported_python_versions(doc) -> list[str]:
+    """List the Python minor versions this project claims to support.
+
+    A candidate release is only usable if it installs on *every* one of them;
+    otherwise the constraint we write would be unsatisfiable for part of our
+    own supported range.
+    """
+    spec_str = None
+    project = doc.get("project")
+    if isinstance(project, dict):
+        spec_str = project.get("requires-python")
+    if not spec_str:
+        tool = doc.get("tool")
+        poetry = tool.get("poetry") if isinstance(tool, dict) else None
+        if isinstance(poetry, dict):
+            deps = poetry.get("dependencies")
+            if isinstance(deps, dict):
+                spec_str = deps.get("python")
+    if not spec_str:
+        return []
+    try:
+        spec = SpecifierSet(str(spec_str))
+    except Exception:
+        return []
+    return [f"3.{minor}" for minor in range(6, 40) if spec.contains(f"3.{minor}")]
+
+
+def _release_supports(info: ReleaseInfo, python_versions: Iterable[str]) -> bool:
+    """True if the release installs on every Python version we support."""
+    if not info.requires_python:
+        return True
+    try:
+        spec = SpecifierSet(info.requires_python)
+    except Exception:
+        return True
+    return all(spec.contains(pv) for pv in python_versions)
+
+
 def _select_latest_version(
-    versions: dict[str, bool], include_prerelease: bool
+    versions: dict[str, ReleaseInfo],
+    include_prerelease: bool,
+    python_versions: Iterable[str] = (),
 ) -> Version | None:
     """Pick the highest non-yanked Version. If include_prerelease=False, prefer finals."""
+    python_versions = list(python_versions)
     valid: list[Version] = []
-    for ver_str, not_yanked in versions.items():
-        if not not_yanked:
+    for ver_str, info in versions.items():
+        if not info.usable:
+            continue
+        if python_versions and not _release_supports(info, python_versions):
             continue
         try:
             v = Version(ver_str)
@@ -281,7 +354,7 @@ def _iter_poetry_deps(doc, groups: Iterable[str]) -> Iterable[DepRef]:
 
 
 def _iter_pep621_deps(doc, groups: Iterable[str]) -> Iterable[DepRef]:
-    project = doc.setdefault("project", tomlkit.table())
+    project = doc.get("project") or tomlkit.table()
     groups_set = set(groups)
 
     def emit_from_array(arr, group: str):
@@ -300,18 +373,27 @@ def _iter_pep621_deps(doc, groups: Iterable[str]) -> Iterable[DepRef]:
 
     # main deps
     if not groups_set or "main" in groups_set:
-        arr = project.setdefault("dependencies", tomlkit.array())
-        emit = list(emit_from_array(arr, "main"))
-        yield from emit
+        arr = project.get("dependencies")
+        if arr is not None:
+            yield from emit_from_array(arr, "main")
 
-    # optional groups
-    opt = project.setdefault("optional-dependencies", tomlkit.table())
+    # extras: [project.optional-dependencies]
+    opt = project.get("optional-dependencies")
     if isinstance(opt, dict):
         for gname, arr in opt.items():
             if groups_set and gname not in groups_set:
                 continue
-            emit = list(emit_from_array(arr, gname))
-            yield from emit
+            yield from emit_from_array(arr, gname)
+
+    # development groups: [dependency-groups] (PEP 735). Dev dependencies live
+    # here rather than in optional-dependencies, since they are not shipped
+    # with the package.
+    dep_groups = doc.get("dependency-groups")
+    if isinstance(dep_groups, dict):
+        for gname, arr in dep_groups.items():
+            if groups_set and gname not in groups_set:
+                continue
+            yield from emit_from_array(arr, gname)
 
 
 def _set_dep_spec(dep: DepRef, new_spec: str):
@@ -333,7 +415,9 @@ def _set_dep_spec(dep: DepRef, new_spec: str):
             name = req.name
             extras = f"[{','.join(sorted(req.extras))}]" if req.extras else ""
             markers = f"; {req.marker}" if req.marker else ""
-            arr[idx] = f"{name}{extras} {new_spec}{markers}".strip()
+            # No space before the specifier, matching the style already used in
+            # pyproject.toml, so upgrades produce a minimal diff.
+            arr[idx] = f"{name}{extras}{new_spec}{markers}".strip()
 
 
 # ---------- Main upgrade routine ----------
@@ -346,6 +430,11 @@ def upgrade(pyproject: Path, opts: Options) -> int:
     # Which groups to consider by default
     groups = opts.groups or ["main", "dev"]  # include Poetry dev by default
     only_norm = {_normalize_pkg_name(n) for n in (opts.only or [])}
+
+    # Never propose a version that cannot be installed across the whole Python
+    # range this project supports; the resulting constraint would be
+    # unsatisfiable and the lock file could not be resolved.
+    python_versions = _supported_python_versions(doc)
 
     # Iterate deps
     iterator = _iter_poetry_deps if layout == "poetry" else _iter_pep621_deps
@@ -362,7 +451,9 @@ def upgrade(pyproject: Path, opts: Options) -> int:
         # Respect-major check (heuristic against crossing major caps)
         # We perform check after we fetch latest.
         versions = _fetch_pypi_versions(dep.name, opts.timeout)
-        latest = _select_latest_version(versions, opts.include_prerelease)
+        latest = _select_latest_version(
+            versions, opts.include_prerelease, python_versions
+        )
         if latest is None:
             continue
 
