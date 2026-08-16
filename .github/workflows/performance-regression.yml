@@ -63,6 +63,9 @@ jobs:
         with:
           name: pr-benchmarks
           path: .benchmarks/
+          # .benchmarks is a dot-directory and upload-artifact skips hidden
+          # files by default, which silently produced an empty artifact.
+          include-hidden-files: true
           if-no-files-found: error
           retention-days: 30
 
@@ -115,6 +118,9 @@ jobs:
         with:
           name: base-benchmarks
           path: .benchmarks/
+          # .benchmarks is a dot-directory and upload-artifact skips hidden
+          # files by default, which silently produced an empty artifact.
+          include-hidden-files: true
           if-no-files-found: error
           retention-days: 30
 
