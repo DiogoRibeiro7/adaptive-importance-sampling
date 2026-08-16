@@ -16,15 +16,15 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: Dependency Review (PRs/Merge Group)
         if: github.event_name == 'pull_request' || github.event_name == 'merge_group'
-        uses: actions/dependency-review-action@v4
+        uses: actions/dependency-review-action@v5
 
       - name: Dependency Review (Push)
         if: github.event_name == 'push' && github.event.before != ''
-        uses: actions/dependency-review-action@v4
+        uses: actions/dependency-review-action@v5
         with:
           base-ref: ${{ github.event.before }}
           head-ref: ${{ github.sha }}
