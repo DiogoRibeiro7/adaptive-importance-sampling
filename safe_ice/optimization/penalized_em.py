@@ -3,16 +3,13 @@
 
 from __future__ import annotations
 
-from typing import Tuple
-
-import math
 import numpy as np
 import numpy.typing as npt
-from scipy.special import iv, ive, gamma
 
 from ..core.parameters import vMFNMParameters
-from ..distributions.nakagami import NakagamiDistribution
+from ..distributions._numeric import vmf_pdf_batch
 from ..distributions.mixture import vMFNMDistribution
+from ..distributions.nakagami import NakagamiDistribution
 
 NDArrayF = npt.NDArray[np.float64]
 
@@ -20,7 +17,9 @@ NDArrayF = npt.NDArray[np.float64]
 class PenalizedEMOptimizer:
     """Penalized EM algorithm for automatic component selection."""
 
-    def __init__(self, max_em_iterations: int = 100, em_tolerance: float = 1e-6) -> None:
+    def __init__(
+        self, max_em_iterations: int = 100, em_tolerance: float = 1e-6
+    ) -> None:
         self.max_em_iterations = int(max_em_iterations)
         self.em_tolerance = float(em_tolerance)
 
@@ -30,7 +29,7 @@ class PenalizedEMOptimizer:
         weights: NDArrayF,
         initial_params: vMFNMParameters,
         beta_init: float = 1.0,
-    ) -> Tuple[vMFNMParameters, int]:
+    ) -> tuple[vMFNMParameters, int]:
         """
         Fit vMFNM mixture using penalized EM.
 
@@ -43,7 +42,7 @@ class PenalizedEMOptimizer:
         Returns:
             (optimized_params, final_K)
         """
-        n, d = data.shape
+        _n, _d = data.shape
         params = self._copy_parameters(initial_params)
         beta: float = float(beta_init)
         K: int = int(params.K)
@@ -94,36 +93,44 @@ class PenalizedEMOptimizer:
         radii: NDArrayF,
         directions: NDArrayF,
         params: vMFNMParameters,
-        weights: NDArrayF,
+        weights: NDArrayF,  # noqa: ARG002 - applied in the M-step, not here
     ) -> NDArrayF:
-        """E-step: compute posterior responsibilities."""
+        """E-step: compute posterior responsibilities.
+
+        ``weights`` is accepted for symmetry with :meth:`_penalized_m_step`,
+        which is where importance weighting is actually applied.
+        """
         n = int(data.shape[0])
         K = int(params.K)
-        responsibilities: NDArrayF = np.zeros((n, K), dtype=np.float64)
 
-        for i in range(n):
-            r: float = float(radii[i])
-            a: NDArrayF = directions[i]
+        # Component likelihoods for every sample at once: one vectorised pass
+        # per component instead of a scalar pdf call per (sample, component).
+        comp_like: NDArrayF = np.zeros((n, K), dtype=np.float64)
+        for k in range(K):
+            nak_pdf: NDArrayF = np.asarray(
+                NakagamiDistribution.pdf(
+                    radii, float(params.m[k]), float(params.Omega[k])
+                ),
+                dtype=np.float64,
+            )
+            vmf_pdf: NDArrayF = self._vmf_pdf_many(
+                directions, params.mu[k], float(params.kappa[k])
+            )
+            comp_like[:, k] = float(params.pi[k]) * nak_pdf * vmf_pdf
 
-            # Component likelihoods
-            comp_like: NDArrayF = np.zeros(K, dtype=np.float64)
-            for k in range(K):
-                # Many pdfs are typed for arrays; pass 1-D array and extract scalar.
-                r_arr: NDArrayF = np.asarray([r], dtype=np.float64)
-                nak_pdf_arr: NDArrayF = np.asarray(
-                    NakagamiDistribution.pdf(r_arr, float(params.m[k]), float(params.Omega[k])),
-                    dtype=np.float64,
-                )
-                nakagami_pdf: float = float(nak_pdf_arr[0])
+        totals: NDArrayF = comp_like.sum(axis=1)
+        degenerate = totals <= 1e-15
 
-                vmf_pdf: float = self._vmf_pdf_single(a, params.mu[k], float(params.kappa[k]))
-                comp_like[k] = float(params.pi[k]) * nakagami_pdf * vmf_pdf
-
-            total_like: float = float(np.sum(comp_like))
-            if total_like > 1e-15:
-                responsibilities[i, :] = comp_like / total_like
-            else:
-                responsibilities[i, :] = 1.0 / float(K)
+        responsibilities: NDArrayF = np.empty((n, K), dtype=np.float64)
+        # Samples with negligible likelihood under every component fall back to
+        # a uniform assignment rather than dividing by ~0.
+        np.divide(
+            comp_like,
+            totals[:, None],
+            out=responsibilities,
+            where=~degenerate[:, None],
+        )
+        responsibilities[degenerate] = 1.0 / float(K)
 
         # Weighting by importance weights is done in M-step via weighted_resp
         return responsibilities
@@ -140,10 +147,10 @@ class PenalizedEMOptimizer:
         weights: NDArrayF,
         params: vMFNMParameters,
         beta: float,
-    ) -> Tuple[vMFNMParameters, int]:
+    ) -> tuple[vMFNMParameters, int]:
         """Penalized M-step with automatic component removal."""
-        n, d = data.shape
-        K = int(params.K)
+        _n, d = data.shape
+        int(params.K)
 
         # Weighted responsibilities
         weighted_resp: NDArrayF = (responsibilities * weights[:, np.newaxis]).astype(
@@ -226,8 +233,11 @@ class PenalizedEMOptimizer:
         # Normalize factor (total_weight/total_weight == 1), kept explicit for clarity
         norm_factor: float = 1.0
         for k in range(K):
-            penalty_term[k] = float(beta) * norm_factor * float(old_pi[k]) * (
-                float(np.log(max(float(old_pi[k]), 1e-15))) - float(entropy_current)
+            penalty_term[k] = (
+                float(beta)
+                * norm_factor
+                * float(old_pi[k])
+                * (float(np.log(max(float(old_pi[k]), 1e-15))) - float(entropy_current))
             )
 
         new_pi: NDArrayF = (pi_em + penalty_term).astype(np.float64, copy=False)
@@ -244,7 +254,7 @@ class PenalizedEMOptimizer:
 
     def _update_nakagami_parameters(
         self, radii: NDArrayF, responsibilities: NDArrayF
-    ) -> Tuple[float, float]:
+    ) -> tuple[float, float]:
         """Update Nakagami parameters using method of moments."""
         sum_resp: float = float(np.sum(responsibilities))
 
@@ -252,14 +262,14 @@ class PenalizedEMOptimizer:
             return 1.0, 1.0
 
         # Weighted moments
-        mean_r2: float = float(np.sum(responsibilities * (radii ** 2)) / sum_resp)
-        mean_r4: float = float(np.sum(responsibilities * (radii ** 4)) / sum_resp)
+        mean_r2: float = float(np.sum(responsibilities * (radii**2)) / sum_resp)
+        mean_r4: float = float(np.sum(responsibilities * (radii**4)) / sum_resp)
 
-        if mean_r4 <= mean_r2 ** 2:
+        if mean_r4 <= mean_r2**2:
             return 1.0, mean_r2
 
         # Method-of-moments estimators
-        m_est: float = float((mean_r2 ** 2) / (mean_r4 - mean_r2 ** 2))
+        m_est: float = float((mean_r2**2) / (mean_r4 - mean_r2**2))
         Omega_est: float = float(mean_r2)
 
         # Ensure valid parameters
@@ -270,7 +280,7 @@ class PenalizedEMOptimizer:
 
     def _update_vmf_parameters(
         self, directions: NDArrayF, responsibilities: NDArrayF
-    ) -> Tuple[NDArrayF, float]:
+    ) -> tuple[NDArrayF, float]:
         """Update von Mises-Fisher parameters."""
         d = int(directions.shape[1])
         sum_resp: float = float(np.sum(responsibilities))
@@ -305,55 +315,29 @@ class PenalizedEMOptimizer:
         if d == 2:
             # Circular case: approximations for kappa(R)
             if R < 0.53:
-                return float(2.0 * R + R ** 3 + 5.0 * (R ** 5) / 6.0)
+                return float(2.0 * R + R**3 + 5.0 * (R**5) / 6.0)
             elif R < 0.85:
                 return float(-0.4 + 1.39 * R + 0.43 / (1.0 - R))
             else:
-                denom = R ** 3 - 4.0 * R ** 2 + 3.0 * R
+                denom = R**3 - 4.0 * R**2 + 3.0 * R
                 if abs(denom) < 1e-12:
                     return 1_000.0
                 return float(1.0 / denom)
         else:
             # Higher dimensions: Banerjee et al. style approximation
-            return float(R * (d - R ** 2) / (1.0 - R ** 2))
+            return float(R * (d - R**2) / (1.0 - R**2))
 
     # -------------------------------------------------------------------------
     # Utilities
     # -------------------------------------------------------------------------
     def _vmf_pdf_single(self, x: NDArrayF, mu: NDArrayF, kappa: float) -> float:
         """von Mises–Fisher PDF for a single point w.r.t. surface area measure."""
-        d = int(x.shape[0])
+        x_arr: NDArrayF = np.asarray(x, dtype=np.float64).reshape(1, -1)
+        return float(self._vmf_pdf_many(x_arr, mu, kappa)[0])
 
-        if float(kappa) == 0.0:
-            # Uniform density on S^{d-1}: 1 / surface_area
-            surface_area: float = float(
-                2.0 * (math.pi ** (d / 2.0)) / float(gamma(d / 2.0))
-            )
-            return 1.0 / surface_area
-
-        nu: float = float(d / 2.0 - 1.0)
-
-        # Use exponentially-scaled Bessel to avoid overflow for large κ
-        ive_val: float = float(ive(nu, kappa))
-        if ive_val <= 0.0 or not np.isfinite(ive_val):
-            return 0.0
-
-        log_C = (
-            nu * float(np.log(kappa))
-            - (d / 2.0) * float(np.log(2.0 * math.pi))
-            - float(np.log(ive_val))
-            - float(kappa)
-        )
-        dot_val: float = float(np.dot(x, mu))
-        log_pdf = log_C + float(kappa) * dot_val
-
-        if not np.isfinite(log_pdf):
-            return 0.0
-        if log_pdf < -745.0:
-            return 0.0
-        if log_pdf > 700.0:
-            return float(np.exp(700.0))
-        return float(np.exp(log_pdf))
+    def _vmf_pdf_many(self, X: NDArrayF, mu: NDArrayF, kappa: float) -> NDArrayF:
+        """von Mises–Fisher PDF for a batch of unit rows w.r.t. surface area measure."""
+        return vmf_pdf_batch(X, mu, kappa)
 
     def _update_beta(self, params: vMFNMParameters, beta: float, K: int) -> float:
         """Update penalty parameter beta (simple adaptive heuristic)."""
@@ -368,7 +352,8 @@ class PenalizedEMOptimizer:
         # Heuristic terms
         # Encourage spreading when weights are peaky (max_pi large, min_pi small)
         term1: float = float(
-            (1.0 / float(K)) * np.sum(
+            (1.0 / float(K))
+            * np.sum(
                 np.exp(-eta * float(K) * np.abs(params.pi - float(np.mean(params.pi))))
             )
         )
@@ -384,7 +369,9 @@ class PenalizedEMOptimizer:
         """Compute weighted log-likelihood."""
         dist = vMFNMDistribution(params)
         pdf_vals: NDArrayF = np.asarray(dist.pdf(data), dtype=np.float64)
-        log_pdf: NDArrayF = np.log(np.maximum(pdf_vals, 1e-15)).astype(np.float64, copy=False)
+        log_pdf: NDArrayF = np.log(np.maximum(pdf_vals, 1e-15)).astype(
+            np.float64, copy=False
+        )
         return float(np.sum(weights * log_pdf))
 
     def _copy_parameters(self, params: vMFNMParameters) -> vMFNMParameters:
