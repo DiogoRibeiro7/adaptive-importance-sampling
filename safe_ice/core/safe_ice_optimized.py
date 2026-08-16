@@ -618,8 +618,20 @@ class OptimizedSafeICE:
         d = int(self.d)
 
         pi = np.ones(K, dtype=np.float64) / float(K)
-        m = np.asarray(self._rng.uniform(1.0, 3.0, K), dtype=np.float64)
-        Omega = np.asarray(self._rng.uniform(0.5, 2.0, K), dtype=np.float64)
+        # Nakagami parameters, scaled to the problem dimension.
+        #
+        # The target is the standard normal in R^d, whose radius follows a chi
+        # distribution with d degrees of freedom, and chi_d is exactly
+        # Nakagami(m = d/2, Omega = d). Initialising around that puts the
+        # proposal on top of the target from the start; the jitter keeps the
+        # components distinguishable so EM has something to separate.
+        #
+        # Fixed values were used here before, which happen to be right only
+        # near d=2. At d=20 they left the proposal at radius ~1.1 while the
+        # target sits at ~4.4, so the two barely overlapped and the run could
+        # never recover.
+        m = np.asarray(self._rng.uniform(0.75, 1.5, K) * (d / 2.0), dtype=np.float64)
+        Omega = np.asarray(self._rng.uniform(0.75, 1.5, K) * float(d), dtype=np.float64)
 
         mu = np.asarray(self._rng.normal(0.0, 1.0, (K, d)), dtype=np.float64)
         row_norms = np.linalg.norm(mu, axis=1, keepdims=True)

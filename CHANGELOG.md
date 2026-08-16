@@ -69,6 +69,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   scaled by that error. On a linear limit state with a closed-form answer the
   estimate was 0.54x the analytical value regardless of sample size; it is now
   1.02x. `OptimizedSafeICE` had the same omission in both of its components.
+- **The mixture was initialised with dimension-independent parameters.** The
+  target is the standard normal in R^d, whose radius follows chi_d, and chi_d
+  is exactly Nakagami(m = d/2, Omega = d), so the fixed values used before were
+  only appropriate near d=2. At d=20 the initial proposal sat at radius ~1.1
+  while the target sits at ~4.4; the two barely overlapped and the run never
+  recovered, returning ~1e-20 for a true 1.5e-2. Initialisation now scales with
+  the dimension, and d=20 goes from 0 of 6 seeds usable to 6 of 6.
 - **The cross-entropy penalty in the EM step had its sign inverted.**
   Equation 21 uses `[ln pi_k - sum_s pi_s ln pi_s]`, and `sum_s pi_s ln pi_s`
   is minus the entropy; the code subtracted the entropy instead. At uniform

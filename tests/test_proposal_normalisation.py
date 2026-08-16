@@ -233,3 +233,64 @@ class TestPenalizedWeightUpdate:
         )
 
         assert int(np.sum(new_pi > 1e-4)) > 1
+
+
+class TestInitialisationScalesWithDimension:
+    """The initial proposal has to sit on top of the target it is fitting.
+
+    The target is the standard normal in R^d, whose radius follows chi_d, and
+    chi_d is exactly Nakagami(m = d/2, Omega = d). Fixed initial values happen
+    to be about right near d=2 but leave the proposal at radius ~1.1 for any
+    dimension, while the target's radius grows like sqrt(d). At d=20 the two
+    barely overlapped and estimates came out around 1e-20 for a true 1.5e-2.
+    """
+
+    @pytest.mark.parametrize("d", [2, 5, 10, 20])
+    def test_initial_radius_tracks_the_target(self, d: int, seed) -> None:
+        ice = SafeICE(
+            limit_state_function=lambda u: 3.0 - np.linalg.norm(u, axis=-1),
+            dimension=d,
+            N=4000,
+            random_state=seed,
+        )
+        params = ice._initialize_vmfnm_parameters()
+        samples = ice._generate_safe_mixture_samples(params, 0.95)
+        mean_radius = float(np.linalg.norm(samples, axis=1).mean())
+
+        target = float(stats.chi.mean(d))
+        # Generous: the point is that it scales with d at all, not that it
+        # matches exactly. Without scaling the ratio is 0.24 at d=20.
+        assert 0.6 < mean_radius / target < 1.7
+
+    @pytest.mark.parametrize("d", [2, 10, 20])
+    def test_omega_scales_with_dimension(self, d: int, seed) -> None:
+        """E[R^2] = Omega for Nakagami, and the target has E[||u||^2] = d."""
+        ice = SafeICE(
+            limit_state_function=lambda u: 3.0 - np.linalg.norm(u, axis=-1),
+            dimension=d,
+            N=10,
+            random_state=seed,
+        )
+        params = ice._initialize_vmfnm_parameters()
+        assert 0.5 * d < float(np.mean(params.Omega)) < 2.0 * d
+
+    @pytest.mark.slow
+    def test_high_dimensional_sphere_is_usable(self) -> None:
+        """d=20 used to return ~1e-20 for a true 1.5e-2."""
+        d, beta = 20, 6.0
+        true = float(1 - stats.chi2.cdf(beta**2, df=d))
+
+        estimates = []
+        for s in range(4):
+            ice = SafeICE(
+                limit_state_function=lambda u: beta - np.linalg.norm(u, axis=-1),
+                dimension=d,
+                N=2000,
+                max_iterations=15,
+                random_state=s,
+            )
+            pf, _ = ice.run(verbose=False)
+            estimates.append(pf)
+
+        within = sum(1 for pf in estimates if true / 4 < pf < true * 4)
+        assert within >= 3, f"only {within}/4 seeds usable: {estimates}"
