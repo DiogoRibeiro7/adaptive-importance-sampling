@@ -4,7 +4,7 @@
 
 ## Project Overview
 
-- **Python Files:** 44
+- **Python Files:** 43
 - **Test Files:** 6
 - **Frameworks:** None detected
 
