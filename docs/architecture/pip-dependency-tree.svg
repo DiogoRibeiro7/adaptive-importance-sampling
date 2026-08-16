@@ -70,7 +70,7 @@
 <title>backports&#45;zstd</title>
 <ellipse fill="none" stroke="black" cx="4940.2" cy="-550.57" rx="86.03" ry="26.74"/>
 <text text-anchor="middle" x="4940.2" y="-554.37" font-family="Times,serif" font-size="14.00">backports&#45;zstd</text>
-<text text-anchor="middle" x="4940.2" y="-539.37" font-family="Times,serif" font-size="14.00">1.6.0</text>
+<text text-anchor="middle" x="4940.2" y="-539.37" font-family="Times,serif" font-size="14.00">1.7.0</text>
 </g>
 <!-- build -->
 <g id="node8" class="node">
@@ -168,7 +168,7 @@
 <title>charset&#45;normalizer</title>
 <ellipse fill="none" stroke="black" cx="793.2" cy="-236.35" rx="107.46" ry="26.74"/>
 <text text-anchor="middle" x="793.2" y="-240.15" font-family="Times,serif" font-size="14.00">charset&#45;normalizer</text>
-<text text-anchor="middle" x="793.2" y="-225.15" font-family="Times,serif" font-size="14.00">3.4.9</text>
+<text text-anchor="middle" x="793.2" y="-225.15" font-family="Times,serif" font-size="14.00">3.5.1</text>
 </g>
 <!-- requests&#45;&gt;charset&#45;normalizer -->
 <g id="edge71" class="edge">
@@ -322,7 +322,7 @@
 <title>sqlalchemy</title>
 <ellipse fill="none" stroke="black" cx="451.2" cy="-341.09" rx="68.68" ry="26.74"/>
 <text text-anchor="middle" x="451.2" y="-344.89" font-family="Times,serif" font-size="14.00">sqlalchemy</text>
-<text text-anchor="middle" x="451.2" y="-329.89" font-family="Times,serif" font-size="14.00">2.0.51</text>
+<text text-anchor="middle" x="451.2" y="-329.89" font-family="Times,serif" font-size="14.00">2.0.52</text>
 </g>
 <!-- eralchemy2&#45;&gt;sqlalchemy -->
 <g id="edge13" class="edge">
@@ -357,7 +357,7 @@
 <title>greenlet</title>
 <ellipse fill="none" stroke="black" cx="613.2" cy="-236.35" rx="54.39" ry="26.74"/>
 <text text-anchor="middle" x="613.2" y="-240.15" font-family="Times,serif" font-size="14.00">greenlet</text>
-<text text-anchor="middle" x="613.2" y="-225.15" font-family="Times,serif" font-size="14.00">3.5.4</text>
+<text text-anchor="middle" x="613.2" y="-225.15" font-family="Times,serif" font-size="14.00">3.5.5</text>
 </g>
 <!-- sqlalchemy&#45;&gt;greenlet -->
 <g id="edge78" class="edge">
@@ -371,14 +371,14 @@
 <title>fastjsonschema</title>
 <ellipse fill="none" stroke="black" cx="3295.2" cy="-445.83" rx="89.61" ry="26.74"/>
 <text text-anchor="middle" x="3295.2" y="-449.63" font-family="Times,serif" font-size="14.00">fastjsonschema</text>
-<text text-anchor="middle" x="3295.2" y="-434.63" font-family="Times,serif" font-size="14.00">2.22.1</text>
+<text text-anchor="middle" x="3295.2" y="-434.63" font-family="Times,serif" font-size="14.00">2.22.2</text>
 </g>
 <!-- filelock -->
 <g id="node32" class="node">
 <title>filelock</title>
 <ellipse fill="none" stroke="black" cx="2427.2" cy="-236.35" rx="47.25" ry="26.74"/>
 <text text-anchor="middle" x="2427.2" y="-240.15" font-family="Times,serif" font-size="14.00">filelock</text>
-<text text-anchor="middle" x="2427.2" y="-225.15" font-family="Times,serif" font-size="14.00">3.32.2</text>
+<text text-anchor="middle" x="2427.2" y="-225.15" font-family="Times,serif" font-size="14.00">3.32.3</text>
 </g>
 <!-- findpython -->
 <g id="node33" class="node">
@@ -399,7 +399,7 @@
 <title>platformdirs</title>
 <ellipse fill="none" stroke="black" cx="3484.2" cy="-341.09" rx="74.91" ry="26.74"/>
 <text text-anchor="middle" x="3484.2" y="-344.89" font-family="Times,serif" font-size="14.00">platformdirs</text>
-<text text-anchor="middle" x="3484.2" y="-329.89" font-family="Times,serif" font-size="14.00">4.11.1</text>
+<text text-anchor="middle" x="3484.2" y="-329.89" font-family="Times,serif" font-size="14.00">4.11.3</text>
 </g>
 <!-- findpython&#45;&gt;platformdirs -->
 <g id="edge16" class="edge">
@@ -691,7 +691,7 @@
 <title>pbs&#45;installer</title>
 <ellipse fill="none" stroke="black" cx="1084.2" cy="-445.83" rx="74.91" ry="26.74"/>
 <text text-anchor="middle" x="1084.2" y="-449.63" font-family="Times,serif" font-size="14.00">pbs&#45;installer</text>
-<text text-anchor="middle" x="1084.2" y="-434.63" font-family="Times,serif" font-size="14.00">2026.8.7</text>
+<text text-anchor="middle" x="1084.2" y="-434.63" font-family="Times,serif" font-size="14.00">2026.8.14</text>
 </g>
 <!-- pip -->
 <g id="node58" class="node">
@@ -901,7 +901,7 @@
 <title>virtualenv</title>
 <ellipse fill="none" stroke="black" cx="2511.2" cy="-445.83" rx="62.87" ry="26.74"/>
 <text text-anchor="middle" x="2511.2" y="-449.63" font-family="Times,serif" font-size="14.00">virtualenv</text>
-<text text-anchor="middle" x="2511.2" y="-434.63" font-family="Times,serif" font-size="14.00">21.7.3</text>
+<text text-anchor="middle" x="2511.2" y="-434.63" font-family="Times,serif" font-size="14.00">21.7.4</text>
 </g>
 <!-- poetry&#45;&gt;virtualenv -->
 <g id="edge53" class="edge">
@@ -943,7 +943,7 @@
 <title>python&#45;discovery</title>
 <ellipse fill="none" stroke="black" cx="2190.2" cy="-341.09" rx="98.08" ry="26.74"/>
 <text text-anchor="middle" x="2190.2" y="-344.89" font-family="Times,serif" font-size="14.00">python&#45;discovery</text>
-<text text-anchor="middle" x="2190.2" y="-329.89" font-family="Times,serif" font-size="14.00">1.5.1</text>
+<text text-anchor="middle" x="2190.2" y="-329.89" font-family="Times,serif" font-size="14.00">1.5.2</text>
 </g>
 <!-- virtualenv&#45;&gt;python&#45;discovery -->
 <g id="edge83" class="edge">
