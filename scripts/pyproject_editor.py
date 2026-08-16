@@ -29,10 +29,17 @@ import sys
 from dataclasses import dataclass
 from difflib import unified_diff
 from pathlib import Path
-from typing import Literal, Optional, Tuple
+from typing import Literal
 
 import tomlkit
 from tomlkit.toml_document import TOMLDocument
+
+# The file being edited contains mathematical notation, so stdout must be
+# able to carry it on consoles that default to a legacy code page.
+if hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+if hasattr(sys.stderr, "reconfigure"):
+    sys.stderr.reconfigure(encoding="utf-8", errors="replace")
 
 VersionBump = Literal["major", "minor", "patch"]
 
@@ -99,10 +106,13 @@ def _dump_doc(doc: TOMLDocument) -> str:
 def _detect_layout(doc: TOMLDocument) -> Literal["poetry", "pep621"]:
     """
     Return which layout the pyproject uses for metadata:
-    - "poetry" if [tool.poetry] exists
-    - "pep621" if [project] exists
+    - "pep621" if [project] carries the metadata
+    - "poetry" if [tool.poetry] does
 
-    We prefer Poetry if both exist.
+    Poetry 2.x projects commonly have both: [project] holds the metadata while
+    [tool.poetry] is reduced to build settings such as `packages`. So [project]
+    wins whenever it is present and actually declares a version, and we only
+    fall back to [tool.poetry] for the older layout.
 
     Args:
         doc: TOML document to check
@@ -113,11 +123,20 @@ def _detect_layout(doc: TOMLDocument) -> Literal["poetry", "pep621"]:
     Raises:
         ValueError: If neither layout is found
     """
-    if "tool" in doc and isinstance(doc["tool"], dict) and "poetry" in doc["tool"]:
-        return "poetry"
-    if "project" in doc:
+    project = doc.get("project")
+    has_project_version = isinstance(project, dict) and "version" in project
+    tool = doc.get("tool")
+    has_poetry = isinstance(tool, dict) and "poetry" in tool
+
+    if has_project_version:
         return "pep621"
-    raise ValueError("Unsupported pyproject: neither [tool.poetry] nor [project] found.")
+    if has_poetry:
+        return "poetry"
+    if project is not None:
+        return "pep621"
+    raise ValueError(
+        "Unsupported pyproject: neither [tool.poetry] nor [project] found."
+    )
 
 
 def _get_version(doc: TOMLDocument) -> str:
@@ -140,8 +159,8 @@ def _get_version(doc: TOMLDocument) -> str:
             v = doc["tool"]["poetry"].get("version")
         else:
             v = doc["project"].get("version")
-    except KeyError:
-        raise KeyError(f"Version field not found in [{layout}] section")
+    except KeyError as exc:
+        raise KeyError(f"Version field not found in [{layout}] section") from exc
 
     if v is None:
         raise KeyError(f"Version field not found in [{layout}] section")
@@ -193,8 +212,8 @@ def _bump_semver(v: str, level: VersionBump) -> str:
 
     try:
         maj, min_, pat = int(m["maj"]), int(m["min"]), int(m["pat"])
-    except ValueError:
-        raise ValueError(f"Version components must be integers in '{v}'")
+    except ValueError as exc:
+        raise ValueError(f"Version components must be integers in '{v}'") from exc
 
     if level == "major":
         maj, min_, pat = maj + 1, 0, 0
@@ -203,12 +222,14 @@ def _bump_semver(v: str, level: VersionBump) -> str:
     elif level == "patch":
         pat = pat + 1
     else:
-        raise ValueError(f"Unknown bump level: {level}. Must be major, minor, or patch.")
+        raise ValueError(
+            f"Unknown bump level: {level}. Must be major, minor, or patch."
+        )
 
     return f"{maj}.{min_}.{pat}"
 
 
-def _get_poetry_dep_table(doc: TOMLDocument, group: Optional[str]) -> tomlkit.items.Table:
+def _get_poetry_dep_table(doc: TOMLDocument, group: str | None) -> tomlkit.items.Table:
     """
     Return a writable table for dependencies in Poetry layout.
     Supports:
@@ -239,7 +260,9 @@ def _get_poetry_dep_table(doc: TOMLDocument, group: Optional[str]) -> tomlkit.it
     return g.setdefault("dependencies", tomlkit.table())
 
 
-def _ensure_pep621_arrays(doc: TOMLDocument) -> Tuple[tomlkit.items.Array, tomlkit.items.Table]:
+def _ensure_pep621_arrays(
+    doc: TOMLDocument,
+) -> tuple[tomlkit.items.Array, tomlkit.items.Table]:
     """
     Return (project.dependencies Array, project.optional-dependencies Table).
     Create them if missing.
@@ -265,7 +288,7 @@ def _ensure_pep621_arrays(doc: TOMLDocument) -> Tuple[tomlkit.items.Array, tomlk
     return deps, opt
 
 
-def _set_dep(doc: TOMLDocument, name: str, spec: str, group: Optional[str]) -> None:
+def _set_dep(doc: TOMLDocument, name: str, spec: str, group: str | None) -> None:
     """
     Set or update a dependency across layouts.
     - Poetry: name = {version = spec} or name = spec (string)
@@ -294,7 +317,11 @@ def _set_dep(doc: TOMLDocument, name: str, spec: str, group: Optional[str]) -> N
 
     # PEP 621
     deps, opt = _ensure_pep621_arrays(doc)
-    target_array = deps if (group is None or group == "main") else opt.setdefault(group, tomlkit.array())
+    target_array = (
+        deps
+        if (group is None or group == "main")
+        else opt.setdefault(group, tomlkit.array())
+    )
     if not isinstance(target_array, tomlkit.items.Array):
         raise TypeError(f"[project.optional-dependencies.{group}] must be an array.")
 
@@ -302,7 +329,9 @@ def _set_dep(doc: TOMLDocument, name: str, spec: str, group: Optional[str]) -> N
     pk_prefix = f"{name} "
     new_line = f"{name} {spec}"
     found_idx = None
-    for i, item in enumerate(list(target_array)):  # make a copy to avoid iterator issues
+    for i, item in enumerate(
+        list(target_array)
+    ):  # make a copy to avoid iterator issues
         if isinstance(item, str) and (item == name or item.startswith(pk_prefix)):
             found_idx = i
             break
@@ -312,7 +341,7 @@ def _set_dep(doc: TOMLDocument, name: str, spec: str, group: Optional[str]) -> N
         target_array.append(new_line)
 
 
-def _remove_dep(doc: TOMLDocument, name: str, group: Optional[str]) -> bool:
+def _remove_dep(doc: TOMLDocument, name: str, group: str | None) -> bool:
     """
     Remove a dependency. Returns True if removed, False if not found.
 
@@ -332,13 +361,21 @@ def _remove_dep(doc: TOMLDocument, name: str, group: Optional[str]) -> bool:
         # For Poetry, handle both legacy dev-dependencies and new group structure
         if group == "dev":
             # Check both legacy and new structure
-            legacy_deps = doc.get("tool", {}).get("poetry", {}).get("dev-dependencies", {})
+            legacy_deps = (
+                doc.get("tool", {}).get("poetry", {}).get("dev-dependencies", {})
+            )
             if name in legacy_deps:
                 del legacy_deps[name]
                 return True
 
             # Try new group.dev structure
-            group_deps = doc.get("tool", {}).get("poetry", {}).get("group", {}).get("dev", {}).get("dependencies", {})
+            group_deps = (
+                doc.get("tool", {})
+                .get("poetry", {})
+                .get("group", {})
+                .get("dev", {})
+                .get("dependencies", {})
+            )
             if name in group_deps:
                 del group_deps[name]
                 return True
@@ -423,8 +460,14 @@ def _write_or_diff(path: Path, old_text: str, new_text: str, check: bool) -> int
         OSError: For other file system related errors
     """
     if check:
-        diff = "".join(unified_diff(old_text.splitlines(True), new_text.splitlines(True),
-                                    fromfile=str(path), tofile=str(path)))
+        diff = "".join(
+            unified_diff(
+                old_text.splitlines(True),
+                new_text.splitlines(True),
+                fromfile=str(path),
+                tofile=str(path),
+            )
+        )
         sys.stdout.write(diff)
         return 0
 
@@ -436,7 +479,7 @@ def _write_or_diff(path: Path, old_text: str, new_text: str, check: bool) -> int
     return 0
 
 
-def main(argv: Optional[list[str]] = None) -> int:
+def main(argv: list[str] | None = None) -> int:
     """
     Main entry point for the script.
 
@@ -447,9 +490,14 @@ def main(argv: Optional[list[str]] = None) -> int:
         Exit code (0 for success, non-zero for failure)
     """
     parser = argparse.ArgumentParser(description="Safely edit pyproject.toml")
-    parser.add_argument("--file", default=DEFAULT_PYPROJECT_PATH, help="Path to pyproject.toml")
-    parser.add_argument("--check", action="store_true",
-                        help="Do not write; print a unified diff of proposed changes.")
+    parser.add_argument(
+        "--file", default=DEFAULT_PYPROJECT_PATH, help="Path to pyproject.toml"
+    )
+    parser.add_argument(
+        "--check",
+        action="store_true",
+        help="Do not write; print a unified diff of proposed changes.",
+    )
 
     sub = parser.add_subparsers(dest="cmd", required=True)
 
@@ -458,8 +506,15 @@ def main(argv: Optional[list[str]] = None) -> int:
 
     sd = sub.add_parser("set-dep", help="Set or update a dependency")
     sd.add_argument("name", type=str)
-    sd.add_argument("spec", type=str, help='Version constraint, e.g. "^1.26" or ">=1.0,<2.0"')
-    sd.add_argument("--group", type=str, default=None, help='Dependency group (Poetry: "dev", or PEP 621 optional group)')
+    sd.add_argument(
+        "spec", type=str, help='Version constraint, e.g. "^1.26" or ">=1.0,<2.0"'
+    )
+    sd.add_argument(
+        "--group",
+        type=str,
+        default=None,
+        help='Dependency group (Poetry: "dev", or PEP 621 optional group)',
+    )
 
     rd = sub.add_parser("remove-dep", help="Remove a dependency")
     rd.add_argument("name", type=str)
@@ -486,16 +541,20 @@ def main(argv: Optional[list[str]] = None) -> int:
 
         elif args.cmd == "set-dep":
             _set_dep(doc, args.name.strip(), args.spec.strip(), args.group)
-            print(f"Set dependency: {args.name} to {args.spec}" +
-                  (f" in group '{args.group}'" if args.group else ""))
+            print(
+                f"Set dependency: {args.name} to {args.spec}"
+                + (f" in group '{args.group}'" if args.group else "")
+            )
 
         elif args.cmd == "remove-dep":
             removed = _remove_dep(doc, args.name.strip(), args.group)
             if not removed:
                 print(f"Dependency '{args.name}' not found.", file=sys.stderr)
                 return 1
-            print(f"Removed dependency: {args.name}" +
-                  (f" from group '{args.group}'" if args.group else ""))
+            print(
+                f"Removed dependency: {args.name}"
+                + (f" from group '{args.group}'" if args.group else "")
+            )
 
         elif args.cmd == "set-python":
             _set_python_constraint(doc, args.spec.strip())
