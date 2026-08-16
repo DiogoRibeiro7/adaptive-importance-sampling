@@ -404,13 +404,14 @@ class TestEdgeCases:
     @pytest.mark.xfail(
         strict=False,
         reason=(
-            "Known estimator weakness: for a limit state that fails everywhere "
-            "the true probability is exactly 1, but the estimate wanders well "
-            "off it and across seeds can even exceed 1, which is not a valid "
-            "probability. Not strict: the estimate lands either side of the "
-            "0.99 threshold depending on the platform and NumPy version, so "
-            "the outcome is not stable enough to assert either way. Remove "
-            "this marker once the estimator is corrected."
+            "Degenerate problem: the limit state fails everywhere, so the "
+            "true probability is exactly 1. The importance-sampling estimator "
+            "is unbiased but unconstrained, so with N=100 it scatters around "
+            "1 and lands either side of the 0.99 threshold; across seeds the "
+            "median is about 1.07. Not strict, because which side it falls on "
+            "depends on the platform and NumPy version. Clamping the estimate "
+            "to [0, 1] would fix this, but that is a modelling decision rather "
+            "than a bug."
         ),
     )
     def test_certain_failure(self, seed):

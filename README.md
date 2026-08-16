@@ -15,10 +15,9 @@ and `g` is a limit-state function. It targets problems where the failure
 probability is far too small for crude Monte Carlo to resolve at a practical
 sample count.
 
-> **Status: alpha.** The algorithm runs end to end and the numerics are covered
-> by tests, but the estimator does not yet reproduce the reference
-> probabilities from the paper reliably. Please read
-> [Known limitations](#known-limitations) before depending on the results.
+> **Status: alpha.** Two correctness bugs that biased every estimate have been
+> fixed, and the estimator now tracks known analytical answers to within about
+> 10%. See [Accuracy](#accuracy) for the numbers and what is still open.
 
 Implements the method described in:
 
@@ -32,7 +31,7 @@ Implements the method described in:
 - [How it works](#how-it-works)
 - [Reproducibility](#reproducibility)
 - [Further usage](#further-usage)
-- [Known limitations](#known-limitations)
+- [Accuracy](#accuracy)
 - [Development](#development)
 - [Citation](#citation)
 - [License](#license)
@@ -217,29 +216,45 @@ safe-ice benchmark --problem four-mode
 `nonlinear_oscillator_simplified`, and `nakagami_ratio_problem`, plus
 `HeatTransferProblem` — a PDE problem using a Karhunen-Loève expansion.
 
-## Known limitations
+## Accuracy
 
-These are measured, reproducible gaps between this implementation and the
-behaviour the method should have. They are recorded as `xfail` tests rather
-than hidden, so they will announce themselves the moment they are fixed.
+Two correctness bugs that biased every estimate have been fixed:
 
-- **Accuracy on the headline benchmark is unreliable.** On the four-mode series
-  system (reference `P_F ≈ 1.22e-5`), a sweep over 12 seeds at `N=500`,
-  `max_iterations=10` lands inside `[1e-6, 1e-4]` only 6 times, with estimates
-  ranging from `6e-6` to `5e-1`. See
-  `tests/test_safe_ice.py::TestBenchmarkProblems::test_four_mode_series_system`.
-- **Systematic bias on a linear limit state.** Where the answer is known in
-  closed form (`Φ(-a₀/‖a‖)`), the estimate sits at roughly `0.54x` the
-  analytical value, and the gap does not shrink as `N` grows from `1e3` to
-  `8e3` — so it is bias, not Monte Carlo noise.
-- **Estimates are not constrained to `[0, 1]`.** For a limit state that fails
-  everywhere (true probability exactly 1), the estimator can return values
-  above 1. See
-  `tests/test_integration.py::TestEdgeCases::test_certain_failure`.
+- The heavy-tailed component of the proposal was missing the polar Jacobian
+  `r^(d-1)`, so it was not a probability density: it integrated to `2.7` at
+  `d=2` and `114` at `d=5`. Since it sits in the importance-sampling
+  denominator, every estimate was scaled by that error, which is why results
+  came out at roughly `0.54x` the analytical answer no matter how large `N`
+  was.
+- The cosine annealing schedule drove `λ` to exactly `1.0`, removing the
+  heavy-tailed component from the proposal entirely. That component is the
+  "safe" part of Safe-ICE: it keeps the proposal's tails heavier than the
+  target so the weights stay bounded. Without it the estimate could be
+  dominated by a single sample — on one seed, 99.5% of the estimate came from
+  one point. `λ` is now capped by `lambda_max` (default `0.95`).
+
+Current accuracy against problems with known answers, median over seeds:
+
+| Problem | Reference | Estimate / reference |
+| --- | --- | --- |
+| Linear limit state, closed form | `1.69e-2` | `1.08` |
+| Sphere `d=2`, closed form | `1.11e-2` | `1.02` |
+| Four-mode series system, 2e7-sample MC | `5.8e-5` | `1.10` |
+
+`tests/test_proposal_normalisation.py` pins this down: it integrates each
+proposal component numerically and fails if the Jacobian is dropped again.
+
+### Remaining limitations
+
+- **Estimates are not constrained to `[0, 1]`.** The estimator is unbiased but
+  unconstrained, so for a limit state that fails everywhere (true probability
+  exactly 1) it scatters around 1 and can land slightly above. Clamping would
+  fix it, but that is a modelling decision rather than a bug.
 - **High-dimensional variance is large.** At `d=10` with a small iteration
-  budget, estimates span several orders of magnitude across seeds.
-
-Contributions that close any of these are very welcome.
+  budget, estimates still vary considerably across seeds.
+- The reference value quoted for the four-mode problem used to be `1.22e-5`.
+  Crude Monte Carlo over 2e7 samples puts it at `5.8e-5 ± 1.7e-6` for the
+  default `z=3.8`.
 
 ## Development
 

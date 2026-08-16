@@ -61,6 +61,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **The heavy-tailed proposal component was missing the polar Jacobian.** It is
+  built as a radial density times an angular one, so recovering a density on
+  R^d needs `du = r^(d-1) dr dw`, which `vMFNMDistribution.pdf` applied and
+  this did not. The component integrated to 2.7 at d=2 and 114 at d=5, and
+  since it sits in the importance-sampling denominator every estimate was
+  scaled by that error. On a linear limit state with a closed-form answer the
+  estimate was 0.54x the analytical value regardless of sample size; it is now
+  1.02x. `OptimizedSafeICE` had the same omission in both of its components.
+- **Cosine annealing drove lambda to exactly 1.0**, which removed the
+  heavy-tailed component from the proposal altogether. That component is what
+  keeps the proposal's tails heavier than the target so importance weights stay
+  bounded; without it a single tail sample could carry the estimate (99.5% of
+  it on one seed, giving 0.71 for a 5.8e-5 event). Lambda is now capped by a
+  new `lambda_max` parameter, default 0.95, matching the cap `AdaptiveSafeICE`
+  already applied. On the four-mode benchmark, 4 of 12 seeds landed within 2x
+  of the true value before; all 12 do now.
+- The four-mode benchmark test cited a reference of 1.22e-5. Crude Monte Carlo
+  over 2e7 samples puts it at 5.8e-5 +/- 1.7e-6 for the default z=3.8.
+
 - **`PerformanceEvaluator.compare_methods` crashed** with `TypeError` because it
   treated `results["iterations"]` (a list of per-iteration records) as a count.
 - **The README's quick-start example printed a list of dicts** where it claimed
