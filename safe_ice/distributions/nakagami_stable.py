@@ -19,7 +19,7 @@ from typing import overload
 
 import numpy as np
 import numpy.typing as npt
-from scipy.special import gamma, gammainc, loggamma  # normalized lower incomplete gamma
+from scipy.special import gammainc, loggamma  # normalized lower incomplete gamma
 
 NDArrayF = npt.NDArray[np.float64]
 
@@ -68,12 +68,12 @@ class NakagamiDistribution:
         # log(pdf) = log(2) + m*log(m) - loggamma(m) - m*log(Omega) + (2m-1)*log(xm) - m*xm^2/Omega
         try:
             log_pdf = (
-                np.log(2.0) +
-                m * np.log(m) -
-                loggamma(m) -
-                m * np.log(Omega) +
-                (2.0 * m - 1.0) * np.log(xm) -
-                m * (xm ** 2) / Omega
+                np.log(2.0)
+                + m * np.log(m)
+                - loggamma(m)
+                - m * np.log(Omega)
+                + (2.0 * m - 1.0) * np.log(xm)
+                - m * (xm**2) / Omega
             )
 
             # Convert back from log-space, handling potential underflow
@@ -121,12 +121,12 @@ class NakagamiDistribution:
 
         # Compute log PDF
         log_pdf = (
-            np.log(2.0) +
-            m * np.log(m) -
-            loggamma(m) -
-            m * np.log(Omega) +
-            (2.0 * m - 1.0) * np.log(xm) -
-            m * (xm ** 2) / Omega
+            np.log(2.0)
+            + m * np.log(m)
+            - loggamma(m)
+            - m * np.log(Omega)
+            + (2.0 * m - 1.0) * np.log(xm)
+            - m * (xm**2) / Omega
         )
 
         out[mask] = log_pdf
@@ -191,7 +191,9 @@ class NakagamiDistribution:
 
         # Standard approach for reasonable m values
         # X ~ Gamma(shape=m, scale=Omega/m)  (NumPy parameterizes by shape & scale)
-        x = np.random.gamma(shape=m, scale=(Omega / m), size=n).astype(np.float64, copy=False)
+        x = np.random.gamma(shape=m, scale=(Omega / m), size=n).astype(
+            np.float64, copy=False
+        )
         return np.sqrt(x).astype(np.float64, copy=False)
 
 

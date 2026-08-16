@@ -1,24 +1,29 @@
 """Example of Safe-ICE for high-dimensional problems."""
 
-import numpy as np
+import time
+
 import matplotlib.pyplot as plt
+import numpy as np
+
 from safe_ice import SafeICE
 from safe_ice.problems.benchmarks import BenchmarkProblems
-import time
 
 
 def linear_limit_state_hd(dimension):
     """Create a linear limit state function in high dimensions."""
+
     def g(u):
         # Linear combination with decreasing weights
         weights = np.ones(dimension) / np.sqrt(dimension)
         beta = 3.0
         return beta - np.dot(u, weights)
+
     return g
 
 
 def nonlinear_limit_state_hd(dimension):
     """Create a nonlinear limit state function in high dimensions."""
+
     def g(u):
         # Nonlinear combination
         beta = 4.5
@@ -30,15 +35,18 @@ def nonlinear_limit_state_hd(dimension):
         else:
             term2 = 0.1 * np.sum(u[:-1] * u[1:])
         return beta - np.sqrt(term1) - term2
+
     return g
 
 
 def sphere_limit_state_hd(dimension):
     """Create a spherical limit state function in high dimensions."""
+
     def g(u):
         # Scaled sphere
         beta = np.sqrt(dimension) * 2.5
         return beta - np.linalg.norm(u, axis=-1)
+
     return g
 
 
@@ -64,10 +72,10 @@ def run_dimension_study():
         n_samples = min(1000 * d, 10000)  # Scale with dimension
         k0 = min(d * 5, 50)  # Initial components
 
-        print(f"Configuration:")
+        print("Configuration:")
         print(f"  Samples per iteration: {n_samples}")
         print(f"  Initial components: {k0}")
-        print(f"  Max iterations: 20")
+        print("  Max iterations: 20")
 
         # Initialize Safe-ICE
         ice = SafeICE(
@@ -77,7 +85,7 @@ def run_dimension_study():
             K0=k0,
             max_iterations=20,
             delta_target=3.0,
-            delta_star=1.5
+            delta_star=1.5,
         )
 
         # Run algorithm
@@ -88,17 +96,17 @@ def run_dimension_study():
 
         # Store results
         result = {
-            'dimension': d,
-            'pf': pf,
-            'time': elapsed_time,
-            'total_samples': len(ice_results['final_samples']),
-            'iterations': len(ice_results['iterations']),
-            'final_K': ice_results['iterations'][-1]['K'],
-            'cv': ice_results['convergence_metrics']['cv_values'][-1]
+            "dimension": d,
+            "pf": pf,
+            "time": elapsed_time,
+            "total_samples": len(ice_results["final_samples"]),
+            "iterations": len(ice_results["iterations"]),
+            "final_K": ice_results["iterations"][-1]["K"],
+            "cv": ice_results["convergence_metrics"]["cv_values"][-1],
         }
         results.append(result)
 
-        print(f"\nResults:")
+        print("\nResults:")
         print(f"  Failure probability: {pf:.6e}")
         print(f"  Total samples: {result['total_samples']}")
         print(f"  Iterations: {result['iterations']}")
@@ -125,11 +133,7 @@ def test_specific_problems():
 
     g = problems.nonlinear_oscillator()
     ice = SafeICE(
-        limit_state_function=g,
-        dimension=10,
-        N=3000,
-        K0=30,
-        max_iterations=15
+        limit_state_function=g, dimension=10, N=3000, K0=30, max_iterations=15
     )
 
     pf, results = ice.run(verbose=True)
@@ -143,11 +147,7 @@ def test_specific_problems():
 
         g = problems.two_mode_opposite_directions(dimension=d)
         ice = SafeICE(
-            limit_state_function=g,
-            dimension=d,
-            N=2000,
-            K0=20,
-            max_iterations=10
+            limit_state_function=g, dimension=d, N=2000, K0=20, max_iterations=10
         )
 
         pf, results = ice.run(verbose=False)
@@ -158,62 +158,62 @@ def test_specific_problems():
 def visualize_dimension_scaling(results):
     """Visualize how performance scales with dimension."""
 
-    dimensions = [r['dimension'] for r in results]
+    dimensions = [r["dimension"] for r in results]
 
-    fig, axes = plt.subplots(2, 3, figsize=(15, 10))
+    _fig, axes = plt.subplots(2, 3, figsize=(15, 10))
 
     # Plot 1: Failure probability vs dimension
     ax = axes[0, 0]
-    pf_values = [r['pf'] for r in results]
-    ax.semilogy(dimensions, pf_values, 'b-o')
-    ax.set_xlabel('Dimension')
-    ax.set_ylabel('Failure Probability')
-    ax.set_title('Failure Probability Scaling')
+    pf_values = [r["pf"] for r in results]
+    ax.semilogy(dimensions, pf_values, "b-o")
+    ax.set_xlabel("Dimension")
+    ax.set_ylabel("Failure Probability")
+    ax.set_title("Failure Probability Scaling")
     ax.grid(True, alpha=0.3)
 
     # Plot 2: Total samples vs dimension
     ax = axes[0, 1]
-    samples = [r['total_samples'] for r in results]
-    ax.plot(dimensions, samples, 'r-s')
-    ax.set_xlabel('Dimension')
-    ax.set_ylabel('Total Samples')
-    ax.set_title('Sample Requirement')
+    samples = [r["total_samples"] for r in results]
+    ax.plot(dimensions, samples, "r-s")
+    ax.set_xlabel("Dimension")
+    ax.set_ylabel("Total Samples")
+    ax.set_title("Sample Requirement")
     ax.grid(True, alpha=0.3)
 
     # Plot 3: Computational time vs dimension
     ax = axes[0, 2]
-    times = [r['time'] for r in results]
-    ax.plot(dimensions, times, 'g-^')
-    ax.set_xlabel('Dimension')
-    ax.set_ylabel('Time (seconds)')
-    ax.set_title('Computational Time')
+    times = [r["time"] for r in results]
+    ax.plot(dimensions, times, "g-^")
+    ax.set_xlabel("Dimension")
+    ax.set_ylabel("Time (seconds)")
+    ax.set_title("Computational Time")
     ax.grid(True, alpha=0.3)
 
     # Plot 4: Number of iterations vs dimension
     ax = axes[1, 0]
-    iterations = [r['iterations'] for r in results]
-    ax.plot(dimensions, iterations, 'm-d')
-    ax.set_xlabel('Dimension')
-    ax.set_ylabel('Iterations')
-    ax.set_title('Convergence Speed')
+    iterations = [r["iterations"] for r in results]
+    ax.plot(dimensions, iterations, "m-d")
+    ax.set_xlabel("Dimension")
+    ax.set_ylabel("Iterations")
+    ax.set_title("Convergence Speed")
     ax.grid(True, alpha=0.3)
 
     # Plot 5: Final components vs dimension
     ax = axes[1, 1]
-    final_K = [r['final_K'] for r in results]
-    ax.plot(dimensions, final_K, 'c-*')
-    ax.set_xlabel('Dimension')
-    ax.set_ylabel('Final K')
-    ax.set_title('Final Number of Components')
+    final_K = [r["final_K"] for r in results]
+    ax.plot(dimensions, final_K, "c-*")
+    ax.set_xlabel("Dimension")
+    ax.set_ylabel("Final K")
+    ax.set_title("Final Number of Components")
     ax.grid(True, alpha=0.3)
 
     # Plot 6: CV vs dimension
     ax = axes[1, 2]
-    cv_values = [r['cv'] for r in results]
-    ax.plot(dimensions, cv_values, 'y-p')
-    ax.set_xlabel('Dimension')
-    ax.set_ylabel('Coefficient of Variation')
-    ax.set_title('Estimation Accuracy')
+    cv_values = [r["cv"] for r in results]
+    ax.plot(dimensions, cv_values, "y-p")
+    ax.set_xlabel("Dimension")
+    ax.set_ylabel("Coefficient of Variation")
+    ax.set_title("Estimation Accuracy")
     ax.grid(True, alpha=0.3)
 
     plt.tight_layout()
@@ -223,11 +223,15 @@ def visualize_dimension_scaling(results):
     print("\n" + "=" * 70)
     print("DIMENSION SCALING SUMMARY")
     print("=" * 70)
-    print(f"{'Dim':<6} {'Pf':<12} {'Samples':<10} {'Time(s)':<10} {'K_final':<8} {'CV':<8}")
+    print(
+        f"{'Dim':<6} {'Pf':<12} {'Samples':<10} {'Time(s)':<10} {'K_final':<8} {'CV':<8}"
+    )
     print("-" * 70)
     for r in results:
-        print(f"{r['dimension']:<6} {r['pf']:<12.2e} {r['total_samples']:<10} "
-              f"{r['time']:<10.2f} {r['final_K']:<8} {r['cv']:<8.4f}")
+        print(
+            f"{r['dimension']:<6} {r['pf']:<12.2e} {r['total_samples']:<10} "
+            f"{r['time']:<10.2f} {r['final_K']:<8} {r['cv']:<8.4f}"
+        )
 
 
 def main():

@@ -3,7 +3,7 @@
 
 from __future__ import annotations
 
-from typing import Callable
+from collections.abc import Callable
 
 import numpy as np
 import numpy.typing as npt
@@ -93,9 +93,9 @@ class HeatTransferProblem:
 
         # --- Vectorized, type-stable column normalization ---
         # Norms as a (1, n_terms) array (keepdims=True prevents scalar return)
-        norms: NDArrayF = np.linalg.norm(
-            self.eigenvecs, axis=0, keepdims=True
-        ).astype(np.float64, copy=False)
+        norms: NDArrayF = np.linalg.norm(self.eigenvecs, axis=0, keepdims=True).astype(
+            np.float64, copy=False
+        )
 
         # Avoid division by zero in a vectorized, typed-safe way
         eps = np.finfo(np.float64).tiny  # strictly positive float64
@@ -119,7 +119,7 @@ class HeatTransferProblem:
         b_kappa = np.sqrt(np.log(1.0 + (sigma_kappa**2) / (mu_kappa**2)))
 
         # KL expansion coefficients
-        xi_vec: NDArrayF = np.asarray(xi, dtype=np.float64)[: self.n_terms]
+        np.asarray(xi, dtype=np.float64)[: self.n_terms]
         # KL expansion coefficients: turn the triple product into a matvec
         # shapes: eigenvecs (n_points, n_terms) @ coeffs (n_terms,) -> (n_points,)
         coeffs: NDArrayF = np.multiply(
@@ -146,7 +146,7 @@ class HeatTransferProblem:
 
         # Heat source region A = (0.2, 0.3) × (0.2, 0.3)
         x_indices = np.where((self.X >= 0.2) & (self.X <= 0.3))
-        y_indices = np.where((self.Y >= 0.2) & (self.Y <= 0.3))
+        np.where((self.Y >= 0.2) & (self.Y <= 0.3))
         source_mask: NDArrayB = np.zeros_like(T, dtype=bool)
         source_mask[x_indices[0], x_indices[1]] = True  # rectangular mask
 

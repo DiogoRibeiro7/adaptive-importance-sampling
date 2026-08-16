@@ -2,10 +2,12 @@
 
 from __future__ import annotations
 
-import numpy as np
-from typing import Dict, Tuple, Optional, Any
-from functools import lru_cache
 import warnings
+from collections.abc import Callable, Sequence
+from functools import lru_cache
+from typing import Any
+
+import numpy as np
 
 
 class PerformanceCache:
@@ -21,18 +23,22 @@ class PerformanceCache:
             Maximum number of items to cache.
         """
         self.max_size = max_size
-        self._omega_in_cache: Dict[Tuple[float, float, float], float] = {}
-        self._vmf_norm_cache: Dict[Tuple[float, int], float] = {}
-        self._chi2_pdf_cache: Dict[Tuple[float, int], float] = {}
+        self._omega_in_cache: dict[tuple[float, float, float], float] = {}
+        self._vmf_norm_cache: dict[tuple[float, int], float] = {}
+        self._chi2_pdf_cache: dict[tuple[float, int], float] = {}
 
-    def clear(self):
+    def clear(self) -> None:
         """Clear all caches."""
         self._omega_in_cache.clear()
         self._vmf_norm_cache.clear()
         self._chi2_pdf_cache.clear()
 
     def get_omega_in(
-        self, m: float, omega: float, m_in: float, compute_func=None
+        self,
+        m: float,
+        omega: float,
+        m_in: float,
+        compute_func: Callable[[float, float, float], float] | None = None,
     ) -> float:
         """
         Get cached Omega_IN value or compute if not cached.
@@ -64,7 +70,10 @@ class PerformanceCache:
         return self._omega_in_cache[key]
 
     def get_vmf_normalization(
-        self, kappa: float, d: int, compute_func=None
+        self,
+        kappa: float,
+        d: int,
+        compute_func: Callable[[float, int], float] | None = None,
     ) -> float:
         """
         Get cached vMF normalization constant.
@@ -111,10 +120,12 @@ class VectorizedOperations:
         np.ndarray
             Radii array of shape (n_samples,).
         """
-        return np.linalg.norm(samples, axis=1)
+        return np.asarray(np.linalg.norm(samples, axis=1))
 
     @staticmethod
-    def normalize_directions_batch(samples: np.ndarray, radii: Optional[np.ndarray] = None) -> Tuple[np.ndarray, np.ndarray]:
+    def normalize_directions_batch(
+        samples: np.ndarray, radii: np.ndarray | None = None
+    ) -> tuple[np.ndarray, np.ndarray]:
         """
         Normalize samples to unit directions (vectorized).
 
@@ -147,10 +158,7 @@ class VectorizedOperations:
 
     @staticmethod
     def evaluate_vmf_density_batch(
-        directions: np.ndarray,
-        mu: np.ndarray,
-        kappa: float,
-        normalization: float
+        directions: np.ndarray, mu: np.ndarray, kappa: float, normalization: float
     ) -> np.ndarray:
         """
         Evaluate vMF density for batch of directions (vectorized).
@@ -173,13 +181,13 @@ class VectorizedOperations:
         """
         # Vectorized dot product
         dot_products = np.dot(directions, mu)
-        return normalization * np.exp(kappa * dot_products)
+        return np.asarray(normalization * np.exp(kappa * dot_products))
 
     @staticmethod
     def evaluate_mixture_density_batch(
-        samples: np.ndarray,
+        samples: np.ndarray,  # noqa: ARG004 - kept so batch helpers share one signature
         component_densities: np.ndarray,
-        weights: np.ndarray
+        weights: np.ndarray,
     ) -> np.ndarray:
         """
         Evaluate mixture density for batch (vectorized).
@@ -199,7 +207,7 @@ class VectorizedOperations:
             Mixture density values of shape (n_samples,).
         """
         # Weighted sum across components
-        return np.dot(component_densities, weights)
+        return np.asarray(np.dot(component_densities, weights))
 
 
 class MemoryEfficientSampling:
@@ -207,10 +215,10 @@ class MemoryEfficientSampling:
 
     @staticmethod
     def generate_samples_in_batches(
-        sample_func,
+        sample_func: Callable[..., np.ndarray],
         n_total: int,
         batch_size: int = 10000,
-        **kwargs
+        **kwargs: Any,
     ) -> np.ndarray:
         """
         Generate samples in batches to manage memory.
@@ -243,9 +251,9 @@ class MemoryEfficientSampling:
 
     @staticmethod
     def evaluate_function_in_batches(
-        func,
+        func: Callable[[np.ndarray], np.ndarray],
         data: np.ndarray,
-        batch_size: int = 10000
+        batch_size: int = 10000,
     ) -> np.ndarray:
         """
         Evaluate function on data in batches.
@@ -282,7 +290,9 @@ class ParallelProcessor:
     """Simple parallel processing utilities (without numba dependency)."""
 
     @staticmethod
-    def parallel_map(func, data_list, n_jobs: int = -1):
+    def parallel_map(
+        func: Callable[[Any], Any], data_list: Sequence[Any], n_jobs: int = -1
+    ) -> list[Any]:
         """
         Apply function to list in parallel using multiprocessing.
 
@@ -311,7 +321,9 @@ class ParallelProcessor:
             return results
 
         except Exception as e:
-            warnings.warn(f"Parallel processing failed: {e}. Using sequential.")
+            warnings.warn(
+                f"Parallel processing failed: {e}. Using sequential.", stacklevel=2
+            )
             return [func(item) for item in data_list]
 
 
@@ -319,7 +331,7 @@ class OptimizationUtils:
     """Utility functions for performance optimization."""
 
     @staticmethod
-    def preallocate_arrays(shapes: Dict[str, Tuple[int, ...]]) -> Dict[str, np.ndarray]:
+    def preallocate_arrays(shapes: dict[str, tuple[int, ...]]) -> dict[str, np.ndarray]:
         """
         Preallocate arrays to avoid repeated allocations.
 
@@ -339,16 +351,17 @@ class OptimizationUtils:
         return arrays
 
     @staticmethod
-    def check_memory_usage():
+    def check_memory_usage() -> dict[str, float] | None:
         """Check current memory usage."""
         try:
             import psutil
+
             process = psutil.Process()
             mem_info = process.memory_info()
             return {
-                'rss_mb': mem_info.rss / 1024 / 1024,
-                'vms_mb': mem_info.vms / 1024 / 1024,
-                'available_mb': psutil.virtual_memory().available / 1024 / 1024
+                "rss_mb": mem_info.rss / 1024 / 1024,
+                "vms_mb": mem_info.vms / 1024 / 1024,
+                "available_mb": psutil.virtual_memory().available / 1024 / 1024,
             }
         except ImportError:
             return None
@@ -372,6 +385,7 @@ class OptimizationUtils:
             PDF value.
         """
         from scipy.stats import chi2
+
         return float(chi2.pdf(x, df))
 
     @staticmethod
@@ -393,15 +407,16 @@ class OptimizationUtils:
             Bessel function value.
         """
         from scipy.special import iv
+
         return float(iv(nu, z))
 
 
 def optimize_safe_ice_iteration(
     samples: np.ndarray,
-    g_values: np.ndarray,
-    params: Any,
-    cache: Optional[PerformanceCache] = None
-) -> Dict[str, Any]:
+    g_values: np.ndarray,  # noqa: ARG001 - part of the iteration signature
+    params: Any,  # noqa: ARG001 - part of the iteration signature
+    cache: PerformanceCache | None = None,
+) -> dict[str, Any]:
     """
     Optimized iteration step for Safe-ICE.
 
@@ -433,20 +448,20 @@ def optimize_safe_ice_iteration(
 
     # Return optimized results
     return {
-        'directions': directions,
-        'radii': radii,
-        'cache_hits': cache._omega_in_cache if cache else 0
+        "directions": directions,
+        "radii": radii,
+        "cache_hits": cache._omega_in_cache if cache else 0,
     }
 
 
 # Performance monitoring decorator
-def profile_performance(func):
+def profile_performance(func: Callable[..., Any]) -> Callable[..., Any]:
     """Decorator to profile function performance."""
     import functools
     import time
 
     @functools.wraps(func)
-    def wrapper(*args, **kwargs):
+    def wrapper(*args: Any, **kwargs: Any) -> Any:
         start_time = time.time()
         start_memory = OptimizationUtils.check_memory_usage()
 
@@ -456,8 +471,10 @@ def profile_performance(func):
         end_memory = OptimizationUtils.check_memory_usage()
 
         if start_memory and end_memory:
-            memory_delta = end_memory['rss_mb'] - start_memory['rss_mb']
-            print(f"{func.__name__}: {elapsed_time:.2f}s, Δmem: {memory_delta:.1f}MB")
+            memory_delta = end_memory["rss_mb"] - start_memory["rss_mb"]
+            print(
+                f"{func.__name__}: {elapsed_time:.2f}s, delta_mem: {memory_delta:.1f}MB"
+            )
         else:
             print(f"{func.__name__}: {elapsed_time:.2f}s")
 

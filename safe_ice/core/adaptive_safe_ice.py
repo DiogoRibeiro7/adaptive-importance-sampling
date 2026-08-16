@@ -2,17 +2,16 @@
 
 from __future__ import annotations
 
-import math
-import warnings
-from typing import Any, Callable, Dict, List, Optional, Tuple
+from typing import Any
+
 import numpy as np
 import numpy.typing as npt
-from scipy.stats import chi2
 from scipy.optimize import minimize_scalar
 
+from ..optimization.penalized_em import PenalizedEMOptimizer
+from ..typing import LimitStateFunction
 from .parameters import vMFNMParameters
 from .safe_ice_optimized import OptimizedSafeICE
-from ..optimization.penalized_em import PenalizedEMOptimizer
 
 NDArrayF = npt.NDArray[np.float64]
 
@@ -30,14 +29,14 @@ class AdaptiveSafeICE(OptimizedSafeICE):
 
     def __init__(
         self,
-        limit_state_function: Callable[[NDArrayF], float],
+        limit_state_function: LimitStateFunction,
         dimension: int,
-        N: Optional[int] = None,
+        N: int | None = None,
         max_iterations: int = 30,
         auto_tune: bool = True,
         adaptive_schedule: bool = True,
-        random_state: Optional[int | np.random.Generator] = None,
-        **kwargs
+        random_state: int | np.random.Generator | None = None,
+        **kwargs: Any,
     ) -> None:
         """
         Initialize Adaptive Safe-ICE.
@@ -66,15 +65,15 @@ class AdaptiveSafeICE(OptimizedSafeICE):
             N = self._compute_adaptive_sample_size(dimension)
 
         # Auto-compute K0 based on dimension
-        if 'K0' not in kwargs:
-            kwargs['K0'] = self._compute_adaptive_k0(dimension)
+        if "K0" not in kwargs:
+            kwargs["K0"] = self._compute_adaptive_k0(dimension)
 
         # Auto-compute delta parameters based on dimension
-        if 'delta_target' not in kwargs:
-            kwargs['delta_target'] = self._compute_adaptive_delta_target(dimension)
+        if "delta_target" not in kwargs:
+            kwargs["delta_target"] = self._compute_adaptive_delta_target(dimension)
 
-        if 'delta_star' not in kwargs:
-            kwargs['delta_star'] = self._compute_adaptive_delta_star(dimension)
+        if "delta_star" not in kwargs:
+            kwargs["delta_star"] = self._compute_adaptive_delta_star(dimension)
 
         # Initialize parent class
         super().__init__(
@@ -83,16 +82,16 @@ class AdaptiveSafeICE(OptimizedSafeICE):
             N=N,
             max_iterations=max_iterations,
             random_state=random_state,
-            **kwargs
+            **kwargs,
         )
 
         self.auto_tune = auto_tune
         self.adaptive_schedule = adaptive_schedule
 
         # Adaptive parameters
-        self.beta_history: List[float] = []
-        self.learning_rate_history: List[float] = []
-        self.convergence_history: List[Dict[str, float]] = []
+        self.beta_history: list[float] = []
+        self.learning_rate_history: list[float] = []
+        self.convergence_history: list[dict[str, float]] = []
 
     def _compute_adaptive_sample_size(self, d: int) -> int:
         """
@@ -212,7 +211,7 @@ class AdaptiveSafeICE(OptimizedSafeICE):
         samples: NDArrayF,
         weights: NDArrayF,
         params: vMFNMParameters,
-        iteration: int
+        iteration: int,
     ) -> float:
         """
         Auto-tune penalty coefficient β.
@@ -233,18 +232,17 @@ class AdaptiveSafeICE(OptimizedSafeICE):
         float
             Optimal beta value.
         """
+
         # Objective function for beta tuning
         def objective(beta: float) -> float:
             """Objective: Balance between likelihood and sparsity."""
             optimizer = PenalizedEMOptimizer(max_em_iterations=20)
 
             try:
-                new_params, _ = optimizer.fit(
-                    samples, weights, params, beta_init=beta
-                )
+                new_params, _ = optimizer.fit(samples, weights, params, beta_init=beta)
 
                 # Compute effective sample size
-                ess = np.sum(weights)**2 / np.sum(weights**2)
+                ess = np.sum(weights) ** 2 / np.sum(weights**2)
 
                 # Penalty for too many or too few components
                 K = new_params.K
@@ -255,7 +253,7 @@ class AdaptiveSafeICE(OptimizedSafeICE):
                 return -ess / len(samples) + 0.1 * K_penalty
 
             except Exception:
-                return float('inf')
+                return float("inf")
 
         # Search for optimal beta
         if iteration == 0:
@@ -267,10 +265,7 @@ class AdaptiveSafeICE(OptimizedSafeICE):
             beta_range = (max(0.1, prev_beta * 0.5), min(10.0, prev_beta * 2.0))
 
         result = minimize_scalar(
-            objective,
-            bounds=beta_range,
-            method='bounded',
-            options={'maxiter': 10}
+            objective, bounds=beta_range, method="bounded", options={"maxiter": 10}
         )
 
         optimal_beta = result.x if result.success else 1.0
@@ -279,10 +274,7 @@ class AdaptiveSafeICE(OptimizedSafeICE):
         return optimal_beta
 
     def _adaptive_annealing_schedule(
-        self,
-        sigma: float,
-        iteration: int,
-        convergence_rate: float
+        self, sigma: float, iteration: int, convergence_rate: float
     ) -> float:
         """
         Adaptive annealing schedule based on convergence.
@@ -324,14 +316,11 @@ class AdaptiveSafeICE(OptimizedSafeICE):
         decay = np.exp(-iteration / 10)
         lambda_val = base_lambda * (1 - 0.3 * (1 - decay))
 
-        return max(0.5, min(0.95, lambda_val))
+        return float(max(0.5, min(0.95, lambda_val)))
 
     def _compute_convergence_metrics(
-        self,
-        weights: NDArrayF,
-        g_values: NDArrayF,
-        iteration: int
-    ) -> Dict[str, float]:
+        self, weights: NDArrayF, g_values: NDArrayF, iteration: int
+    ) -> dict[str, float]:
         """
         Compute comprehensive convergence metrics.
 
@@ -353,24 +342,24 @@ class AdaptiveSafeICE(OptimizedSafeICE):
         cv = self._compute_cv(weights)
 
         # Effective sample size
-        ess = np.sum(weights)**2 / np.sum(weights**2) if np.sum(weights) > 0 else 0
+        ess = np.sum(weights) ** 2 / np.sum(weights**2) if np.sum(weights) > 0 else 0
 
         # Failure sample ratio
         failure_ratio = np.sum(g_values <= 0) / len(g_values)
 
         # Convergence rate (if we have history)
         if self.convergence_history:
-            prev_cv = self.convergence_history[-1]['cv']
+            prev_cv = self.convergence_history[-1]["cv"]
             cv_change = abs(cv - prev_cv) / max(prev_cv, 1e-10)
         else:
             cv_change = 1.0
 
         metrics = {
-            'cv': cv,
-            'ess': ess,
-            'failure_ratio': failure_ratio,
-            'cv_change': cv_change,
-            'iteration': iteration
+            "cv": cv,
+            "ess": ess,
+            "failure_ratio": failure_ratio,
+            "cv_change": cv_change,
+            "iteration": iteration,
         }
 
         self.convergence_history.append(metrics)
@@ -378,9 +367,7 @@ class AdaptiveSafeICE(OptimizedSafeICE):
         return metrics
 
     def _adaptive_stopping_criterion(
-        self,
-        metrics: Dict[str, float],
-        iteration: int
+        self, metrics: dict[str, float], iteration: int
     ) -> bool:
         """
         Adaptive stopping criterion based on multiple metrics.
@@ -406,32 +393,29 @@ class AdaptiveSafeICE(OptimizedSafeICE):
             return True
 
         # Check CV convergence
-        cv_converged = metrics['cv'] < 0.05
+        cv_converged = metrics["cv"] < 0.05
 
         # Check CV stability (small changes)
         if len(self.convergence_history) >= 3:
-            recent_cvs = [m['cv'] for m in self.convergence_history[-3:]]
-            cv_stable = np.std(recent_cvs) < 0.01
+            recent_cvs = [m["cv"] for m in self.convergence_history[-3:]]
+            cv_stable = bool(np.std(recent_cvs) < 0.01)
         else:
             cv_stable = False
 
         # Check ESS
-        ess_sufficient = metrics['ess'] > 0.5 * self.N
+        ess_sufficient = metrics["ess"] > 0.5 * self.N
 
         # Adaptive criterion
         if cv_converged and cv_stable:
             return True
 
-        if iteration > 10 and cv_stable and ess_sufficient:
-            return True
-
-        return False
+        return bool(iteration > 10 and cv_stable and ess_sufficient)
 
     def run(
         self,
-        initial_params: Optional[vMFNMParameters] = None,
+        initial_params: vMFNMParameters | None = None,
         verbose: bool = False,
-    ) -> Tuple[float, Dict[str, Any]]:
+    ) -> tuple[float, dict[str, Any]]:
         """
         Run Adaptive Safe-ICE algorithm.
 
@@ -461,10 +445,10 @@ class AdaptiveSafeICE(OptimizedSafeICE):
         delta_prev = 0.0
 
         # Storage
-        all_samples: List[NDArrayF] = []
-        all_g_values: List[NDArrayF] = []
-        all_weights: List[NDArrayF] = []
-        iterations_data: List[Dict[str, Any]] = []
+        all_samples: list[NDArrayF] = []
+        all_g_values: list[NDArrayF] = []
+        all_weights: list[NDArrayF] = []
+        iterations_data: list[dict[str, Any]] = []
 
         if verbose:
             print("=" * 50)
@@ -489,28 +473,27 @@ class AdaptiveSafeICE(OptimizedSafeICE):
                 self._precompute_omega_in(phi_t)
 
             # Compute convergence rate for adaptive schedule
-            if t > 0:
-                conv_rate = self.convergence_history[-1]['cv_change']
-            else:
-                conv_rate = 1.0
+            conv_rate = self.convergence_history[-1]["cv_change"] if t > 0 else 1.0
 
             # Adaptive annealing
             lambda_t = self._adaptive_annealing_schedule(sigma, t, conv_rate)
 
             # Generate samples
             if verbose:
-                print(f"  Generating {self.N} samples (λ={lambda_t:.3f})...")
+                print(f"  Generating {self.N} samples (lambda={lambda_t:.3f})...")
             samples_t = self._generate_safe_mixture_samples_batched(phi_t, lambda_t)
 
             # Evaluate limit state
             g_values_t = self._evaluate_limit_state_vectorized(samples_t)
 
             # Update delta adaptively
-            if t > 0 and self.convergence_history[-1]['failure_ratio'] < 0.01:
+            if t > 0 and self.convergence_history[-1]["failure_ratio"] < 0.01:
                 # Few failures - increase delta more aggressively
                 delta_increment = self.delta_star * 1.5
             else:
-                delta_increment = self.delta_star if delta_prev >= self.delta_star else 0.0
+                delta_increment = (
+                    self.delta_star if delta_prev >= self.delta_star else 0.0
+                )
 
             delta_t = min(self.delta_target, delta_prev + delta_increment)
             delta_prev = delta_t
@@ -534,14 +517,16 @@ class AdaptiveSafeICE(OptimizedSafeICE):
             all_g_values.append(g_values_t)
             all_weights.append(weights_t)
 
-            iterations_data.append({
-                "iteration": t + 1,
-                "K": phi_t.K,
-                "delta": delta_t,
-                "lambda": lambda_t,
-                "metrics": metrics,
-                "sigma": sigma,
-            })
+            iterations_data.append(
+                {
+                    "iteration": t + 1,
+                    "K": phi_t.K,
+                    "delta": delta_t,
+                    "lambda": lambda_t,
+                    "metrics": metrics,
+                    "sigma": sigma,
+                }
+            )
 
             # Check adaptive stopping
             if self._adaptive_stopping_criterion(metrics, t):
@@ -567,7 +552,7 @@ class AdaptiveSafeICE(OptimizedSafeICE):
                         elites_samples, elites_weights, phi_t, t
                     )
                     if verbose:
-                        print(f"  Auto-tuned β: {beta:.3f}")
+                        print(f"  Auto-tuned beta: {beta:.3f}")
                 else:
                     beta = 1.0
 
@@ -591,7 +576,7 @@ class AdaptiveSafeICE(OptimizedSafeICE):
 
                 if verbose:
                     print(f"  Updated K: {K_old} -> {K_new}")
-                    print(f"  Updated σ: {sigma:.4f}")
+                    print(f"  Updated sigma: {sigma:.4f}")
 
         # Combine results
         final_samples = np.vstack(all_samples)
@@ -610,8 +595,8 @@ class AdaptiveSafeICE(OptimizedSafeICE):
             "iterations": iterations_data,
             "convergence_metrics": {
                 "history": self.convergence_history,
-                "cv_values": [m['cv'] for m in self.convergence_history],
-                "ess_values": [m['ess'] for m in self.convergence_history],
+                "cv_values": [m["cv"] for m in self.convergence_history],
+                "ess_values": [m["ess"] for m in self.convergence_history],
             },
             "adaptive_metrics": {
                 "beta_history": self.beta_history,
@@ -627,7 +612,11 @@ class AdaptiveSafeICE(OptimizedSafeICE):
             print(f"Failure Probability: {pf_estimate:.6e}")
             print(f"Total Iterations: {t + 1}")
             print(f"Final Components: {phi_t.K}")
-            print(f"Average β: {np.mean(self.beta_history):.3f}" if self.beta_history else "")
+            print(
+                f"Average beta: {np.mean(self.beta_history):.3f}"
+                if self.beta_history
+                else ""
+            )
 
         return float(pf_estimate), results
 
@@ -666,7 +655,7 @@ class AdaptiveSafeICE(OptimizedSafeICE):
 
         if d == 2:
             # Uniform angles in 2D
-            angles = np.linspace(0, 2*np.pi, K, endpoint=False)
+            angles = np.linspace(0, 2 * np.pi, K, endpoint=False)
             mu[:, 0] = np.cos(angles)
             mu[:, 1] = np.sin(angles)
         else:

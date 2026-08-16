@@ -3,8 +3,8 @@
 from __future__ import annotations
 
 import math
-import warnings
-from typing import Any, Callable, Dict, List, Optional, Tuple
+from collections.abc import Callable
+from typing import Any
 
 import numpy as np
 import numpy.typing as npt
@@ -14,19 +14,23 @@ try:
     from numba import jit, prange
 except ImportError:
     # Optional acceleration: keep API compatible when numba is unavailable.
-    def jit(*args: Any, **kwargs: Any) -> Callable[[Callable[..., Any]], Callable[..., Any]]:
+    def jit(
+        *args: Any, **kwargs: Any
+    ) -> Callable[[Callable[..., Any]], Callable[..., Any]]:
         def decorator(func: Callable[..., Any]) -> Callable[..., Any]:
             return func
 
         return decorator
 
-    def prange(*args: Any, **kwargs: Any) -> range:  # type: ignore[misc]
+    def prange(*args: Any, **kwargs: Any) -> range:
         return range(*args)
 
-from .parameters import vMFNMParameters
+
 from ..distributions.nakagami import InverseNakagamiDistribution, NakagamiDistribution
 from ..distributions.vmf import VonMisesFisherSampler
 from ..optimization.penalized_em import PenalizedEMOptimizer
+from ..typing import LimitStateFunction
+from .parameters import vMFNMParameters
 
 # Type alias for NumPy float arrays
 NDArrayF = npt.NDArray[np.float64]
@@ -45,7 +49,7 @@ class OptimizedSafeICE:
 
     def __init__(
         self,
-        limit_state_function: Callable[[NDArrayF], float],
+        limit_state_function: LimitStateFunction,
         dimension: int,
         K0: int = 20,
         delta_target: float = 4.0,
@@ -56,8 +60,8 @@ class OptimizedSafeICE:
         em_max_iter: int = 100,
         enable_caching: bool = True,
         enable_parallel: bool = True,
-        batch_size: Optional[int] = None,
-        random_state: Optional[int | np.random.Generator] = None,
+        batch_size: int | None = None,
+        random_state: int | np.random.Generator | None = None,
     ) -> None:
         """
         Initialize Optimized Safe-ICE.
@@ -113,20 +117,20 @@ class OptimizedSafeICE:
         self.batch_size = batch_size or min(N, 10000)
 
         # Caches
-        self._omega_in_cache: Optional[Dict[int, float]] = None
-        self._pdf_cache: Optional[Dict[Tuple[float, ...], float]] = None
+        self._omega_in_cache: dict[int, float] | None = None
+        self._pdf_cache: dict[tuple[float, ...], float] | None = None
 
         # Pre-compute constants
-        self.m_IN = max(1, int(math.ceil(math.sqrt(self.d))))
+        self.m_IN = max(1, math.ceil(math.sqrt(self.d)))
 
         # Statistics tracking
-        self.history: List[Dict[str, Any]] = []
+        self.history: list[dict[str, Any]] = []
 
     def run(
         self,
-        initial_params: Optional[vMFNMParameters] = None,
+        initial_params: vMFNMParameters | None = None,
         verbose: bool = False,
-    ) -> Tuple[float, Dict[str, Any]]:
+    ) -> tuple[float, dict[str, Any]]:
         """
         Run optimized Safe-ICE algorithm.
 
@@ -156,12 +160,12 @@ class OptimizedSafeICE:
         phi_t = phi_0
 
         # Storage for all samples and weights
-        all_samples: List[NDArrayF] = []
-        all_g_values: List[NDArrayF] = []
-        all_weights: List[NDArrayF] = []
-        iterations_data: List[Dict[str, Any]] = []
-        cv_values: List[float] = []
-        delta_values: List[float] = []
+        all_samples: list[NDArrayF] = []
+        all_g_values: list[NDArrayF] = []
+        all_weights: list[NDArrayF] = []
+        iterations_data: list[dict[str, Any]] = []
+        cv_values: list[float] = []
+        delta_values: list[float] = []
 
         if verbose:
             print("=" * 50)
@@ -203,7 +207,7 @@ class OptimizedSafeICE:
 
             # Step 5: Compute importance weights
             if verbose:
-                print(f"  Computing importance weights...")
+                print("  Computing importance weights...")
             weights_t = self._compute_importance_weights_vectorized(
                 samples_t, g_values_t, phi_t, lambda_t, delta_t, sigma
             )
@@ -224,15 +228,17 @@ class OptimizedSafeICE:
             all_weights.append(weights_t)
 
             # Store iteration data
-            iterations_data.append({
-                "iteration": t + 1,
-                "K": phi_t.K,
-                "delta": delta_t,
-                "lambda": lambda_t,
-                "cv": cv_weights,
-                "sigma": sigma,
-                "n_failures": np.sum(g_values_t <= 0),
-            })
+            iterations_data.append(
+                {
+                    "iteration": t + 1,
+                    "K": phi_t.K,
+                    "delta": delta_t,
+                    "lambda": lambda_t,
+                    "cv": cv_weights,
+                    "sigma": sigma,
+                    "n_failures": np.sum(g_values_t <= 0),
+                }
+            )
 
             # Step 7: Update parameters (if not last iteration)
             if t < self.max_iterations - 1:
@@ -248,11 +254,11 @@ class OptimizedSafeICE:
 
                 # Penalized EM optimization
                 if verbose:
-                    print(f"  Running Penalized EM...")
-                optimizer = PenalizedEMOptimizer(
-                    max_em_iterations=self.em_max_iter
+                    print("  Running Penalized EM...")
+                optimizer = PenalizedEMOptimizer(max_em_iterations=self.em_max_iter)
+                phi_t, _ = optimizer.fit(
+                    elites_samples, elites_weights, phi_t, beta_init=1.0
                 )
-                phi_t, _ = optimizer.fit(elites_samples, elites_weights, phi_t, beta_init=1.0)
 
                 # Adapt sigma based on component evolution
                 K_new = phi_t.K
@@ -277,7 +283,11 @@ class OptimizedSafeICE:
         # Compute failure probability
         failure_indicator = (final_g_values <= 0).astype(float)
         pf_estimate = np.sum(failure_indicator * final_weights) / np.sum(final_weights)
-        cv_w_star = self._compute_cv(final_weights[final_g_values <= 0]) if np.any(final_g_values <= 0) else 0.0
+        cv_w_star = (
+            self._compute_cv(final_weights[final_g_values <= 0])
+            if np.any(final_g_values <= 0)
+            else 0.0
+        )
 
         # Prepare results
         results = {
@@ -326,7 +336,9 @@ class OptimizedSafeICE:
         """Get cached Omega_IN value or compute if not cached."""
         if self.enable_caching and self._omega_in_cache and k in self._omega_in_cache:
             return self._omega_in_cache[k]
-        return self._calculate_matched_omega_inverse_nakagami(m_k, omega_k, float(self.m_IN))
+        return self._calculate_matched_omega_inverse_nakagami(
+            m_k, omega_k, float(self.m_IN)
+        )
 
     # -------------------------------------------------------------------------
     # Vectorized Operations
@@ -371,13 +383,17 @@ class OptimizedSafeICE:
 
             # Sample radii (vectorized)
             radii = NakagamiDistribution.sample(
-                float(params.m[k]), float(params.Omega[k]), n_k,
+                float(params.m[k]),
+                float(params.Omega[k]),
+                n_k,
                 rng=self._rng,
             )
 
             # Sample directions (already vectorized in VonMisesFisherSampler)
             directions = VonMisesFisherSampler.sample(
-                params.mu[k], float(params.kappa[k]), n_k,
+                params.mu[k],
+                float(params.kappa[k]),
+                n_k,
                 rng=self._rng,
             )
 
@@ -386,7 +402,9 @@ class OptimizedSafeICE:
 
         return samples
 
-    def _sample_heavy_tailed_batch(self, params: vMFNMParameters, n_samples: int) -> NDArrayF:
+    def _sample_heavy_tailed_batch(
+        self, params: vMFNMParameters, n_samples: int
+    ) -> NDArrayF:
         """Sample batch from heavy-tailed distribution (vectorized)."""
         samples = np.zeros((n_samples, self.d), dtype=np.float64)
 
@@ -407,13 +425,17 @@ class OptimizedSafeICE:
 
             # Sample radii from inverse Nakagami
             radii = InverseNakagamiDistribution.sample(
-                float(self.m_IN), omega_in, n_k,
+                float(self.m_IN),
+                omega_in,
+                n_k,
                 rng=self._rng,
             )
 
             # Sample directions
             directions = VonMisesFisherSampler.sample(
-                params.mu[k], float(params.kappa[k]), n_k,
+                params.mu[k],
+                float(params.kappa[k]),
+                n_k,
                 rng=self._rng,
             )
 
@@ -428,7 +450,7 @@ class OptimizedSafeICE:
 
         if n_samples <= self.batch_size:
             # Evaluate all at once
-            return self.g(samples)
+            return np.asarray(self.g(samples), dtype=np.float64)
         else:
             # Process in batches to manage memory
             g_values = np.zeros(n_samples, dtype=np.float64)
@@ -465,7 +487,9 @@ class OptimizedSafeICE:
                 )
 
         # Standard normal density (vectorized)
-        phi_u = np.exp(-0.5 * np.sum(samples**2, axis=1)) / ((2 * np.pi) ** (self.d / 2))
+        phi_u = np.exp(-0.5 * np.sum(samples**2, axis=1)) / (
+            (2 * np.pi) ** (self.d / 2)
+        )
 
         # Importance weights with regularization
         weights = np.zeros(n_samples, dtype=np.float64)
@@ -483,10 +507,10 @@ class OptimizedSafeICE:
         samples: NDArrayF,
         params: vMFNMParameters,
         lambda_val: float,
-        sigma: float
+        sigma: float,
     ) -> NDArrayF:
         """Evaluate safe mixture density (vectorized)."""
-        n_samples = samples.shape[0]
+        samples.shape[0]
 
         # Compute both components
         q_light = self._evaluate_vmfnm_density_vectorized(samples, params, sigma)
@@ -607,15 +631,18 @@ class OptimizedSafeICE:
     def _compute_cv(self, weights: NDArrayF) -> float:
         """Compute coefficient of variation of weights."""
         if len(weights) == 0 or np.sum(weights) == 0:
-            return float('inf')
+            return float("inf")
         mean_w = np.mean(weights)
         if mean_w == 0:
-            return float('inf')
+            return float("inf")
         std_w = np.std(weights)
         return float(std_w / mean_w)
 
     def _calculate_matched_omega_inverse_nakagami(
-        self, m: float, Omega: float, m_IN: float
+        self,
+        m: float,  # noqa: ARG002 - overrides the base signature
+        Omega: float,
+        m_IN: float,
     ) -> float:
         """Calculate Omega_IN for mode matching."""
         chi2_pdf_val = chi2.pdf(Omega * self.sigma0**2, df=self.d)
@@ -632,7 +659,9 @@ class OptimizedSafeICE:
 
         # General formula
         d = self.d
-        return kappa**(d/2 - 1) / ((2*np.pi)**(d/2) * iv(d/2 - 1, kappa))
+        return float(
+            kappa ** (d / 2 - 1) / ((2 * np.pi) ** (d / 2) * iv(d / 2 - 1, kappa))
+        )
 
 
 # Optional: Numba-accelerated functions for critical loops
@@ -647,7 +676,7 @@ def compute_radii_parallel(samples: NDArrayF) -> NDArrayF:
 
 
 @jit(nopython=True, parallel=True)
-def evaluate_limit_state_parallel(samples: NDArrayF, g_func) -> NDArrayF:
+def evaluate_limit_state_parallel(samples: NDArrayF, g_func: Any) -> NDArrayF:
     """Evaluate limit state in parallel (if g_func is Numba-compatible)."""
     n_samples = samples.shape[0]
     g_values = np.zeros(n_samples, dtype=np.float64)

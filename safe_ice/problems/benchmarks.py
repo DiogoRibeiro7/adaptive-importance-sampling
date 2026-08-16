@@ -3,7 +3,7 @@
 
 from __future__ import annotations
 
-from typing import Callable
+from collections.abc import Callable
 
 import numpy as np
 import numpy.typing as npt
@@ -46,7 +46,7 @@ class BenchmarkProblems:
             g_min = np.minimum(np.minimum(g1, g2), np.minimum(g3, g4)) + z
             if is_single:
                 return float(g_min[0])
-            return g_min.astype(np.float64, copy=False)
+            return np.asarray(g_min, dtype=np.float64)
 
         return limit_state_function
 
@@ -71,7 +71,7 @@ class BenchmarkProblems:
             g_min = np.minimum(g1, g2)
             if is_single:
                 return float(g_min[0])
-            return g_min.astype(np.float64, copy=False)
+            return np.asarray(g_min, dtype=np.float64)
 
         return limit_state_function
 
@@ -85,10 +85,9 @@ class BenchmarkProblems:
             u: npt.ArrayLike,
         ) -> float | npt.NDArray[np.float64]:
             # Parameters from the paper (kept as floats)
-            m = 6e4        # mass
-            k = 5e6        # stiffness
-            alpha = 0.1    # force partition
-            S = 0.005      # white-noise intensity
+            k = 5e6  # stiffness
+            alpha = 0.1  # force partition
+            S = 0.005  # white-noise intensity
 
             # Frequency discretization
             d_eff = max(int(d), 2)
@@ -118,7 +117,7 @@ class BenchmarkProblems:
 
             if is_single:
                 return float(g_values[0])
-            return g_values.astype(np.float64, copy=False)
+            return np.asarray(g_values, dtype=np.float64)
 
         return limit_state_function
 
@@ -152,7 +151,7 @@ class BenchmarkProblems:
             g_min = np.minimum(g1, g2)
             if is_single:
                 return float(g_min[0])
-            return g_min.astype(np.float64, copy=False)
+            return np.asarray(g_min, dtype=np.float64)
 
         return limit_state_function
 
@@ -174,6 +173,6 @@ class BenchmarkProblems:
 
             if is_single:
                 return float(g_values[0])
-            return g_values.astype(np.float64, copy=False)
+            return np.asarray(g_values, dtype=np.float64)
 
         return limit_state_function

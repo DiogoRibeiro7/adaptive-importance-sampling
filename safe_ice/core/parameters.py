@@ -8,6 +8,7 @@ We use explicit NumPy typing so mypy knows array shapes/dtypes and to avoid
 from __future__ import annotations
 
 from dataclasses import dataclass
+
 import numpy as np
 import numpy.typing as npt
 
@@ -33,11 +34,11 @@ class vMFNMParameters:
         vMF concentration parameters (shape: (K,)), kappa >= 0.
     """
 
-    pi: NDArrayF          # (K,)
-    m: NDArrayF           # (K,)
-    Omega: NDArrayF       # (K,)
-    mu: NDArrayF          # (K, d)
-    kappa: NDArrayF       # (K,)
+    pi: NDArrayF  # (K,)
+    m: NDArrayF  # (K,)
+    Omega: NDArrayF  # (K,)
+    mu: NDArrayF  # (K, d)
+    kappa: NDArrayF  # (K,)
 
     def __init__(
         self,

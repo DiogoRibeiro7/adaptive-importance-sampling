@@ -1,4 +1,3 @@
-
 """Benchmark problems for Safe-ICE testing."""
 
 from .benchmarks import BenchmarkProblems
