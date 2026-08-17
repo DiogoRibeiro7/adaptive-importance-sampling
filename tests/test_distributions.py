@@ -53,16 +53,28 @@ class TestVonMisesFisherSampler:
         assert np.linalg.norm(mean_direction) < 0.2
 
     def test_high_kappa_concentration(self, rng) -> None:
-        """Test that high kappa concentrates around mean."""
+        """Test that high kappa concentrates around mean.
+
+        This used to assert that *every* sample had ``x . mu > 0.9``. For
+        vMF_3 at kappa=50 the tail probability below 0.9 is 0.0067, so over 100
+        draws that assertion fails about half the time: measured at 98 of 200
+        seeds. It passed reliably only because the sampler had a bug that
+        over-concentrated samples around mu. The concentration is now checked
+        through its expectation, which is what the parameter actually controls.
+        """
         mu: npt.NDArray[np.float64] = np.array([1.0, 0.0, 0.0], dtype=np.float64)
         kappa: float = 50.0
-        n_samples: int = 100
+        n_samples: int = 4000
 
         samples = VonMisesFisherSampler.sample(mu, kappa, n_samples, rng=rng)
-
-        # All samples should be close to mu
         dot_products = np.dot(samples, mu)
-        assert np.all(dot_products > 0.9)
+
+        # E[x . mu] = I_{d/2}(k)/I_{d/2-1}(k); for d=3 that is coth(k) - 1/k.
+        expected = 1.0 / np.tanh(kappa) - 1.0 / kappa
+        assert float(np.mean(dot_products)) == pytest.approx(expected, abs=0.01)
+
+        # Still overwhelmingly concentrated: the bulk sits well above 0.9.
+        assert float(np.mean(dot_products > 0.9)) > 0.95
 
     def test_circular_vmf(self, rng) -> None:
         """Test 2D circular case."""

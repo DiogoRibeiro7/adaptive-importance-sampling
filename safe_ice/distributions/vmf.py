@@ -84,44 +84,98 @@ class VonMisesFisherSampler:
 
         # General case d >= 3. Wood's rejection sampler is exact and holds up at
         # any concentration: measured against I_{d/2}(k)/I_{d/2-1}(k) it is
-        # accurate to ~1e-6 out to kappa = 1e4, at constant cost per sample.
+        # accurate to ~1e-6 out to kappa = 1e4.
         #
         # A "high-concentration" shortcut used to intercept kappa >= 30 with a
         # Gaussian around mu using scale 0.2/sqrt(kappa). The 0.2 is arbitrary
         # and roughly five times too small -- the tangent-space standard
-        # deviation is 1/sqrt(kappa) -- and it ignores the dimension entirely,
+        # deviation is 1/sqrt(kappa) -- and it ignored the dimension entirely,
         # so samples clustered far too tightly around mu. At d=20, kappa=50 the
         # mean resultant length came out at 0.9925 against a true 0.8263.
-        out: NDArrayF = np.zeros((n_samples, d), dtype=np.float64)
-        for i in range(n_samples):
-            w: float = VonMisesFisherSampler._sample_w_wood(float(kappa), d, _rng)
+        w: NDArrayF = VonMisesFisherSampler._sample_w_wood_batch(
+            float(kappa), d, n_samples, _rng
+        )
 
-            # v ~ Unif(S^{d-2}) in R^{d-1}
-            v_raw: NDArrayF = np.asarray(
-                _rng.normal(loc=0.0, scale=1.0, size=(d - 1,)),
-                dtype=np.float64,
+        # Directions v ~ Unif(S^{d-2}) in R^{d-1}, one row per sample.
+        v_raw: NDArrayF = np.asarray(
+            _rng.normal(loc=0.0, scale=1.0, size=(n_samples, d - 1)),
+            dtype=np.float64,
+        )
+        v_norms: NDArrayF = np.linalg.norm(v_raw, axis=1, keepdims=True)
+        # A row of exact zeros has probability zero, but guard it anyway.
+        degenerate = (v_norms <= 0.0).reshape(-1)
+        v_norms = np.maximum(v_norms, float(np.finfo(np.float64).tiny))
+        v: NDArrayF = v_raw / v_norms
+        if np.any(degenerate):
+            v[degenerate] = 0.0
+            v[degenerate, 0] = 1.0
+
+        # Points on S^{d-1} aligned with e_d: the first d-1 coordinates scale by
+        # sqrt(1 - w^2), the last one is w.
+        radial: NDArrayF = np.sqrt(np.maximum(0.0, 1.0 - w * w)).reshape(-1, 1)
+        xy: NDArrayF = np.concatenate([radial * v, w.reshape(-1, 1)], axis=1)
+
+        # Rotate e_d -> mu with a single Householder reflection, applied to
+        # every row at once.
+        return VonMisesFisherSampler._householder_rotation_batch(xy, mu_unit)
+
+    @staticmethod
+    def _sample_w_wood_batch(kappa: float, d: int, n: int, rng: RNGLike) -> NDArrayF:
+        """Sample n values of w with Wood (1994), rejecting in batches.
+
+        Mathematically identical to drawing them one at a time; the acceptance
+        rate is high, so a modest over-draw usually finishes in one pass.
+        """
+        b: float = (d - 1.0) / (
+            2.0 * kappa + math.sqrt(4.0 * kappa * kappa + (d - 1.0) ** 2)
+        )
+        x0: float = (1.0 - b) / (1.0 + b)
+        c: float = kappa * x0 + (d - 1.0) * math.log(1.0 - x0 * x0)
+        a_beta: float = (d - 1.0) / 2.0
+
+        if n <= 0:
+            return np.zeros(0, dtype=np.float64)
+
+        kept: list[NDArrayF] = []
+        remaining: int = n
+        while remaining > 0:
+            # Over-draw a little so a single pass usually suffices.
+            draw = max(int(remaining * 1.3) + 8, 16)
+            z: NDArrayF = np.asarray(
+                rng.beta(a=a_beta, b=a_beta, size=draw), dtype=np.float64
             )
-            v_norm: float = float(np.linalg.norm(v_raw))
-            if v_norm > 0.0:
-                v: NDArrayF = (v_raw / v_norm).astype(np.float64, copy=False)
-            else:
-                v = np.zeros(d - 1, dtype=np.float64)
-                v[0] = 1.0
+            w_try: NDArrayF = (1.0 - (1.0 + b) * z) / (1.0 - (1.0 - b) * z)
+            u: NDArrayF = np.asarray(rng.uniform(0.0, 1.0, size=draw), dtype=np.float64)
 
-            # Point on S^{d-1} aligned with e_d
-            xy: NDArrayF = np.concatenate(
-                [
-                    (math.sqrt(max(0.0, 1.0 - w * w)) * v).astype(
-                        np.float64, copy=False
-                    ),
-                    np.asarray([w], dtype=np.float64),
-                ]
-            ).astype(np.float64, copy=False)
+            # 1 - x0 * w_try is strictly positive: |w_try| <= 1 and 0 < x0 < 1.
+            accept = (kappa * w_try + (d - 1.0) * np.log1p(-x0 * w_try) - c) >= np.log(
+                u
+            )
 
-            # Rotate e_d -> mu via Householder and apply to xy
-            out[i, :] = VonMisesFisherSampler._householder_rotation(xy, mu_unit)
+            taken = w_try[accept][:remaining]
+            kept.append(taken)
+            remaining -= int(taken.shape[0])
 
-        return out
+        return np.concatenate(kept).astype(np.float64, copy=False)
+
+    @staticmethod
+    def _householder_rotation_batch(x: NDArrayF, mu: NDArrayF) -> NDArrayF:
+        """Apply the reflection mapping e_d to mu, to every row of x."""
+        d: int = int(mu.shape[0])
+        if x.shape[1] != d:
+            raise ValueError("x rows and mu must have the same dimension.")
+
+        e_d: NDArrayF = np.zeros(d, dtype=np.float64)
+        e_d[-1] = 1.0
+
+        u: NDArrayF = e_d - mu
+        u_norm: float = float(np.linalg.norm(u))
+        if u_norm < 1e-15:
+            # mu already is e_d, so the reflection is the identity.
+            return x.astype(np.float64, copy=False)
+
+        u = u / u_norm
+        return (x - 2.0 * np.outer(x @ u, u)).astype(np.float64, copy=False)
 
     @staticmethod
     def _sample_circular(
@@ -142,49 +196,3 @@ class VonMisesFisherSampler:
         return np.column_stack([np.cos(angles), np.sin(angles)]).astype(
             np.float64, copy=False
         )
-
-    @staticmethod
-    def _sample_w_wood(kappa: float, d: int, rng: RNGLike) -> float:
-        """Sample the last coordinate w using Wood (1994) rejection sampler."""
-        b: float = (d - 1.0) / (
-            2.0 * kappa + math.sqrt(4.0 * kappa * kappa + (d - 1.0) ** 2)
-        )
-        x0: float = (1.0 - b) / (1.0 + b)
-        c: float = kappa * x0 + (d - 1.0) * math.log(1.0 - x0 * x0)
-
-        a_beta: float = (d - 1.0) / 2.0
-        b_beta: float = a_beta
-
-        while True:
-            z: float = float(rng.beta(a=a_beta, b=b_beta))
-            w: float = (1.0 - (1.0 + b) * z) / (1.0 - (1.0 - b) * z)
-            u: float = float(rng.uniform(0.0, 1.0))
-
-            test_val: float = kappa * w + (d - 1.0) * math.log(1.0 - x0 * w) - c
-            if test_val >= math.log(u):
-                return w
-
-    @staticmethod
-    def _householder_rotation(x: npt.ArrayLike, mu: npt.ArrayLike) -> NDArrayF:
-        """Apply Householder reflection that maps e_d to mu."""
-        x_arr: NDArrayF = np.asarray(x, dtype=np.float64).reshape(-1)
-        mu_arr: NDArrayF = np.asarray(mu, dtype=np.float64).reshape(-1)
-        d: int = int(mu_arr.shape[0])
-
-        if x_arr.shape[0] != d:
-            raise ValueError("x and mu must have the same dimension.")
-
-        e_d: NDArrayF = np.zeros(d, dtype=np.float64)
-        e_d[-1] = 1.0
-
-        if np.allclose(mu_arr, e_d):
-            return x_arr.astype(np.float64, copy=False)
-
-        u: NDArrayF = (e_d - mu_arr).astype(np.float64, copy=False)
-        u_norm: float = float(np.linalg.norm(u))
-        if u_norm < 1e-15:
-            return x_arr.astype(np.float64, copy=False)
-
-        u /= u_norm
-        dot: float = float(np.dot(u, x_arr))
-        return (x_arr - 2.0 * dot * u).astype(np.float64, copy=False)
