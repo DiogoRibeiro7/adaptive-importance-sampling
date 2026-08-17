@@ -21,6 +21,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   pull request template.
 - A "Known limitations" section in the README recording measured accuracy gaps.
 
+### Removed
+
+- The `architecture-diagrams` workflow, its `docs/architecture/` output, and
+  `benchmarks/architecture_config.py`. The workflow was 1826 lines, 62% of all
+  the workflow code in the repository, and regenerated diagrams on every push
+  that touched a Python file, committing them straight to `main` with
+  `[skip ci]`. Nothing linked to the output. Of the four diagram types, only the
+  class diagram produced anything real: `module-diagram.mmd` was an empty
+  `graph LR`, `architecture-overview.mmd` was a single generic
+  "Business Logic Layer" node, and the generated README linked an
+  `architecture-overview.svg` that was never produced. It also carried handling
+  for JavaScript, TypeScript and Java. `architecture_config.py` was template
+  boilerplate for a web application, listing `User`, `Order` and `Product` as
+  the important classes and grouping modules by `routes`/`controllers`.
+
 ### Changed
 
 - Dependency updates are handled by Dependabot alone. The custom
