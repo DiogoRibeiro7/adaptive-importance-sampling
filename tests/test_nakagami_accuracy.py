@@ -99,6 +99,42 @@ class TestNakagamiSampling:
         samples = NakagamiDistribution.sample(m, omega, 20_000, rng=rng)
         assert float(np.mean(samples**2)) == pytest.approx(omega, rel=0.03)
 
+    @pytest.mark.parametrize("m", [2.0, 99.0, 101.0, 200.0, 1000.0])
+    def test_samples_follow_the_distribution(self, m: float, rng) -> None:
+        """A moment check is not enough: the shape has to be right too.
+
+        A normal approximation used to take over for m > 100 whose variance was
+        four times too large, so samples had twice the correct spread. E[R^2]
+        was still within 0.3% of Omega, so only a distributional test catches
+        it. This one rejected at p = 0 for every m above the old cutoff.
+        """
+        omega = 5.0
+        samples = NakagamiDistribution.sample(m, omega, 20_000, rng=rng)
+
+        result = stats.kstest(
+            samples, lambda x: stats.nakagami.cdf(x, m, scale=np.sqrt(omega))
+        )
+        assert result.pvalue > 0.001, f"KS statistic {result.statistic:.4f}"
+
+    @pytest.mark.parametrize("m", [2.0, 200.0])
+    def test_sample_spread_matches_the_distribution(self, m: float, rng) -> None:
+        omega = 5.0
+        samples = NakagamiDistribution.sample(m, omega, 40_000, rng=rng)
+        expected = float(stats.nakagami.std(m, scale=np.sqrt(omega)))
+        # The old approximation gave exactly twice this.
+        assert float(np.std(samples)) == pytest.approx(expected, rel=0.05)
+
+    @pytest.mark.parametrize("m", [2.0, 200.0])
+    def test_inverse_sampler_inherits_the_fix(self, m: float, rng) -> None:
+        """InverseNakagami draws R then returns 1/R, so 1/Y must be Nakagami."""
+        omega = 5.0
+        y = InverseNakagamiDistribution.sample(m, omega, 20_000, rng=rng)
+
+        result = stats.kstest(
+            1.0 / y, lambda x: stats.nakagami.cdf(x, m, scale=np.sqrt(omega))
+        )
+        assert result.pvalue > 0.001, f"KS statistic {result.statistic:.4f}"
+
     def test_chi_identity(self, rng) -> None:
         """chi_d is exactly Nakagami(m=d/2, Omega=d), which the initialiser uses."""
         for d in (2, 5, 20):

@@ -69,6 +69,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   scaled by that error. On a linear limit state with a closed-form answer the
   estimate was 0.54x the analytical value regardless of sample size; it is now
   1.02x. `OptimizedSafeICE` had the same omission in both of its components.
+- **The Nakagami sampler drew from the wrong distribution for shapes above
+  100.** A normal approximation replaced the exact `sqrt(Gamma(m, Omega/m))`
+  route there. Its variance, `Omega*(1 - 1/(4m))/m`, is about `Omega/m`, while
+  the Nakagami variance tends to `Omega/(4m)`, so samples came out with exactly
+  twice the correct spread. A KS test against `scipy.stats.nakagami` rejected at
+  p = 0 for every shape above the cutoff, and passes at p > 0.1 now. The second
+  moment stayed within 0.3% of `Omega`, so a moment check alone did not reveal
+  it. `InverseNakagamiDistribution.sample` inherited the error, since it draws
+  R and returns 1/R.
 - **The Nakagami density was badly wrong for shape parameters above 170.** A
   normal approximation replaced the exact form there, on the theory that the
   exact one would overflow. It does not: log-space with `loggamma` is stable for
