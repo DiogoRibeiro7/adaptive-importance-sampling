@@ -69,6 +69,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   scaled by that error. On a linear limit state with a closed-form answer the
   estimate was 0.54x the analytical value regardless of sample size; it is now
   1.02x. `OptimizedSafeICE` had the same omission in both of its components.
+- **The Nakagami density was badly wrong for shape parameters above 170.** A
+  normal approximation replaced the exact form there, on the theory that the
+  exact one would overflow. It does not: log-space with `loggamma` is stable for
+  any shape. Measured against `scipy.stats.nakagami`, the approximation was off
+  by 43% at m=200 and 145% at m=500, where the log-space form is accurate to
+  ~1e-13. The CDF had the same branch, off by ~5e-3 absolute, plus a cap on the
+  incomplete-gamma argument that was never needed. This is reachable rather
+  than hypothetical, because the initialiser now sets the shape from the problem
+  dimension.
+- Removed `safe_ice/distributions/nakagami_stable.py`. It duplicated the live
+  module under the same class names and was referenced by nothing, but it was
+  also the *correct* implementation for large shapes, so its behaviour was
+  folded into `nakagami.py` before deleting it. The only thing lost is a
+  `log_pdf` helper that nothing called.
 - **The mixture was initialised with dimension-independent parameters.** The
   target is the standard normal in R^d, whose radius follows chi_d, and chi_d
   is exactly Nakagami(m = d/2, Omega = d), so the fixed values used before were
