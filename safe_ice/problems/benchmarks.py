@@ -79,7 +79,23 @@ class BenchmarkProblems:
     def nonlinear_oscillator_simplified(
         d: int = 10, z: float = 0.05
     ) -> Callable[[npt.ArrayLike], float | npt.NDArray[np.float64]]:
-        """Simplified nonlinear oscillator problem."""
+        """Simplified nonlinear oscillator problem.
+
+        .. warning::
+
+           This problem cannot fail as parameterised, so it measures nothing.
+           Displacement is computed as ``force_rms / (k * (1 - alpha))`` with
+           ``k = 5e6``, giving values around ``4e-7`` against a threshold of
+           ``z = 0.05``. Reaching the threshold needs ``||u||`` of about
+           ``7.3e5``, where the norm of a 10-dimensional standard normal
+           averages ``3.1``. Crude Monte Carlo over 2e7 samples finds zero
+           failures, and any estimator will return ``0``.
+
+           The scaling is inconsistent by a factor of roughly ``1e5``.
+           Reconstructing the intended formulation needs the source paper, so
+           the defect is documented rather than guessed at. See
+           ``tests/test_benchmark_ground_truth.py::TestNonlinearOscillator``.
+        """
 
         def limit_state_function(
             u: npt.ArrayLike,
@@ -125,7 +141,14 @@ class BenchmarkProblems:
     def nonlinear_oscillator(
         dimension: int = 10, z: float = 0.05
     ) -> Callable[[npt.ArrayLike], float | npt.NDArray[np.float64]]:
-        """Compatibility wrapper for nonlinear oscillator benchmark."""
+        """Compatibility wrapper for nonlinear oscillator benchmark.
+
+        .. warning::
+
+           Delegates to :meth:`nonlinear_oscillator_simplified` and shares its
+           defect: the failure region is unreachable, so this returns a
+           probability of zero for any estimator.
+        """
         return BenchmarkProblems.nonlinear_oscillator_simplified(d=dimension, z=z)
 
     @staticmethod
