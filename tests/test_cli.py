@@ -12,10 +12,25 @@ fails here rather than being printed to a user as fact.
 
 from __future__ import annotations
 
+import re
+
 import pytest
 
 from safe_ice import __version__
 from safe_ice.cli import main, run_benchmark
+
+_ANSI = re.compile(r"\x1b\[[0-9;]*m")
+
+
+def plain(text: str) -> str:
+    """Strip ANSI colour codes.
+
+    Python 3.14 colourises argparse help output, which splits `usage: safe-ice`
+    across escape sequences. Whether it does so also depends on the terminal and
+    on NO_COLOR/FORCE_COLOR, so the tests compare the uncoloured text rather
+    than depending on the environment.
+    """
+    return _ANSI.sub("", text)
 
 
 class TestVersion:
@@ -25,21 +40,21 @@ class TestVersion:
             main(["--version"])
         assert excinfo.value.code == 0
 
-        out = capsys.readouterr().out
+        out = plain(capsys.readouterr().out)
         assert __version__ in out
 
 
 class TestHelp:
     def test_no_command_prints_help(self, capsys) -> None:
         assert main([]) == 0
-        out = capsys.readouterr().out
+        out = plain(capsys.readouterr().out)
         assert "usage: safe-ice" in out
         assert "demo" in out
 
     def test_epilogue_has_no_placeholder_url(self, capsys) -> None:
         """The help text used to point at a `your-username` placeholder."""
         assert main([]) == 0
-        out = capsys.readouterr().out
+        out = plain(capsys.readouterr().out)
         assert "your-username" not in out
         assert "DiogoRibeiro7/adaptive-importance-sampling-ice" in out
 
@@ -47,18 +62,18 @@ class TestHelp:
 class TestBenchmarkListing:
     def test_lists_the_available_problems(self, capsys) -> None:
         assert main(["benchmark", "--list"]) == 0
-        out = capsys.readouterr().out
+        out = plain(capsys.readouterr().out)
         for name in ("four-mode", "three-mode", "two-mode"):
             assert name in out
 
     def test_does_not_offer_the_oscillator(self, capsys) -> None:
         """It cannot fail, so it always reported a probability of exactly 0."""
         assert main(["benchmark", "--list"]) == 0
-        assert "oscillator" not in capsys.readouterr().out
+        assert "oscillator" not in plain(capsys.readouterr().out)
 
     def test_unknown_problem_is_reported(self, capsys) -> None:
         assert main(["benchmark", "not-a-problem"]) == 0
-        out = capsys.readouterr().out
+        out = plain(capsys.readouterr().out)
         assert "Unknown problem" in out
         assert "four-mode" in out  # still shows what is available
 
@@ -69,7 +84,7 @@ class TestBenchmarkRun:
         assert (
             main(["benchmark", problem, "--samples", "200", "--iterations", "2"]) == 0
         )
-        out = capsys.readouterr().out
+        out = plain(capsys.readouterr().out)
         assert "Estimated failure probability" in out
         assert "Relative error" in out
 
@@ -86,7 +101,7 @@ class TestBenchmarkRun:
         }
         for problem, reference in expected.items():
             run_benchmark(problem, n_samples=200, max_iterations=2)
-            out = capsys.readouterr().out
+            out = plain(capsys.readouterr().out)
             assert f"{reference:.2e}" in out, f"{problem}: reference not printed"
 
 
@@ -94,7 +109,7 @@ class TestDemo:
     @pytest.mark.slow
     def test_demo_runs(self, capsys) -> None:
         assert main(["demo"]) == 0
-        out = capsys.readouterr().out
+        out = plain(capsys.readouterr().out)
         assert "Safe-ICE Algorithm Demonstration" in out
         assert "Estimated failure probability" in out
 
@@ -103,4 +118,4 @@ class TestAnalyze:
     def test_analyze_is_a_placeholder(self, capsys) -> None:
         """Records that the subcommand is not implemented yet."""
         assert main(["analyze"]) == 0
-        assert "coming soon" in capsys.readouterr().out
+        assert "coming soon" in plain(capsys.readouterr().out)
