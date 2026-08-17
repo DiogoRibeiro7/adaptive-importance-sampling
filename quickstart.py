@@ -78,7 +78,6 @@ def check_optional_features():
 
     features = {
         "Plotly (interactive visualization)": "plotly",
-        "Numba (JIT compilation)": "numba",
         "Pandas (data analysis)": "pandas",
         "Seaborn (statistical plots)": "seaborn",
         "PSUtil (memory monitoring)": "psutil",
