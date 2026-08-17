@@ -69,6 +69,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   scaled by that error. On a linear limit state with a closed-form answer the
   estimate was 0.54x the analytical value regardless of sample size; it is now
   1.02x. `OptimizedSafeICE` had the same omission in both of its components.
+- **The von Mises-Fisher sampler was wrong for concentrations above 30.** A
+  shortcut intercepted `kappa >= 30` and replaced Wood's rejection sampler with
+  a Gaussian around `mu` of scale `0.2 / sqrt(kappa)`. The 0.2 is arbitrary and
+  roughly five times too small (the tangent-space standard deviation is
+  `1 / sqrt(kappa)`), and it ignores the dimension, so samples clustered far too
+  tightly around `mu`. Measured against the closed-form mean resultant length
+  `I_{d/2}(k)/I_{d/2-1}(k)`, at d=20 and kappa=50 it gave 0.9925 against a true
+  0.8263. Wood's sampler is exact at any concentration, accurate to ~1e-6 out to
+  kappa = 1e4 at constant cost, so the shortcut only introduced error. Removing
+  it also improved the estimator, since for `kappa >= 30` the sampler and the
+  density it is weighted by no longer agreed: the sphere problem went from 0.86
+  to 1.01 of the closed form at d=10, and 0.54 to 0.76 at d=20.
 - **The Nakagami sampler drew from the wrong distribution for shapes above
   100.** A normal approximation replaced the exact `sqrt(Gamma(m, Omega/m))`
   route there. Its variance, `Omega*(1 - 1/(4m))/m`, is about `Omega/m`, while

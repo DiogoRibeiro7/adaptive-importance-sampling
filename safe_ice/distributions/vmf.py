@@ -82,21 +82,16 @@ class VonMisesFisherSampler:
                 mu_unit, float(kappa), n_samples, _rng
             )
 
-        # High-concentration regime (d >= 3): numerically stable local
-        # Gaussian approximation around mu on the tangent space.
-        if kappa >= 30.0:
-            noise_scale = 0.2 / math.sqrt(float(kappa))
-            raw: NDArrayF = np.asarray(
-                mu_unit + _rng.normal(0.0, noise_scale, size=(n_samples, d)),
-                dtype=np.float64,
-            )
-            norms_h: NDArrayF = np.linalg.norm(raw, axis=1, keepdims=True).astype(
-                np.float64, copy=False
-            )
-            eps_h: float = float(np.finfo(np.float64).tiny)
-            return np.asarray(raw / np.maximum(norms_h, eps_h), dtype=np.float64)
-
-        # General case d >= 3
+        # General case d >= 3. Wood's rejection sampler is exact and holds up at
+        # any concentration: measured against I_{d/2}(k)/I_{d/2-1}(k) it is
+        # accurate to ~1e-6 out to kappa = 1e4, at constant cost per sample.
+        #
+        # A "high-concentration" shortcut used to intercept kappa >= 30 with a
+        # Gaussian around mu using scale 0.2/sqrt(kappa). The 0.2 is arbitrary
+        # and roughly five times too small -- the tangent-space standard
+        # deviation is 1/sqrt(kappa) -- and it ignores the dimension entirely,
+        # so samples clustered far too tightly around mu. At d=20, kappa=50 the
+        # mean resultant length came out at 0.9925 against a true 0.8263.
         out: NDArrayF = np.zeros((n_samples, d), dtype=np.float64)
         for i in range(n_samples):
             w: float = VonMisesFisherSampler._sample_w_wood(float(kappa), d, _rng)
