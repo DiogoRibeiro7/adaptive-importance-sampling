@@ -120,4 +120,8 @@ class vMFNMDistribution:
 
     def log_likelihood(self, x: npt.ArrayLike) -> float:
         pdf_vals = self.pdf(x)
-        return float(np.sum(np.log(np.maximum(pdf_vals, 1e-15))))
+        # Floor at the smallest positive float rather than 1e-15: densities on
+        # R^d fall below 1e-15 routinely once d is around 20, and flooring there
+        # caps every term at log(1e-15) = -34.5, flattening real differences.
+        floor = float(np.finfo(np.float64).tiny)
+        return float(np.sum(np.log(np.maximum(pdf_vals, floor))))

@@ -226,6 +226,10 @@ Two correctness bugs that biased every estimate have been fixed:
   denominator, every estimate was scaled by that error, which is why results
   came out at roughly `0.54x` the analytical answer no matter how large `N`
   was.
+- The proposal density was floored at `1e-15` before being divided into the
+  prior. That is not a small number for a density on `R^d`: it clamped 11% of
+  samples at `d=20` and 100% at `d=30`, which is what produced the apparent
+  dimensional ceiling.
 - The mixture was initialised with fixed Nakagami parameters, independent of
   dimension. The target is the standard normal in `R^d`, whose radius follows
   `chi_d`, and `chi_d` is exactly `Nakagami(m = d/2, Ω = d)` — so the old fixed
@@ -253,8 +257,10 @@ Current accuracy against problems with known answers, median over seeds:
 | --- | --- | --- |
 | Linear limit state, closed form | `1.69e-2` | `1.02` |
 | Sphere `d=2`, closed form | `1.11e-2` | `1.01` |
-| Sphere `d=10`, closed form | `5.35e-3` | `1.01` |
-| Sphere `d=20`, closed form | `1.54e-2` | `0.76` |
+| Sphere `d=10`, closed form | `5.35e-3` | `1.00` |
+| Sphere `d=20`, closed form | `1.54e-2` | `1.01` |
+| Sphere `d=50`, closed form | `3.61e-3` | `0.98` |
+| Sphere `d=200`, closed form | `4.57e-3` | `1.01` |
 | Four-mode series system, 2e7-sample MC | `5.8e-5` | `1.01` |
 
 `tests/test_proposal_normalisation.py` pins this down: it integrates each
@@ -266,12 +272,13 @@ proposal component numerically and fails if the Jacobian is dropped again.
   unconstrained, so for a limit state that fails everywhere (true probability
   exactly 1) it scatters around 1 and can land slightly above. Clamping would
   fix it, but that is a modelling decision rather than a bug.
-- **It still breaks down above roughly `d=20`.** On the sphere problem, `d=20`
-  now works (6 of 6 seeds within `3x`, ratio `0.76`), but `d=30` does not —
-  every seed collapses. Importance weights become extremely heavy-tailed as
-  dimension grows: the ratio of largest to median weight goes from `~10` at
-  `d=2` to `~8e11` at `d=20`, so a few samples carry the estimate. Raising `N`
-  helps but does not fix it. Treat `d > 20` as unsupported.
+- **High dimensions now work.** The apparent ceiling above `d=20` was a fixed
+  `1e-15` floor applied to the proposal density before dividing it into the
+  prior. Densities on `R^d` shrink geometrically with dimension, so that floor
+  clamped 11% of samples at `d=20` and *every* sample at `d=30`, collapsing the
+  estimate to `~1e-9` against a true `1.6e-2`. With the floor at the smallest
+  positive float instead, the sphere problem holds to within a few percent
+  through `d=200`.
 - The reference value quoted for the four-mode problem used to be `1.22e-5`.
   Crude Monte Carlo over 2e7 samples puts it at `5.8e-5 ± 1.7e-6` for the
   default `z=3.8`.

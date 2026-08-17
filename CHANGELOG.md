@@ -119,6 +119,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   also the *correct* implementation for large shapes, so its behaviour was
   folded into `nakagami.py` before deleting it. The only thing lost is a
   `log_pdf` helper that nothing called.
+- **The proposal density was floored at 1e-15 before being divided into the
+  prior.** That is not a small number for a probability density on R^d, which
+  shrinks geometrically with dimension. Measured on the sphere problem, the
+  median proposal density is 4.5e-2 at d=2, 1.6e-8 at d=10, 4.3e-15 at d=20 and
+  7.1e-22 at d=30, so the floor clamped nothing at low dimension, 11% of samples
+  at d=20, and every sample at d=30. Clamping inflates the denominator and
+  collapses the estimate: d=30 returned about 1e-9 against a true 1.6e-2.
+
+  This presented as a hard ceiling between d=20 and d=30 and was twice
+  attributed here to importance-weight degeneracy. That is a real phenomenon,
+  but it was the wrong diagnosis: with the floor at the smallest positive float,
+  the sphere problem holds to within a few percent through d=200. The same fixed
+  floor was also applied inside two log-likelihood computations, capping every
+  term at log(1e-15) and flattening the EM objective in high dimensions.
+
+  Sphere problem, median over seeds, ratio to the exact chi-square tail:
+
+    d=20   0.75 -> 1.01
+    d=30   0.00 -> 0.98   (was 7e-9 against 1.6e-2)
+    d=50   0.00 -> 0.98
+    d=200    --  -> 1.01
+
 - **The mixture was initialised with dimension-independent parameters.** The
   target is the standard normal in R^d, whose radius follows chi_d, and chi_d
   is exactly Nakagami(m = d/2, Omega = d), so the fixed values used before were

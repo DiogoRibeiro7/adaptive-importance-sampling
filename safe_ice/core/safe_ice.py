@@ -35,6 +35,18 @@ from .parameters import vMFNMParameters
 # ----------------------------
 NDArrayF = npt.NDArray[np.float64]
 
+#: Smallest positive normal float64. Used to keep a proposal density out of a
+#: denominator without distorting it.
+#:
+#: A fixed 1e-15 floor was used here before. Probability densities on R^d shrink
+#: geometrically with dimension, so that floor is far below any real value at
+#: d=2 but sits above most of them by d=20: measured on the sphere problem, the
+#: median proposal density is 4.5e-2 at d=2, 4.3e-15 at d=20 and 7.1e-22 at
+#: d=30, where every single sample was being clamped. Clamping inflates the
+#: denominator and drives the estimate to zero, which is why d=30 returned
+#: ~1e-9 for a true 1.6e-2.
+DENSITY_FLOOR: float = float(np.finfo(np.float64).tiny)
+
 
 class _SafeICEHistory(TypedDict):
     """History container for monitoring algorithm progress."""
@@ -550,7 +562,7 @@ class SafeICE:
 
         # W_t = h * p / q_safe
         weights: NDArrayF = (
-            h_values * prior_densities / np.maximum(safe_densities, 1e-15)
+            h_values * prior_densities / np.maximum(safe_densities, DENSITY_FLOOR)
         ).astype(np.float64, copy=False)
         return weights
 
@@ -592,7 +604,7 @@ class SafeICE:
 
         # Importance weights
         importance_weights: NDArrayF = (
-            prior_densities / np.maximum(safe_densities, 1e-15)
+            prior_densities / np.maximum(safe_densities, DENSITY_FLOOR)
         ).astype(np.float64, copy=False)
 
         # Monte Carlo estimate
