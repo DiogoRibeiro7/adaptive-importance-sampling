@@ -11,29 +11,32 @@ permissions:
 
 env:
   BENCHMARK_ITERATIONS: 10
-  REGRESSION_THRESHOLD: 10  # Percentage threshold for regression alert
+  # Sized from observed noise. With both sides measured on the same runner and
+  # compared on `min`, a pull request touching no library code came back within
+  # 1.1% across all five benchmarks. 15% leaves an order of magnitude of head
+  # room over that while still catching a real regression. For comparison, the
+  # previous split-runner setup drifted by 44% on untouched code, which is why
+  # the old 10% threshold reported noise as a regression.
+  REGRESSION_THRESHOLD: 15
 
 jobs:
-  benchmark-pr:
+  benchmark:
+    # Both sides are measured in one job, on one runner. As separate jobs they
+    # landed on different machines and the comparison picked up hardware
+    # variance: a change touching only the sampler was reported as a uniform
+    # -44% across benchmarks that never call it.
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout PR branch
+      - name: Checkout with full history
         uses: actions/checkout@v7
         with:
-          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
 
       - name: Setup Python
         uses: actions/setup-python@v7
         with:
           python-version: '3.12'
-
-      - name: Cache dependencies
-        uses: actions/cache@v6
-        with:
-          path: ~/.cache/pip
-          key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt', '**/pyproject.toml') }}
-          restore-keys: |
-            ${{ runner.os }}-pip-
+          cache: 'pip'
 
       - name: Install dependencies
         run: |
@@ -41,82 +44,28 @@ jobs:
           pip install -e .
           pip install pytest pytest-benchmark
 
-      - name: Run PR benchmarks
-        id: pr-bench
+      - name: Stage the benchmark runner outside the working tree
+        # The base commit may predate this script, and checking it out would
+        # remove it. Copying it out first also means both sides are measured by
+        # exactly the same code, which is the point of the comparison.
+        run: cp .github/scripts/run-benchmarks.sh "$RUNNER_TEMP/run-benchmarks.sh"
+
+      - name: Benchmark the PR
         run: |
-          mkdir -p .benchmarks
+          git checkout --quiet ${{ github.event.pull_request.head.sha }}
+          bash "$RUNNER_TEMP/run-benchmarks.sh" pr
 
-          if compgen -G "benchmarks/test_*.py" > /dev/null; then
-            python -m pytest benchmarks/ --benchmark-only --benchmark-json=.benchmarks/pr_results.json || true
-          fi
+      - name: Benchmark the base
+        # The editable install resolves modules from the working tree, so
+        # switching the checkout is enough for a pure-Python package.
+        run: |
+          git checkout --quiet ${{ github.event.pull_request.base.sha }}
+          bash "$RUNNER_TEMP/run-benchmarks.sh" base
 
-          # Always leave a readable file behind. upload-artifact creates nothing
-          # for an empty directory, and the compare job would then fail on a
-          # missing artifact rather than reporting there was no baseline.
-          if [ ! -f .benchmarks/pr_results.json ]; then
-            echo '{"benchmarks": []}' > .benchmarks/pr_results.json
-          fi
-
-          echo "pr benchmarks completed"
-      - name: Upload PR benchmark results
+      - name: Upload benchmark results
         uses: actions/upload-artifact@v7
         with:
-          name: pr-benchmarks
-          path: .benchmarks/
-          # .benchmarks is a dot-directory and upload-artifact skips hidden
-          # files by default, which silently produced an empty artifact.
-          include-hidden-files: true
-          if-no-files-found: error
-          retention-days: 30
-
-  benchmark-base:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout base branch
-        uses: actions/checkout@v7
-        with:
-          ref: ${{ github.event.pull_request.base.sha }}
-
-      - name: Setup Python
-        uses: actions/setup-python@v7
-        with:
-          python-version: '3.12'
-
-      - name: Cache dependencies
-        uses: actions/cache@v6
-        with:
-          path: ~/.cache/pip
-          key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt', '**/pyproject.toml') }}
-          restore-keys: |
-            ${{ runner.os }}-pip-
-
-      - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install -e .
-          pip install pytest pytest-benchmark
-
-      - name: Run base benchmarks
-        id: base-bench
-        run: |
-          mkdir -p .benchmarks
-
-          if compgen -G "benchmarks/test_*.py" > /dev/null; then
-            python -m pytest benchmarks/ --benchmark-only --benchmark-json=.benchmarks/base_results.json || true
-          fi
-
-          # Always leave a readable file behind. upload-artifact creates nothing
-          # for an empty directory, and the compare job would then fail on a
-          # missing artifact rather than reporting there was no baseline.
-          if [ ! -f .benchmarks/base_results.json ]; then
-            echo '{"benchmarks": []}' > .benchmarks/base_results.json
-          fi
-
-          echo "base benchmarks completed"
-      - name: Upload base benchmark results
-        uses: actions/upload-artifact@v7
-        with:
-          name: base-benchmarks
+          name: benchmarks
           path: .benchmarks/
           # .benchmarks is a dot-directory and upload-artifact skips hidden
           # files by default, which silently produced an empty artifact.
@@ -126,7 +75,7 @@ jobs:
 
   compare-and-report:
     runs-on: ubuntu-latest
-    needs: [benchmark-pr, benchmark-base]
+    needs: [benchmark]
     steps:
       - name: Checkout code
         uses: actions/checkout@v7
@@ -136,17 +85,11 @@ jobs:
         with:
           node-version: '20'
 
-      - name: Download PR benchmarks
+      - name: Download benchmark results
         uses: actions/download-artifact@v8
         with:
-          name: pr-benchmarks
-          path: ./pr-benchmarks
-
-      - name: Download base benchmarks
-        uses: actions/download-artifact@v8
-        with:
-          name: base-benchmarks
-          path: ./base-benchmarks
+          name: benchmarks
+          path: ./benchmarks-out
 
       - name: Analyze and compare results
         id: analyze
@@ -172,10 +115,10 @@ jobs:
             }
             
             // Read benchmark results
-            const prResults = readJSON('./pr-benchmarks/pr_results.json');
-            const baseResults = readJSON('./base-benchmarks/base_results.json');
-            const prCustom = readJSON('./pr-benchmarks/pr_custom.json');
-            const baseCustom = readJSON('./base-benchmarks/base_custom.json');
+            const prResults = readJSON('./benchmarks-out/pr_results.json');
+            const baseResults = readJSON('./benchmarks-out/base_results.json');
+            const prCustom = readJSON('./benchmarks-out/pr_custom.json');
+            const baseCustom = readJSON('./benchmarks-out/base_custom.json');
             
             const regressionThreshold = parseFloat(process.env.REGRESSION_THRESHOLD);
             
@@ -204,8 +147,12 @@ jobs:
                 
                 if (!prBench) continue;
                 
-                const baseTime = baseBench.stats?.mean || baseBench.stats?.median || 0;
-                const prTime = prBench.stats?.mean || prBench.stats?.median || 0;
+                // Prefer `min`: it is the least sensitive to interference from
+                // other work on the runner. Measured on identical code, run to
+                // run, `mean` drifted by up to 49% where `min` drifted by 24%.
+                const pick = (st) => st?.min ?? st?.median ?? st?.mean ?? 0;
+                const baseTime = pick(baseBench.stats);
+                const prTime = pick(prBench.stats);
                 
                 if (baseTime === 0) continue;
                 
@@ -334,22 +281,6 @@ jobs:
                 report += `${formatChange(st.change)} |\n`;
               }
               report += '\n</details>\n\n';
-            }
-            
-            // Memory analysis (if available)
-            const prMemory = fs.existsSync('./pr-benchmarks/pr_memory.txt') 
-              ? fs.readFileSync('./pr-benchmarks/pr_memory.txt', 'utf8') 
-              : null;
-            const baseMemory = fs.existsSync('./base-benchmarks/base_memory.txt')
-              ? fs.readFileSync('./base-benchmarks/base_memory.txt', 'utf8')
-              : null;
-            
-            if (prMemory && baseMemory) {
-              report += '## 💾 Memory Profile\n\n';
-              report += '<details>\n<summary>Click to view memory comparison</summary>\n\n';
-              report += '### Base Branch\n```\n' + baseMemory.slice(0, 1000) + '\n```\n\n';
-              report += '### PR Branch\n```\n' + prMemory.slice(0, 1000) + '\n```\n';
-              report += '</details>\n\n';
             }
             
             // Recommendations
