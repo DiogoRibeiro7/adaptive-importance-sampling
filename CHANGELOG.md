@@ -76,6 +76,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **The nonlinear oscillator benchmark cannot fail, and so measures nothing.**
+  Displacement is computed as `force_rms / (k * (1 - alpha))` with `k = 5e6`,
+  giving values around 4e-7 against a threshold of `z = 0.05`. Reaching it needs
+  a norm of about 7.3e5, where a 10-dimensional standard normal averages 3.1.
+  Crude Monte Carlo over 2e7 samples finds zero failures, and `safe-ice
+  benchmark oscillator` reported a probability of exactly 0 with an infinite
+  coefficient of variation. The scaling is inconsistent by roughly 1e5.
+  Reconstructing the intended formulation needs the source paper, so the defect
+  is documented on the problem, recorded as a strict xfail, and the problem is
+  removed from the CLI in favour of `two-mode`.
+- Reference probabilities in the CLI were wrong: four-mode was quoted as 1.22e-5
+  against a measured 5.8e-5, and three-mode as 2.3e-3 against 3.5e-3. Both now
+  come from the Monte Carlo values recorded in the tests. The CLI epilogue also
+  pointed at a `your-username` placeholder URL.
+
 - **The heavy-tailed proposal component was missing the polar Jacobian.** It is
   built as a radial density times an angular one, so recovering a density on
   R^d needs `du = r^(d-1) dr dw`, which `vMFNMDistribution.pdf` applied and

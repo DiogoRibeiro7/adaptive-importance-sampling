@@ -212,9 +212,24 @@ safe-ice benchmark --problem four-mode
 ### Available benchmark problems
 
 `four_mode_series_system`, `three_mode_problem`,
-`two_mode_opposite_directions`, `nonlinear_oscillator`,
-`nonlinear_oscillator_simplified`, and `nakagami_ratio_problem`, plus
+`two_mode_opposite_directions` and `nakagami_ratio_problem`, plus
 `HeatTransferProblem` — a PDE problem using a Karhunen-Loève expansion.
+
+Reference probabilities, from crude Monte Carlo over 2e7 samples:
+
+| Problem | `P_F` |
+| --- | --- |
+| `four_mode_series_system` | `5.8e-5` |
+| `three_mode_problem` | `3.5e-3` |
+| `two_mode_opposite_directions` | `2.7e-3` |
+| `nakagami_ratio_problem` | `5.2e-2` |
+
+> `nonlinear_oscillator` and `nonlinear_oscillator_simplified` **cannot fail as
+> parameterised** and so measure nothing: displacement comes out around `4e-7`
+> against a threshold of `0.05`, needing `‖u‖ ≈ 7.3e5` where a 10-dimensional
+> standard normal averages `3.1`. Any estimator returns `0`. Fixing the scaling
+> needs the source paper, so the defect is documented rather than guessed at;
+> the problems are excluded from the CLI.
 
 ## Accuracy
 

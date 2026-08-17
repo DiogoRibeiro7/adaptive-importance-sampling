@@ -47,7 +47,7 @@ def run_demo() -> None:
         print("Results:")
         print(f"  Estimated failure probability: {pf:.6e}")
         print(f"  Number of samples generated: {len(results['final_samples'])}")
-        print("  Reference probability: ~1.22e-5")
+        print("  Reference probability: ~5.8e-5")
         print("=" * 60)
 
     except Exception as e:
@@ -64,11 +64,18 @@ def run_benchmark(
 
     problems = BenchmarkProblems()
 
-    # Available problems
+    # Available problems. Reference probabilities are from crude Monte Carlo
+    # over 2e7 standard-normal samples; see
+    # tests/test_benchmark_ground_truth.py.
     available: dict[str, tuple[Callable[[], LimitStateFunction], int, float | None]] = {
-        "four-mode": (problems.four_mode_series_system, 2, 1.22e-5),
-        "three-mode": (problems.three_mode_problem, 2, 2.3e-3),
-        "oscillator": (problems.nonlinear_oscillator, 10, None),
+        "four-mode": (problems.four_mode_series_system, 2, 5.815e-05),
+        "three-mode": (problems.three_mode_problem, 2, 3.475e-03),
+        # "oscillator" is deliberately absent. nonlinear_oscillator cannot fail
+        # as parameterised -- displacement is ~4e-7 against a threshold of 0.05
+        # -- so this subcommand reported a failure probability of exactly 0 with
+        # an infinite coefficient of variation. Offering it as a benchmark is
+        # worse than not offering it. See the warning on the problem itself.
+        "two-mode": (problems.two_mode_opposite_directions, 2, 2.690e-03),
     }
 
     if problem_name is None or problem_name not in available:
@@ -129,7 +136,8 @@ Examples:
   safe-ice benchmark --list        List available benchmark problems
   safe-ice --help                  Show this help message
 
-For more information, visit: https://github.com/your-username/safe-ice
+For more information, visit:
+  https://github.com/DiogoRibeiro7/adaptive-importance-sampling-ice
         """,
     )
 
@@ -146,7 +154,7 @@ For more information, visit: https://github.com/your-username/safe-ice
     # Benchmark command
     benchmark_parser = subparsers.add_parser("benchmark", help="Run benchmark problems")
     benchmark_parser.add_argument(
-        "problem", nargs="?", help="Problem name (four-mode, three-mode, oscillator)"
+        "problem", nargs="?", help="Problem name (four-mode, three-mode, two-mode)"
     )
     benchmark_parser.add_argument(
         "--samples",
