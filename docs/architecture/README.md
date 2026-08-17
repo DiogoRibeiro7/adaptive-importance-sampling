@@ -1,11 +1,11 @@
 # Architecture Documentation
 
-*Auto-generated on 2026-08-16*
+*Auto-generated on 2026-08-17*
 
 ## Project Overview
 
 - **Python Files:** 44
-- **Test Files:** 7
+- **Test Files:** 8
 - **Frameworks:** None detected
 
 ## Architecture Diagrams

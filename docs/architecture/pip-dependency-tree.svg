@@ -978,7 +978,7 @@
 <title>pygments</title>
 <ellipse fill="none" stroke="black" cx="4187.2" cy="-341.09" rx="61.54" ry="26.74"/>
 <text text-anchor="middle" x="4187.2" y="-344.89" font-family="Times,serif" font-size="14.00">pygments</text>
-<text text-anchor="middle" x="4187.2" y="-329.89" font-family="Times,serif" font-size="14.00">2.20.0</text>
+<text text-anchor="middle" x="4187.2" y="-329.89" font-family="Times,serif" font-size="14.00">2.21.0</text>
 </g>
 <!-- pylint -->
 <g id="node72" class="node">

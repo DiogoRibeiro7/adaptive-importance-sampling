@@ -83,27 +83,6 @@ classDiagram
     +sample()
   }
 
-  class NakagamiDistribution {
-    +pdf()
-    +pdf()
-    +pdf()
-    +log_pdf()
-    +cdf()
-    +cdf()
-    +cdf()
-    +sample()
-  }
-
-  class InverseNakagamiDistribution {
-    +pdf()
-    +pdf()
-    +pdf()
-    +cdf()
-    +cdf()
-    +cdf()
-    +sample()
-  }
-
   class VonMisesFisherSampler {
     +sample()
   }
@@ -339,6 +318,23 @@ classDiagram
     +rare_event_limit_state()
     +test_certain_failure()
     +certain_failure_limit_state()
+  }
+
+  class TestNakagamiAgainstScipy {
+    +test_pdf_matches_reference()
+    +test_cdf_matches_reference()
+    +test_no_discontinuity_across_the_old_cutoff()
+    +test_pdf_stays_finite_and_non_negative()
+  }
+
+  class TestInverseNakagami {
+    +test_pdf_integrates_to_one()
+    +test_samples_match_the_density()
+  }
+
+  class TestNakagamiSampling {
+    +test_second_moment_is_omega()
+    +test_chi_identity()
   }
 
   class TestRadiiAndDirections {
