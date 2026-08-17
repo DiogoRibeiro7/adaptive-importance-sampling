@@ -381,7 +381,10 @@ class PenalizedEMOptimizer:
         """Compute weighted log-likelihood."""
         dist = vMFNMDistribution(params)
         pdf_vals: NDArrayF = np.asarray(dist.pdf(data), dtype=np.float64)
-        log_pdf: NDArrayF = np.log(np.maximum(pdf_vals, 1e-15)).astype(
+        # See mixture.log_likelihood: 1e-15 is not a small density once the
+        # dimension is around 20, and flooring there flattens the objective.
+        floor = float(np.finfo(np.float64).tiny)
+        log_pdf: NDArrayF = np.log(np.maximum(pdf_vals, floor)).astype(
             np.float64, copy=False
         )
         return float(np.sum(weights * log_pdf))
