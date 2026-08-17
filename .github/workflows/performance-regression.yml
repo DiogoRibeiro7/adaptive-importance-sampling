@@ -11,11 +11,13 @@ permissions:
 
 env:
   BENCHMARK_ITERATIONS: 10
-  # Sized from measured noise rather than chosen round. Running the suite twice
-  # on identical code on one machine drifted the per-benchmark `min` by up to
-  # 24%, so anything tighter reports noise as a regression. This is a coarse
-  # smoke detector: it catches an order-of-magnitude change, not a few percent.
-  REGRESSION_THRESHOLD: 30
+  # Sized from observed noise. With both sides measured on the same runner and
+  # compared on `min`, a pull request touching no library code came back within
+  # 1.1% across all five benchmarks. 15% leaves an order of magnitude of head
+  # room over that while still catching a real regression. For comparison, the
+  # previous split-runner setup drifted by 44% on untouched code, which is why
+  # the old 10% threshold reported noise as a regression.
+  REGRESSION_THRESHOLD: 15
 
 jobs:
   benchmark:
