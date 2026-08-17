@@ -2,18 +2,49 @@ name: Monthly maintenance reminder
 
 on:
   schedule:
-    # Second Monday of each month at 09:00 UTC
-    - cron: "0 9 8-14 * 1"
+    # Days 8-14 at 09:00 UTC; the `gate` job below keeps only the Monday, which
+    # is the second Monday of the month.
+    #
+    # This used to be "0 9 8-14 * 1", intended as "the second Monday". Cron
+    # treats day-of-month and day-of-week as OR when both are restricted, so it
+    # fired on days 8-14 *and* on every Monday: 11 times in August 2026 instead
+    # of once. Since October 2025 that put over 100 comments on issue #1.
+    - cron: "0 9 8-14 * *"
   workflow_dispatch:
 
 jobs:
+  gate:
+    # Cron cannot express "second Monday", so the schedule casts a wider net and
+    # the day-of-week test happens here. Manual runs always proceed.
+    runs-on: ubuntu-latest
+    outputs:
+      should_run: ${{ steps.check.outputs.should_run }}
+    steps:
+      - name: Keep only the second Monday
+        id: check
+        run: |
+          if [ "${{ github.event_name }}" != "schedule" ]; then
+            echo "Manual run; proceeding."
+            echo "should_run=true" >> "$GITHUB_OUTPUT"
+          elif [ "$(date -u +%u)" = "1" ]; then
+            echo "Second Monday of the month; proceeding."
+            echo "should_run=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "Day-of-week is $(date -u +%u), not Monday; skipping."
+            echo "should_run=false" >> "$GITHUB_OUTPUT"
+          fi
+
   monthly-reminder:
+    needs: gate
     runs-on: ubuntu-latest
     timeout-minutes: 10
     concurrency:
       group: monthly-reminder-${{ github.repository }}
       cancel-in-progress: true
-    if: ${{ !github.event.repository.fork && !github.event.repository.archived }}
+    if: >-
+      ${{ needs.gate.outputs.should_run == 'true'
+      && !github.event.repository.fork
+      && !github.event.repository.archived }}
     permissions:
       contents: read
       issues: write
