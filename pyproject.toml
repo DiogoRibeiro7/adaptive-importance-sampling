@@ -161,11 +161,6 @@ ignore-variadic-names = true
 "tests/**/*.py" = ["ARG", "S101"]  # fixtures and asserts
 "examples/**/*.py" = ["T201"]      # prints are the point
 "benchmarks/**/*.py" = ["T201"]
-# This module is currently unreferenced by the package, the tests and the docs.
-# It is exempted rather than modernised pending a decision on whether to keep
-# it; if it is revived, drop this entry and give its samplers an `rng` argument
-# like `distributions/nakagami.py` has.
-"safe_ice/distributions/nakagami_stable.py" = ["NPY002"]
 
 [tool.ruff.lint.isort]
 known-first-party = ["safe_ice"]
