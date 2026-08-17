@@ -42,17 +42,23 @@ jobs:
           pip install -e .
           pip install pytest pytest-benchmark
 
+      - name: Stage the benchmark runner outside the working tree
+        # The base commit may predate this script, and checking it out would
+        # remove it. Copying it out first also means both sides are measured by
+        # exactly the same code, which is the point of the comparison.
+        run: cp .github/scripts/run-benchmarks.sh "$RUNNER_TEMP/run-benchmarks.sh"
+
       - name: Benchmark the PR
         run: |
           git checkout --quiet ${{ github.event.pull_request.head.sha }}
-          bash .github/scripts/run-benchmarks.sh pr
+          bash "$RUNNER_TEMP/run-benchmarks.sh" pr
 
       - name: Benchmark the base
         # The editable install resolves modules from the working tree, so
         # switching the checkout is enough for a pure-Python package.
         run: |
           git checkout --quiet ${{ github.event.pull_request.base.sha }}
-          bash .github/scripts/run-benchmarks.sh base
+          bash "$RUNNER_TEMP/run-benchmarks.sh" base
 
       - name: Upload benchmark results
         uses: actions/upload-artifact@v7
