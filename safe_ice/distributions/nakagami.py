@@ -153,13 +153,14 @@ class NakagamiDistribution:
         Omega = float(Omega)
         n = int(n)
 
-        if m > 100:
-            mean = np.sqrt(Omega * (m - 0.5) / m) if m > 0.5 else 0.0
-            variance = Omega * (1 - 1 / (4 * m)) / m if m > 0.25 else Omega
-            std = np.sqrt(variance)
-            samples = _rng.normal(mean, std, n)
-            return np.asarray(np.abs(samples), dtype=np.float64)
-
+        # R = sqrt(X) with X ~ Gamma(shape=m, scale=Omega/m) is exact for every
+        # shape, and NumPy's gamma sampler is stable for large m.
+        #
+        # A normal approximation used to take over for m > 100. It was wrong
+        # twice over: its variance, Omega*(1 - 1/(4m))/m, is about Omega/m,
+        # whereas the Nakagami variance tends to Omega/(4m), so the samples came
+        # out with exactly twice the correct spread. A KS test against
+        # scipy.stats.nakagami rejected at p = 0 for every m above the cutoff.
         x = np.asarray(_rng.gamma(shape=m, scale=(Omega / m), size=n), dtype=np.float64)
         return np.asarray(np.sqrt(x), dtype=np.float64)
 
