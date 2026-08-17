@@ -253,8 +253,8 @@ Current accuracy against problems with known answers, median over seeds:
 | --- | --- | --- |
 | Linear limit state, closed form | `1.69e-2` | `1.02` |
 | Sphere `d=2`, closed form | `1.11e-2` | `1.01` |
-| Sphere `d=10`, closed form | `5.35e-3` | `0.86` |
-| Sphere `d=20`, closed form | `1.54e-2` | `0.54` |
+| Sphere `d=10`, closed form | `5.35e-3` | `1.01` |
+| Sphere `d=20`, closed form | `1.54e-2` | `0.76` |
 | Four-mode series system, 2e7-sample MC | `5.8e-5` | `1.01` |
 
 `tests/test_proposal_normalisation.py` pins this down: it integrates each
@@ -267,7 +267,7 @@ proposal component numerically and fails if the Jacobian is dropped again.
   exactly 1) it scatters around 1 and can land slightly above. Clamping would
   fix it, but that is a modelling decision rather than a bug.
 - **It still breaks down above roughly `d=20`.** On the sphere problem, `d=20`
-  now works (6 of 6 seeds within `3x`, ratio `0.54`), but `d=30` does not —
+  now works (6 of 6 seeds within `3x`, ratio `0.76`), but `d=30` does not —
   every seed collapses. Importance weights become extremely heavy-tailed as
   dimension grows: the ratio of largest to median weight goes from `~10` at
   `d=2` to `~8e11` at `d=20`, so a few samples carry the estimate. Raising `N`
