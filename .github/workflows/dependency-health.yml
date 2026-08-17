@@ -125,9 +125,41 @@ jobs:
         # so the audit silently reported no vulnerabilities either way.
         run: |
           pip install -e . || true
-          pip-audit -f json > audit.json || true
-          python -c "import json,pathlib; json.loads(pathlib.Path('audit.json').read_text() or '[]')"             || echo "[]" > audit.json
-          echo "Audit written to audit.json"
+          pip-audit -f json > audit-raw.json || true
+          python - << 'PY'
+          # pip-audit emits {"dependencies": [{name, version, vulns: [...]}], ...}
+          # but deps_health.js iterates audit.json as a flat array of findings
+          # with .name and .advisory.*. An object is truthy, so its `|| []`
+          # fallback does not catch the mismatch and it fails with
+          # "auditJson is not iterable". Flatten to the shape it expects.
+          import json
+          from pathlib import Path
+
+          findings = []
+          try:
+            raw = json.loads(Path("audit-raw.json").read_text(encoding="utf-8"))
+          except Exception:
+            raw = {}
+
+          for dep in (raw.get("dependencies") if isinstance(raw, dict) else []) or []:
+            name = dep.get("name")
+            for vuln in dep.get("vulns") or []:
+              aliases = vuln.get("aliases") or []
+              cve = next((a for a in aliases if str(a).upper().startswith("CVE-")), None)
+              findings.append({
+                "name": name,
+                "version": dep.get("version"),
+                "advisory": {
+                  "id": vuln.get("id"),
+                  "summary": vuln.get("description"),
+                  "cve": cve,
+                },
+                "fix_versions": vuln.get("fix_versions") or [],
+              })
+
+          Path("audit.json").write_text(json.dumps(findings, indent=2), encoding="utf-8")
+          print(f"Audit: {len(findings)} finding(s) written to audit.json")
+          PY
 
       - name: Dependency Health Analyzer (node)
         env:
