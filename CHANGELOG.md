@@ -23,6 +23,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Removed
 
+- The `numba` dependency and the `perf` extra's JIT claim. The two `@jit`
+  kernels in `safe_ice_optimized.py` were defined but never called, so the
+  extra pulled in a large dependency that did nothing. `perf` now provides
+  memory instrumentation only.
 - The `architecture-diagrams` workflow, its `docs/architecture/` output, and
   `benchmarks/architecture_config.py`. The workflow was 1826 lines, 62% of all
   the workflow code in the repository, and regenerated diagrams on every push
@@ -75,6 +79,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Slow tests are marked `slow` and excluded from the default `pytest` run.
 
 ### Fixed
+
+- **`OptimizedSafeICE` and `AdaptiveSafeICE` returned `nan` for every seed on
+  every benchmark problem.** Both are exported from the package root. They
+  reimplemented the algorithm rather than reusing it, and the copy did not
+  work: adaptation weights used a hard indicator, which is zero for every
+  sample until one lands in the failure region, so on a rare-event problem
+  every weight was zero, the elite set was empty and the loop stopped after one
+  iteration; the smoothing parameter was moved by ±10% according to whether the
+  number of mixture components had changed, rather than by targeting the weight
+  coefficient of variation, so it rose from 1.00 to 1.21 over a run instead of
+  falling towards the failure region; and the final estimate divided by the sum
+  of those already-zeroed weights, which was exactly zero. `AdaptiveSafeICE`
+  additionally initialised the radial parameters from fixed ranges regardless
+  of dimension, placing the proposal at radius ~1.5 whether the problem was 2-
+  or 200-dimensional.
+
+  Both now subclass `SafeICE` and override only sample generation, so the
+  sigma schedule, the weights and the estimator are shared with the
+  implementation that is tested against Monte Carlo. On the four-mode problem
+  the three agree at 0.94x, 0.98x and 1.17x of the reference; on the sphere
+  problem `OptimizedSafeICE` matches the exact chi-square tail to within 3% at
+  d = 10, 30 and 50. Vectorised sampling is retained and is now a real
+  optimisation: 3.5x faster than `SafeICE` at N = 4000.
 
 - **The nonlinear oscillator benchmark cannot fail, and so measures nothing.**
   Displacement is computed as `force_rms / (k * (1 - alpha))` with `k = 5e6`,

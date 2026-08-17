@@ -362,14 +362,6 @@ def plot_performance_results(results):
 def main():
     """Run performance benchmark."""
 
-    # Check if numba is available for additional optimizations
-    try:
-        import numba  # noqa: F401 - availability probe
-
-        print("Numba available for JIT compilation")
-    except ImportError:
-        print("Numba not available - some optimizations disabled")
-
     # Run benchmarks
     results = run_benchmark_suite()
 

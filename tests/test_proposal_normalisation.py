@@ -101,25 +101,35 @@ def test_safe_mixture_integrates_to_one(lambda_val: float, rng, seed) -> None:
 
 
 @pytest.mark.parametrize("d", [2, 3])
-def test_optimized_components_integrate_to_one(d: int, rng, seed) -> None:
-    """OptimizedSafeICE has its own density code, with the same requirement."""
+def test_optimized_batching_preserves_the_density(d: int, rng, seed) -> None:
+    """Chunking the density evaluation must not change what it returns.
+
+    OptimizedSafeICE evaluates q_safe in slices of ``batch_size`` rows. A
+    batched loop that got its slice bookkeeping wrong would still integrate to
+    roughly 1 while returning the wrong value per sample, so this compares
+    against the unbatched parent element by element as well.
+    """
     params = build_params(rng, 3, d)
-    ice = OptimizedSafeICE(
-        limit_state_function=lambda u: np.sum(u, axis=-1),
-        dimension=d,
-        N=10,
-        random_state=seed,
+    kwargs = {
+        "limit_state_function": lambda u: np.sum(u, axis=-1),
+        "dimension": d,
+        "N": 10,
+        "random_state": seed,
+    }
+    plain = SafeICE(**kwargs)
+    # Small enough to force several batches over the 500-row sample below.
+    batched = OptimizedSafeICE(**kwargs, batch_size=64)
+
+    u = rng.standard_normal((500, d)) * 2.0
+    assert np.allclose(
+        batched._evaluate_safe_mixture_density(u, params, 0.5),
+        plain._evaluate_safe_mixture_density(u, params, 0.5),
     )
 
-    light, light_se = integrate_density(
-        lambda u: ice._evaluate_vmfnm_density_vectorized(u, params, 1.0), d
+    integral, stderr = integrate_density(
+        lambda x: batched._evaluate_safe_mixture_density(x, params, 0.5), d
     )
-    assert light == pytest.approx(1.0, abs=max(TOLERANCE, 3 * light_se))
-
-    heavy, heavy_se = integrate_density(
-        lambda u: ice._evaluate_heavy_tailed_density_vectorized(u, params), d
-    )
-    assert heavy == pytest.approx(1.0, abs=max(TOLERANCE, 3 * heavy_se))
+    assert integral == pytest.approx(1.0, abs=max(TOLERANCE, 3 * stderr))
 
 
 class TestLambdaCap:
