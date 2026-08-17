@@ -151,6 +151,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Performance
 
+- **Wood's vMF sampler is vectorised.** It drew one point per Python-loop
+  iteration, with a separate Householder rotation each time, costing about
+  200 microseconds per sample. Rejection now happens in batches and the
+  rotation is applied to every row at once. Drawing 20000 samples at d=20,
+  kappa=50 goes from 1.74 s to 0.065 s; at d=10 from 4.20 s to 0.047 s. The
+  default test suite drops from 26 s to 12 s and the full suite from 118 s to
+  89 s. Verified statistically identical to the per-sample version by a
+  two-sample KS test (p = 0.29 to 0.86), and the batched rotation matches the
+  scalar one to 4e-16. The now-unreferenced scalar helpers are removed rather
+  than left to drift out of step.
+
 - **Roughly 200x faster.** `vMFNMDistribution.pdf`, the penalized-EM E-step and
   the heavy-tailed density each looped in Python over every (sample, component)
   pair, calling scalar PDFs; `NakagamiDistribution.pdf` alone was called 4.2
