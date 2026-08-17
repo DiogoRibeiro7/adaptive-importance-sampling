@@ -66,7 +66,9 @@ class TestBenchmarkListing:
 class TestBenchmarkRun:
     @pytest.mark.parametrize("problem", ["four-mode", "three-mode", "two-mode"])
     def test_runs_and_reports_a_probability(self, problem: str, capsys) -> None:
-        assert main(["benchmark", problem, "--samples", "200", "--iterations", "2"]) == 0
+        assert (
+            main(["benchmark", problem, "--samples", "200", "--iterations", "2"]) == 0
+        )
         out = capsys.readouterr().out
         assert "Estimated failure probability" in out
         assert "Relative error" in out
