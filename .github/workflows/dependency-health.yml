@@ -27,7 +27,7 @@ jobs:
       - name: Setup Python
         uses: actions/setup-python@v7
         with:
-          python-version: '3.11'
+          python-version: '3.12'
 
       - name: Extract dependencies (pyproject/poetry.lock/requirements)
         id: extract
@@ -61,7 +61,7 @@ jobs:
             project = data.get("project") or {}
             for dep in project.get("dependencies", []) or []:
               name = dep.split(";")[0].strip()
-              name = re.split(r"[<>=!~\[\( ]", name, 1)[0]
+              name = re.split(r"[<>=!~\[\( ]", name, maxsplit=1)[0]
               if name and name.lower() != "python":
                 direct.add(norm(name))
             # Poetry-style
@@ -71,20 +71,26 @@ jobs:
               if name.lower() != "python":
                 direct.add(norm(name))
 
-          # 2) poetry.lock (TOML since Poetry 1.2)
-          lock = root / "poetry.lock"
-          if lock.exists():
-            try:
-              ldata = tomllib.loads(lock.read_text(encoding="utf-8"))
-              # Keep only top-level (category="main") packages
-              for pkg in ldata.get("package", []) or []:
-                if pkg.get("category") == "main":
-                  n = pkg.get("name")
-                  if n:
-                    direct.add(norm(n))
-            except Exception:
-              # Older Poetry lock or different format: ignore gracefully
-              pass
+          # 2) [project.optional-dependencies] and PEP 735 [dependency-groups]
+          #
+          # poetry.lock used to be read here, keeping packages with
+          # category="main". Poetry removed that field in 1.5, so the filter
+          # matched nothing and the lock contributed no names at all. The lock
+          # also lists transitive packages, which is not what "direct" means;
+          # pyproject.toml is the authoritative source for direct dependencies.
+          if pp.exists():
+            for _group, entries in (project.get("optional-dependencies") or {}).items():
+              for dep in entries or []:
+                name = re.split(r"[<>=!~\[\( ;]", dep.strip(), maxsplit=1)[0]
+                if name:
+                  direct.add(norm(name))
+            for _group, entries in (data.get("dependency-groups") or {}).items():
+              for dep in entries or []:
+                if not isinstance(dep, str):
+                  continue
+                name = re.split(r"[<>=!~\[\( ;]", dep.strip(), maxsplit=1)[0]
+                if name:
+                  direct.add(norm(name))
 
           # 3) requirements.txt
           req = root / "requirements.txt"
@@ -95,7 +101,7 @@ jobs:
                 continue
               # Strip version pins and comments
               line = line.split("#", 1)[0].strip()
-              name = re.split(r"(==|>=|<=|>|<|~=|!=)", line, 1)[0].strip()
+              name = re.split(r"(==|>=|<=|>|<|~=|!=)", line, maxsplit=1)[0].strip()
               if name:
                 direct.add(norm(name))
 
@@ -111,15 +117,16 @@ jobs:
           python -m pip install pip-audit
 
       - name: Run vulnerability audit (pip-audit)
-        # Prefer lock > requirements; else audit resolved env (empty) -> safe no-op
+        # Audits the installed environment, which is what ci.yml's security job
+        # does too. This previously ran `pip-audit -f json -p poetry.lock`, but
+        # `-p` is not a pip-audit flag: the command printed its usage message,
+        # `|| true` swallowed the failure, and audit.json ended up holding that
+        # text. deps_health.js falls back to an empty list on unparseable JSON,
+        # so the audit silently reported no vulnerabilities either way.
         run: |
-          if [ -f poetry.lock ]; then
-            pip-audit -f json -p poetry.lock > audit.json || true
-          elif [ -f requirements.txt ]; then
-            pip-audit -f json -r requirements.txt > audit.json || true
-          else
-            echo "[]" > audit.json
-          fi
+          pip install -e . || true
+          pip-audit -f json > audit.json || true
+          python -c "import json,pathlib; json.loads(pathlib.Path('audit.json').read_text() or '[]')"             || echo "[]" > audit.json
           echo "Audit written to audit.json"
 
       - name: Dependency Health Analyzer (node)
