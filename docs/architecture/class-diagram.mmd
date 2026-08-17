@@ -453,4 +453,17 @@ classDiagram
     +g()
   }
 
+  class TestMeanResultantLength {
+    +test_concentration_matches_closed_form()
+    +test_concentration_across_dimensions()
+    +test_no_jump_across_the_old_cutoff()
+  }
+
+  class TestSamplerInvariants {
+    +test_samples_are_unit_vectors()
+    +test_zero_concentration_is_uniform()
+    +test_direction_follows_mu()
+    +test_non_unit_mu_is_normalised()
+  }
+
   OptimizedSafeICE <|-- AdaptiveSafeICE
