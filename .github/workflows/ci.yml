@@ -85,7 +85,9 @@ jobs:
           pip install -e .
           # tomlkit is not a package dependency; it is needed by
           # scripts/pyproject_editor.py, which tests/test_version_bump.py runs.
-          pip install pytest pytest-cov pytest-xdist tomlkit
+          # plotly is the viz extra, without which the interactive
+          # visualisation tests skip themselves and never run here at all.
+          pip install pytest pytest-cov pytest-xdist tomlkit plotly
 
       - name: Run tests
         # -m "" runs the slow tests too, which the default config skips.

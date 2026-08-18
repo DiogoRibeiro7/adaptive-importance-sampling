@@ -55,10 +55,9 @@ viz = [
   "seaborn>=0.13",
   "pandas>=2.0",
 ]
-# Memory instrumentation for safe_ice.utils.performance.
+# Memory instrumentation for examples/performance_benchmark.py.
 perf = [
   "psutil>=5.9",
-  "memory-profiler>=0.61",
 ]
 # Poetry's resolver rejects self-referential extras, so `all` is expanded.
 all = [
@@ -66,7 +65,6 @@ all = [
   "seaborn>=0.13",
   "pandas>=2.0",
   "psutil>=5.9",
-  "memory-profiler>=0.61",
 ]
 
 [project.scripts]

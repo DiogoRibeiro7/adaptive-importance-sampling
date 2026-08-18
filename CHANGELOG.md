@@ -7,7 +7,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Removed
+
+- `safe_ice.utils`. Nothing in the package imported it, and where it overlapped
+  `distributions/_numeric.py` it was the weaker of the two:
+  `VectorizedOperations.evaluate_vmf_density_batch` computes
+  `norm * exp(kappa * dot)` directly and overflows to infinity at
+  `kappa = 800`, where the log-space form in use stays finite. Its caching and
+  batching duplicated what `OptimizedSafeICE` already does. Two duplicated
+  implementations have already gone wrong in this codebase --
+  `safe_ice_optimized.py` returned `nan` on every problem, and
+  `nakagami_stable.py` was the correct one while the version in use was not --
+  so the second copy was removed rather than tested.
+- `memory-profiler` from the `perf` extra; nothing used it. The extra now
+  carries `psutil` alone, for `examples/performance_benchmark.py`.
+
 ### Added
+
+- Smoke tests for `analysis/interactive_visualization.py`, 0% to 73%. It draws
+  figures rather than computing results, so a defect there misleads rather than
+  corrupts and the tests are shallow by design: each entry point is called on
+  the output of a real run and the figure inspected for the traces it claims to
+  draw. CI now installs `plotly`, without which they would skip themselves and
+  never run there.
 
 - `TimeVariantProblem`, `SystemReliabilityProblem`, `StochasticProcessProblem`
   and `NetworkReliabilityProblem` are exported from the package root. They

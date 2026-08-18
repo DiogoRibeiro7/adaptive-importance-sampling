@@ -58,7 +58,7 @@ pip install -e .
 | Extra  | Adds                           | For                                                     |
 | ------ | ------------------------------ | ------------------------------------------------------- |
 | `viz`  | plotly, seaborn, pandas        | `safe_ice.analysis.interactive_visualization`           |
-| `perf` | psutil, memory-profiler        | Memory instrumentation in `safe_ice.utils.performance`  |
+| `perf` | psutil                         | Memory instrumentation in `examples/performance_benchmark.py` |
 | `all`  | everything above               |                                                         |
 
 ```bash
