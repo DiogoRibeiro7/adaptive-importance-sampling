@@ -291,7 +291,16 @@ class BenchmarkProblems:
     def nakagami_ratio_problem(
         threshold: float = 0.1,
     ) -> Callable[[npt.ArrayLike], float | npt.NDArray[np.float64]]:
-        """Simple ratio-style benchmark using two transformed standard normals."""
+        """Ratio of Nakagami-distributed variables.
+
+        .. note::
+
+           Not one of the paper's benchmarks. Sections 4.1 to 4.5 cover the
+           four-mode series system, the three-mode problem, the nonlinear
+           oscillator, the two-mode system and the heat transfer problem; this
+           is an extra exercise for the Nakagami machinery. Its reference value
+           comes from crude Monte Carlo here, not from the paper.
+        """
 
         def limit_state_function(
             u: npt.ArrayLike,

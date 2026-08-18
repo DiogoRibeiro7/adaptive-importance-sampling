@@ -75,7 +75,7 @@ class OptimizedSafeICE(SafeICE):
         max_iterations: int = 20,
         N: int = 1000,
         sigma0: float = 1.0,
-        em_max_iter: int = 100,
+        em_max_iter: int = 20,
         enable_caching: bool = True,
         enable_parallel: bool = True,
         batch_size: int | None = None,

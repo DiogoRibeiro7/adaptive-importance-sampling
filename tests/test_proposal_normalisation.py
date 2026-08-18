@@ -208,7 +208,7 @@ class TestPenalizedWeightUpdate:
         # the weights untouched, so any change is entirely the penalty.
         weighted_resp = np.full((n, K), 1.0 / K)
 
-        new_pi = PenalizedEMOptimizer()._update_mixture_weights_penalized(
+        new_pi, _pi_em = PenalizedEMOptimizer()._update_mixture_weights_penalized(
             weighted_resp, uniform, beta=1.0
         )
 
@@ -221,12 +221,14 @@ class TestPenalizedWeightUpdate:
         old_pi = np.array([0.7, 0.1, 0.1, 0.1])
         weighted_resp = np.tile(old_pi, (200, 1))
 
-        new_pi = PenalizedEMOptimizer()._update_mixture_weights_penalized(
+        new_pi, _pi_em = PenalizedEMOptimizer()._update_mixture_weights_penalized(
             weighted_resp, old_pi, beta=1.0
         )
 
         assert new_pi[0] > old_pi[0]
         assert np.all(new_pi[1:] < old_pi[1:])
+        # Equation (21) is a zero-sum redistribution, so it preserves the
+        # normalisation without a renormalising step.
         assert new_pi.sum() == pytest.approx(1.0)
 
     def test_mixture_is_not_collapsed_on_the_first_step(self) -> None:
@@ -238,11 +240,11 @@ class TestPenalizedWeightUpdate:
         rng = np.random.default_rng(7)
         weighted_resp = rng.dirichlet(np.ones(n_components), size=n_samples)
 
-        new_pi = PenalizedEMOptimizer()._update_mixture_weights_penalized(
+        new_pi, _pi_em = PenalizedEMOptimizer()._update_mixture_weights_penalized(
             weighted_resp, uniform, beta=1.0
         )
 
-        assert int(np.sum(new_pi > 1e-4)) > 1
+        assert int(np.sum(new_pi > 0.0)) > 1  # equation (22) prunes at zero
 
 
 class TestInitialisationScalesWithDimension:
@@ -304,3 +306,65 @@ class TestInitialisationScalesWithDimension:
 
         within = sum(1 for pf in estimates if true / 4 < pf < true * 4)
         assert within >= 3, f"only {within}/4 seeds usable: {estimates}"
+
+
+class TestPenaltyCoefficientSchedule:
+    """Equation (23) sets beta; it used to be an unrelated heuristic.
+
+    The replaced version measured each weight's deviation from the mean rather
+    than its change since the previous iteration, scaled by the number of
+    components rather than the number of samples, substituted
+    ``(1 - max pi) / min pi`` for the entropy term of equation (24), and
+    blended the result with the previous beta. Its own docstring called it a
+    "simple adaptive heuristic".
+    """
+
+    @staticmethod
+    def beta_of(pi_old, pi_new, pi_em, n, d):
+        """Equation (23) as implemented."""
+        from safe_ice.optimization.penalized_em import PenalizedEMOptimizer
+
+        return PenalizedEMOptimizer._update_beta(
+            np.asarray(pi_old), np.asarray(pi_new), np.asarray(pi_em), n, d
+        )
+
+    def test_settled_weights_give_the_largest_penalty(self) -> None:
+        """The first term is 1 when nothing moved, and falls as drift grows."""
+        pi = np.full(4, 0.25)
+        settled = self.beta_of(pi, pi, pi, 1000, 2)
+        drifting = self.beta_of(
+            pi, pi + np.array([0.1, -0.1, 0.05, -0.05]), pi, 1000, 2
+        )
+        assert settled > drifting
+
+    def test_drift_is_scaled_by_the_sample_count(self) -> None:
+        """Equation (23) uses N, not K: more samples means less tolerance."""
+        pi = np.full(4, 0.25)
+        moved = pi + np.array([0.01, -0.01, 0.005, -0.005])
+        assert self.beta_of(pi, moved, pi, 10_000, 2) < self.beta_of(
+            pi, moved, pi, 100, 2
+        )
+
+    def test_eta_shrinks_with_dimension(self) -> None:
+        """eta = min(1, 0.5^(floor(d/2) - 1)) damps the drift term as d grows."""
+        pi = np.full(4, 0.25)
+        moved = pi + np.array([0.02, -0.02, 0.01, -0.01])
+        low_d = self.beta_of(pi, moved, pi, 1000, 2)
+        high_d = self.beta_of(pi, moved, pi, 1000, 20)
+        assert high_d > low_d  # weaker damping term -> closer to 1
+
+    def test_beta_is_bounded_and_finite(self) -> None:
+        rng = np.random.default_rng(3)
+        for _ in range(50):
+            k = int(rng.integers(2, 12))
+            pi_old = rng.dirichlet(np.ones(k))
+            pi_em = rng.dirichlet(np.ones(k))
+            pi_new = rng.dirichlet(np.ones(k))
+            beta = self.beta_of(pi_old, pi_new, pi_em, 1000, int(rng.integers(2, 40)))
+            assert np.isfinite(beta)
+            assert beta >= 0.0
+
+    def test_single_component_has_nothing_to_prune(self) -> None:
+        """E = 1*ln 1 = 0 there, so equation (24)'s denominator vanishes."""
+        one = np.array([1.0])
+        assert self.beta_of(one, one, one, 1000, 2) == 0.0

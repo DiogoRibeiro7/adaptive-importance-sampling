@@ -93,7 +93,7 @@ class SafeICE:
         max_iterations: int = 20,
         N: int = 1000,
         sigma0: float = 1.0,
-        em_max_iter: int = 100,
+        em_max_iter: int = 20,
         cv_tolerance: float = 0.01,
         lambda_max: float = 0.95,
         random_state: int | np.random.Generator | None = None,
@@ -182,6 +182,13 @@ class SafeICE:
             )
             cv_w_star: float = self._coefficient_of_variation(stopping_weights)
 
+            # Section 3.2: the stopping criterion reads the vMFNM samples, so
+            # when lambda is 0 there are none and the CV is set to infinity to
+            # force another iteration. lambda_0 is always 0 because M = sigma0,
+            # so this is what guarantees at least two iterations.
+            if lambda_t <= 0.0:
+                cv_w_star = float("inf")
+
             # Record history
             self.history["sigma"].append(float(sigma_t))
             self.history["cv"].append(float(cv_w_star))
@@ -202,7 +209,7 @@ class SafeICE:
                 print(f"           CV={cv_w_star:.4f}")
 
             # Convergence check using delta_star
-            if cv_w_star <= self.delta_star and (t + 1) >= 2:
+            if cv_w_star <= self.delta_star:
                 if verbose:
                     print(
                         f"  Converged: CV {cv_w_star:.4f} "
@@ -345,15 +352,16 @@ class SafeICE:
         return vMFNMParameters(pi=pi, m=m, Omega=Omega, mu=mu, kappa=kappa)
 
     def _cosine_annealing_schedule(self, sigma: float, M: float) -> float:
-        """Cosine annealing schedule for lambda parameter.
+        """Cosine annealing schedule for lambda, equation (35).
 
-        The raw schedule reaches exactly 1 as sigma goes to 0, which drops the
-        heavy-tailed component from the proposal altogether. That component is
-        the "safe" part of Safe-ICE: it keeps the proposal's tails heavier than
-        the target so the importance weights stay bounded. Without it a single
-        sample from the tail can carry essentially the whole estimate. The
-        result is capped at ``lambda_max`` so some heavy-tailed mass always
-        remains.
+        A deliberate divergence from the paper: lambda is capped at
+        ``lambda_max``. Equation (35) reaches exactly 1 as sigma goes to 0, and
+        section 3.2 relies on that -- it argues the final estimate is sound
+        because the last iteration samples only the light-tailed family. In
+        practice that removes the heavy-tailed component which makes the method
+        "safe", and the weights are then unbounded: on one seed a single tail
+        sample carried 99.5% of an estimate. The cap keeps a 5% heavy-tailed
+        share, so the proposal always has heavier tails than the target.
         """
         if sigma > M:
             return 0.0
