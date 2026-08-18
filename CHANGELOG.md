@@ -7,7 +7,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- `TimeVariantProblem`, `SystemReliabilityProblem`, `StochasticProcessProblem`
+  and `NetworkReliabilityProblem` are exported from the package root. They
+  were 238 statements at 0% coverage and unreachable through the public API,
+  so the roadmap recorded them as either to be exported and tested or removed.
+  They turned out to be correct, which decided it. Each is now checked against
+  a value that can be worked out by hand: series and parallel systems of
+  independent components against `1 - prod(1 - p_i)` and `prod(p_i)`,
+  k-out-of-n against those two at `k = 1` and `k = n`, the Karhunen-Loeve
+  expansion against the covariance it is built from, and connectivity against
+  a graph whose cut sets are known by inspection. Coverage goes to 89%.
+
 ### Fixed
+
+- **`SystemReliabilityProblem.get_correlated_system` could not be called.** It
+  passed component `j` the one-element slice `u_corr[j:j+1]`, where the series,
+  parallel and k-out-of-n systems all pass the whole vector, so any component
+  function reading past its own first entry raised `IndexError` -- which is
+  every function that works with the other three methods. It now passes the
+  whole correlated vector, and with an identity correlation it reproduces the
+  plain systems exactly.
 
 - **The search for sigma in equation (10) was ill-posed, and runs collapsed
   because of it.** The equation minimises `(CV(W_t(sigma)) - delta_target)^2`

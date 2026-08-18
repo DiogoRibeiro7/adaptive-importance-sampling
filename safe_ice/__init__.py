@@ -11,7 +11,14 @@ from .distributions import (
     vMFNMDistribution,
 )
 from .optimization import PenalizedEMOptimizer
-from .problems import BenchmarkProblems, HeatTransferProblem
+from .problems import (
+    BenchmarkProblems,
+    HeatTransferProblem,
+    NetworkReliabilityProblem,
+    StochasticProcessProblem,
+    SystemReliabilityProblem,
+    TimeVariantProblem,
+)
 
 try:
     __version__ = version("safe-ice")
@@ -26,10 +33,14 @@ __all__ = [
     "HeatTransferProblem",
     "InverseNakagamiDistribution",
     "NakagamiDistribution",
+    "NetworkReliabilityProblem",
     "OptimizedSafeICE",
     "PenalizedEMOptimizer",
     "PerformanceEvaluator",
     "SafeICE",
+    "StochasticProcessProblem",
+    "SystemReliabilityProblem",
+    "TimeVariantProblem",
     "VonMisesFisherSampler",
     "vMFNMDistribution",
     "vMFNMParameters",
