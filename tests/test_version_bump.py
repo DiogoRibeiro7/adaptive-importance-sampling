@@ -10,6 +10,7 @@ until someone read the citation metadata.
 
 from __future__ import annotations
 
+import importlib.util
 import shutil
 import subprocess
 import sys
@@ -20,6 +21,13 @@ import pytest
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 EDITOR = REPO_ROOT / "scripts" / "pyproject_editor.py"
+
+# The editor is repository tooling rather than part of the package, so its
+# dependency is declared in the dev group and installed explicitly in CI.
+requires_tomlkit = pytest.mark.skipif(
+    importlib.util.find_spec("tomlkit") is None,
+    reason="scripts/pyproject_editor.py needs tomlkit; install the dev group",
+)
 
 
 @pytest.fixture
@@ -52,6 +60,7 @@ def run_editor(project: Path, *args: str) -> subprocess.CompletedProcess[str]:
     )
 
 
+@requires_tomlkit
 class TestBumpKeepsMetadataInStep:
     def test_all_three_files_move_together(self, project: Path) -> None:
         result = run_editor(project, "bump-version", "minor")
