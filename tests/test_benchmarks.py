@@ -173,9 +173,11 @@ class TestHeatTransferProblem:
         problem = HeatTransferProblem()
 
         assert problem.n_terms == 10
-        assert problem.correlation_length == 0.5
+        # Section 4.5: correlation length l = 0.2, and equation (48) puts the
+        # failure threshold at 10. These were 0.5 and 100.
+        assert problem.correlation_length == 0.2
         assert problem.field_std == 0.3
-        assert problem.threshold == 100.0
+        assert problem.threshold == 10.0
 
     def test_initialization_custom(self):
         """Test custom initialization of heat transfer problem."""
@@ -250,21 +252,28 @@ class TestHeatTransferProblem:
         )
         g = problem.get_limit_state_function()
 
-        # Large positive fluctuations should increase temperature
+        # The random field must actually change the answer -- the limit state
+        # used to return exactly `threshold` for every input.
         u_positive = np.ones(problem.n_terms) * 3
-        result_positive = g(u_positive)
+        u_negative = -u_positive
 
-        # Large negative fluctuations should decrease temperature
-        u_negative = -np.ones(problem.n_terms) * 3
-        result_negative = g(u_negative)
+        result_positive = float(g(u_positive))
+        result_negative = float(g(u_negative))
 
-        # Both must be finite; when the PDE solver fully converges,
-        # positive KL coefficients lead to higher temperature
-        # (lower g), but this depends on grid resolution and
-        # iteration count.
         assert np.isfinite(result_positive)
         assert np.isfinite(result_negative)
-        assert result_positive <= result_negative
+        assert result_positive != result_negative
+
+        # The unambiguous physical statement: for a uniform conductivity the
+        # steady-state field satisfies T ~ 1/kappa exactly, so doubling the
+        # conductivity halves the temperature. There is no such monotone
+        # relation for the mean of a random field -- conduction is limited by
+        # the low-kappa parts of the path, not by the average -- which is why
+        # this is checked on a uniform field.
+        ones = np.ones((problem.grid_size, problem.grid_size))
+        base = problem.solve_heat_equation(ones)
+        doubled = problem.solve_heat_equation(2.0 * ones)
+        assert doubled == pytest.approx(base / 2.0, rel=1e-10)
 
 
 class TestBenchmarkComparison:

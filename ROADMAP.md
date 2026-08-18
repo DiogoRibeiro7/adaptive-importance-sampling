@@ -33,31 +33,49 @@ Runge-Kutta, and reproduces Figure 7: 1.798e-03 at `z=0.05`, 1.475e-04 at
 `0.06` and 4.5e-06 at `0.07`. Safe-ICE estimates the first to within 1% of the
 Monte Carlo value. It is available from the CLI again.
 
+### Done: the heat transfer problem is solved and referenced
+
+Its field solver diverged and the limit state ignored its input entirely. It
+now uses a direct sparse solve, verified against an analytic solution, and
+Safe-ICE estimates `2.83e-07` against the paper's `4.69e-07`.
+
 ## Next
+
+### Make the sigma schedule robust on smooth high-dimensional problems
+
+On the heat transfer problem the estimator collapses on a minority of seeds:
+sigma falls too far in the first two iterations, from 1 to 0.37 to 0.13, then
+stalls, and the weight coefficient of variation never comes down from 6-8
+against a target of 4. Those runs end many orders of magnitude low -- 1e-27
+rather than 3e-07. Two of six seeds did this in one measurement, and the median
+is unaffected, which is why the reference test takes one.
+
+Equation (10) chooses sigma by minimising `(CV - delta_target)^2` over
+`(0, sigma_prev)`. When no sigma in that interval achieves the target the
+minimiser returns a point near the boundary, and the proposal never catches up.
+A floor on how far sigma may fall in one step, or a retry when the CV worsens,
+would likely fix it, but both are departures from the paper and need measuring
+across the whole benchmark set before being adopted.
+
 
 ### Cover the untested modules
 
-Overall line coverage is 53%, but it is not evenly spread. The core algorithm,
-the distributions and the optimiser are at 87-94%. Four modules are not
-meaningfully exercised at all:
+Overall line coverage is 61%, but it is not evenly spread. The core algorithm,
+the distributions, the optimiser, the benchmarks and the heat transfer problem
+are at 87-99%. Three modules are not exercised at all:
 
 | Module | Coverage | Notes |
 | --- | --- | --- |
 | `problems/advanced_problems.py` | 0% | 238 statements, four problem classes, not exported from the package |
 | `analysis/interactive_visualization.py` | 0% | Requires the `viz` extra |
 | `utils/performance.py` | 0% | |
-| `problems/heat_transfer.py` | 11% | Exported publicly; has no reference-based check |
 
 Every module examined closely so far has turned out to contain a defect that
-changed results, so these are treated as unverified rather than as working.
-`advanced_problems.py` needs a decision first: it is unreachable through the
-public API, so it is either exported and tested or removed.
-
-### Give `HeatTransferProblem` a reference
-
-It is exported from the package root but has no check against an independent
-answer, which is the gap that hid the benchmark defects until they were
-measured against Monte Carlo.
+changed results, most recently the heat transfer problem, whose field solver
+diverged and whose limit state ignored its input. These are treated as
+unverified rather than as working. `advanced_problems.py` needs a decision
+first: it is unreachable through the public API, so it is either exported and
+tested or removed.
 
 ## Later
 
