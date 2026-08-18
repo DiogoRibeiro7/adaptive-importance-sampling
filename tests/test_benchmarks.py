@@ -362,21 +362,21 @@ class TestBenchmarkRobustness:
         """Test numerical stability of limit state functions."""
         problems = BenchmarkProblems()
 
-        # Test all benchmark problems
+        # Each problem with the dimension it expects. This used to compare
+        # `g == problems.nonlinear_oscillator()`, which builds a fresh closure
+        # and so is never equal, meaning the oscillator was always handed
+        # 2-column input.
         test_functions = [
-            problems.four_mode_series_system(),
-            problems.three_mode_problem(),
-            problems.nonlinear_oscillator(),
-            problems.nakagami_ratio_problem(),
+            (problems.four_mode_series_system(), 2),
+            (problems.three_mode_problem(), 2),
+            (problems.nonlinear_oscillator(), 10),
+            (problems.nakagami_ratio_problem(), 2),
         ]
 
-        for g in test_functions:
+        for g, dim in test_functions:
             # Test with various scales of input
             for scale in [1e-3, 1.0, 1e3]:
-                if g == problems.nonlinear_oscillator():
-                    u_test = rng.standard_normal((10, 10)) * scale
-                else:
-                    u_test = rng.standard_normal((10, 2)) * scale
+                u_test = rng.standard_normal((10, dim)) * scale
 
                 results = g(u_test)
 

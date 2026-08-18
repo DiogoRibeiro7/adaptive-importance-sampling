@@ -1,9 +1,9 @@
 """Tests for the command-line interface.
 
 The CLI had no test coverage at all, and accumulated two user-facing defects
-because of it: it advertised a benchmark problem that cannot fail and always
-reported a probability of zero, and it reported a hard-coded version string that
-drifted from the package's own.
+because of it: it advertised a benchmark problem that could not fail and so
+always reported a probability of zero, and it reported a hard-coded version
+string that drifted from the package's own.
 
 These tests exercise each subcommand and pin the reference probabilities to the
 Monte Carlo values in ``test_benchmark_ground_truth.py``, so a stale number
@@ -66,10 +66,10 @@ class TestBenchmarkListing:
         for name in ("four-mode", "three-mode", "two-mode"):
             assert name in out
 
-    def test_does_not_offer_the_oscillator(self, capsys) -> None:
-        """It cannot fail, so it always reported a probability of exactly 0."""
+    def test_offers_the_oscillator(self, capsys) -> None:
+        """Withdrawn while it could not fail; restored with the real model."""
         assert main(["benchmark", "--list"]) == 0
-        assert "oscillator" not in plain(capsys.readouterr().out)
+        assert "oscillator" in plain(capsys.readouterr().out)
 
     def test_unknown_problem_is_reported(self, capsys) -> None:
         assert main(["benchmark", "not-a-problem"]) == 0
@@ -98,6 +98,7 @@ class TestBenchmarkRun:
             "four-mode": 5.815e-05,
             "three-mode": 3.475e-03,
             "two-mode": 2.690e-03,
+            "oscillator": 1.798e-03,
         }
         for problem, reference in expected.items():
             run_benchmark(problem, n_samples=200, max_iterations=2)
