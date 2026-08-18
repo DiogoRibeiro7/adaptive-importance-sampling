@@ -52,22 +52,22 @@ two of six seeds on the heat transfer problem previously returned 1e-27.
 
 ### Cover the untested modules
 
-Overall line coverage is 61%, but it is not evenly spread. The core algorithm,
-the distributions, the optimiser, the benchmarks and the heat transfer problem
-are at 87-99%. Three modules are not exercised at all:
+Overall line coverage is 74%. The core algorithm, the distributions, the
+optimiser, the benchmarks, the heat transfer problem and the advanced problem
+generators are at 87-99%. Two modules remain untested:
 
 | Module | Coverage | Notes |
 | --- | --- | --- |
-| `problems/advanced_problems.py` | 0% | 238 statements, four problem classes, not exported from the package |
-| `analysis/interactive_visualization.py` | 0% | Requires the `viz` extra |
-| `utils/performance.py` | 0% | |
+| `analysis/interactive_visualization.py` | 0% | Plotly figures; not exported from `safe_ice.analysis` |
+| `utils/performance.py` | 0% | Unused by the package, and duplicates `distributions/_numeric.py` |
 
-Every module examined closely so far has turned out to contain a defect that
-changed results, most recently the heat transfer problem, whose field solver
-diverged and whose limit state ignored its input. These are treated as
-unverified rather than as working. `advanced_problems.py` needs a decision
-first: it is unreachable through the public API, so it is either exported and
-tested or removed.
+`utils/performance.py` needs a decision rather than tests. Nothing in the
+package imports it, and where it overlaps `_numeric.py` it is the weaker of the
+two: its `evaluate_vmf_density_batch` computes `norm * exp(kappa * dot)`
+directly and overflows to infinity at `kappa = 800`, where the log-space form
+in use stays finite. Its caching and batching duplicate what `OptimizedSafeICE`
+already does. Either it is removed, or it is tested and one of the two
+implementations is deleted.
 
 ## Later
 

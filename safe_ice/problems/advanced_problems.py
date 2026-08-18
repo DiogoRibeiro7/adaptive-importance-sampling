@@ -358,13 +358,13 @@ class SystemReliabilityProblem:
                 # Apply correlation
                 u_corr = L @ z
 
-                # Evaluate components with correlated inputs
-                g_components = np.array(
-                    [
-                        self.component_funcs[j](u_corr[j : j + 1])
-                        for j in range(self.n_components)
-                    ]
-                )
+                # Evaluate components with correlated inputs. Each component
+                # gets the whole vector, as it does from the series, parallel
+                # and k-out-of-n systems. This used to hand component j the
+                # one-element slice u_corr[j:j+1], so any component function
+                # reading past its own first entry raised IndexError -- which
+                # is every function that works with the other three methods.
+                g_components = np.array([func(u_corr) for func in self.component_funcs])
 
                 # Apply system logic
                 if system_type == "series":
