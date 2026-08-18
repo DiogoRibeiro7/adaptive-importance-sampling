@@ -9,6 +9,49 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **The search for sigma in equation (10) was ill-posed, and runs collapsed
+  because of it.** The equation minimises `(CV(W_t(sigma)) - delta_target)^2`
+  over `(0, sigma_prev)`, and the whole interval was handed to a bounded
+  minimiser. Below some sigma the smoothed indicator `Phi(-g/sigma)` underflows
+  to zero for every sample, so the weights all vanish and the CV is undefined;
+  on a rare-event problem that is most of the interval, and a minimiser given a
+  mostly-infinite objective returns arbitrary points. On the heat transfer
+  problem it took sigma from 1 to 0.373, where the CV is 18.75, when 0.999 was
+  available at 9.5 against a target of 4. Sigma then fell faster than the
+  proposal could follow, the CV never recovered, and two of six seeds ended at
+  1e-27 and 1e-34 against a reference of 4.69e-07.
+
+  Simply fixing the search to find the true global minimum is worse. Just above
+  the underflow region only a handful of samples still carry weight, and the CV
+  of one surviving sample out of N is about `sqrt(N)`, so it sweeps through the
+  target on its way to infinity. Those spurious minima sit at a sigma hundreds
+  of times too small, and are what the old minimiser was accidentally missing.
+
+  The CV rises monotonically as sigma falls, so the minimiser is the largest
+  sigma at which it reaches the target. That is now bracketed from above and
+  found by bisection. The densities in `W_t` do not depend on sigma, so they
+  are hoisted out of the search, which costs about as much as the single
+  objective evaluation it replaces.
+
+  Accuracy is unchanged and robustness is much better. Across nine problems the
+  median estimate is within 0.93x to 1.07x of its reference, and the *worst
+  individual seed* is 0.83x:
+
+  | Problem | reference | median | worst seed |
+  | --- | --- | --- | --- |
+  | four-mode `z=1.0` | `6.465e-05` | 1.00x | 0.83x |
+  | three-mode `z=3.0` | `3.475e-03` | 1.05x | 0.96x |
+  | two-mode `z=3.0` | `2.700e-03` | 1.07x | 0.95x |
+  | oscillator `z=0.05` | `1.798e-03` | 0.98x | 0.88x |
+  | nakagami ratio | `5.188e-02` | 1.00x | 0.98x |
+  | sphere `d=2` | `2.187e-03` | 1.02x | 1.00x |
+  | sphere `d=10` | `5.346e-03` | 1.01x | 1.01x |
+  | sphere `d=50` | `3.610e-03` | 0.99x | 0.95x |
+  | sphere `d=200` | `4.565e-03` | 0.93x | 0.85x |
+
+  The heat transfer estimate is now `3.07e-07` against the paper's `4.69e-07`
+  on every seed, where before the median hid two collapsed runs.
+
 - **The heat transfer problem did not work, and no test would have noticed.**
   It was the least covered module in the package and had never been checked
   against an independent answer. The temperature field came from an explicit

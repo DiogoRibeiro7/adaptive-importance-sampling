@@ -15,6 +15,8 @@ dropped.
 
 from __future__ import annotations
 
+from itertools import pairwise
+
 import numpy as np
 import pytest
 from scipy import stats
@@ -368,3 +370,104 @@ class TestPenaltyCoefficientSchedule:
         """E = 1*ln 1 = 0 there, so equation (24)'s denominator vanishes."""
         one = np.array([1.0])
         assert self.beta_of(one, one, one, 1000, 2) == 0.0
+
+
+class TestSigmaSchedule:
+    """Equation (10) picks sigma; the search for it has to be well posed.
+
+    The CV of the intermediate weights rises monotonically as sigma falls, so
+    the minimiser is the largest sigma at which it reaches the target. Two
+    things make a naive search on the whole interval fail:
+
+    * below some sigma the smoothed indicator underflows for every sample, the
+      weights all vanish and the CV is undefined -- on a rare-event problem
+      that is most of the interval, and a bounded minimiser handed a
+      mostly-infinite objective returns arbitrary points;
+    * just above that region only a handful of samples still carry weight, and
+      the CV of one surviving sample out of N is about sqrt(N), so it sweeps
+      through the target on its way to infinity. Those spurious minima sit at a
+      sigma hundreds of times too small.
+    """
+
+    @staticmethod
+    def estimator(seed, dimension=2, **kwargs):
+        from safe_ice.problems.benchmarks import BenchmarkProblems
+
+        return SafeICE(
+            limit_state_function=BenchmarkProblems.four_mode_series_system(),
+            dimension=dimension,
+            N=1000,
+            max_iterations=12,
+            random_state=seed,
+            **kwargs,
+        )
+
+    def test_sigma_decreases_monotonically(self) -> None:
+        ice = self.estimator(0)
+        ice.run(verbose=False)
+        sigmas = ice.history["sigma"]
+
+        assert len(sigmas) >= 2
+        assert all(later <= earlier for earlier, later in pairwise(sigmas)), (
+            f"sigma did not decrease monotonically: {sigmas}"
+        )
+
+    def test_first_step_does_not_overshoot(self) -> None:
+        """It fell from 1 to 0.373 in one step where 0.999 was the minimiser.
+
+        The proposal is still the initial one at that point, so a large drop
+        leaves it unable to follow, and the weight CV never recovers.
+        """
+        ice = self.estimator(0)
+        ice.run(verbose=False)
+        sigmas = ice.history["sigma"]
+
+        assert sigmas[1] > 0.5 * sigmas[0], (
+            f"sigma fell from {sigmas[0]} to {sigmas[1]} on the first step"
+        )
+
+    def test_returned_sigma_is_inside_the_interval(self) -> None:
+        """Equation (10) minimises over the open interval (0, sigma_prev)."""
+        ice = self.estimator(3)
+        params = ice._initialize_vmfnm_parameters()
+        samples = ice._generate_safe_mixture_samples(params, 0.0)
+        g_values = ice._evaluate_limit_state(samples)
+
+        for sigma_prev in (1.0, 0.5, 0.01):
+            chosen = ice._determine_next_sigma(
+                samples, g_values, params, 0.0, sigma_prev
+            )
+            assert 0.0 < chosen <= sigma_prev
+
+    def test_target_is_met_when_it_is_reachable(self) -> None:
+        """Where a root exists, the chosen sigma should sit on it."""
+        ice = self.estimator(1)
+        params = ice._initialize_vmfnm_parameters()
+        samples = ice._generate_safe_mixture_samples(params, 0.0)
+        g_values = ice._evaluate_limit_state(samples)
+
+        chosen = ice._determine_next_sigma(samples, g_values, params, 0.0, 1.0)
+        weights = ice._calculate_intermediate_weights(
+            samples, g_values, chosen, params, 0.0
+        )
+        cv = ice._coefficient_of_variation(weights)
+
+        if chosen < 0.999:  # a root was found rather than the interval held
+            assert cv == pytest.approx(ice.delta_target, rel=0.25), (
+                f"CV {cv} at sigma {chosen} against target {ice.delta_target}"
+            )
+
+    def test_no_seed_collapses_on_a_smooth_problem(self) -> None:
+        """The failure this guards against was a run twenty orders of magnitude low.
+
+        On the heat transfer problem two of six seeds returned 1e-27 and 1e-34
+        against a reference of 4.69e-07. The four-mode problem is cheap enough
+        to check every seed here.
+        """
+        reference = 6.465e-05
+        estimates = [self.estimator(seed).run(verbose=False)[0] for seed in range(8)]
+
+        for seed, pf in enumerate(estimates):
+            assert reference / 5 < pf < reference * 5, (
+                f"seed {seed} returned {pf:.3e} against {reference:.3e}"
+            )

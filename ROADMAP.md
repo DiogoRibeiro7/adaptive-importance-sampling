@@ -39,24 +39,16 @@ Its field solver diverged and the limit state ignored its input entirely. It
 now uses a direct sparse solve, verified against an analytic solution, and
 Safe-ICE estimates `2.83e-07` against the paper's `4.69e-07`.
 
+### Done: the sigma schedule no longer collapses
+
+Equation (10)'s search was ill-posed. Below some sigma the smoothed indicator
+underflows for every sample and the CV is undefined, which on a rare-event
+problem is most of the interval; a bounded minimiser handed a mostly-infinite
+objective returned arbitrary points. It is now bracketed from above, and the
+worst individual seed across nine problems sits at 0.83x its reference, where
+two of six seeds on the heat transfer problem previously returned 1e-27.
+
 ## Next
-
-### Make the sigma schedule robust on smooth high-dimensional problems
-
-On the heat transfer problem the estimator collapses on a minority of seeds:
-sigma falls too far in the first two iterations, from 1 to 0.37 to 0.13, then
-stalls, and the weight coefficient of variation never comes down from 6-8
-against a target of 4. Those runs end many orders of magnitude low -- 1e-27
-rather than 3e-07. Two of six seeds did this in one measurement, and the median
-is unaffected, which is why the reference test takes one.
-
-Equation (10) chooses sigma by minimising `(CV - delta_target)^2` over
-`(0, sigma_prev)`. When no sigma in that interval achieves the target the
-minimiser returns a point near the boundary, and the proposal never catches up.
-A floor on how far sigma may fall in one step, or a retry when the CV worsens,
-would likely fix it, but both are departures from the paper and need measuring
-across the whole benchmark set before being adopted.
-
 
 ### Cover the untested modules
 
