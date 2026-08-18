@@ -173,9 +173,11 @@ class TestHeatTransferProblem:
         problem = HeatTransferProblem()
 
         assert problem.n_terms == 10
-        assert problem.correlation_length == 0.5
+        # Section 4.5: correlation length l = 0.2, and equation (48) puts the
+        # failure threshold at 10. These were 0.5 and 100.
+        assert problem.correlation_length == 0.2
         assert problem.field_std == 0.3
-        assert problem.threshold == 100.0
+        assert problem.threshold == 10.0
 
     def test_initialization_custom(self):
         """Test custom initialization of heat transfer problem."""
@@ -250,21 +252,22 @@ class TestHeatTransferProblem:
         )
         g = problem.get_limit_state_function()
 
-        # Large positive fluctuations should increase temperature
+        # kappa = exp(a + b f), so positive coefficients raise the
+        # conductivity. A better conductor carries the same heat with a
+        # smaller temperature difference, so the field is cooler and
+        # g = threshold - T is larger.
         u_positive = np.ones(problem.n_terms) * 3
         result_positive = g(u_positive)
 
-        # Large negative fluctuations should decrease temperature
         u_negative = -np.ones(problem.n_terms) * 3
         result_negative = g(u_negative)
 
-        # Both must be finite; when the PDE solver fully converges,
-        # positive KL coefficients lead to higher temperature
-        # (lower g), but this depends on grid resolution and
-        # iteration count.
         assert np.isfinite(result_positive)
         assert np.isfinite(result_negative)
-        assert result_positive <= result_negative
+        # This asserted the opposite, hedged with "depends on grid resolution
+        # and iteration count" -- which it did, because the relaxation it was
+        # written against never converged.
+        assert result_positive > result_negative
 
 
 class TestBenchmarkComparison:

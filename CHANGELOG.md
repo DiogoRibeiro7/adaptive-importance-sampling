@@ -9,6 +9,44 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **The heat transfer problem did not work, and no test would have noticed.**
+  It was the least covered module in the package and had never been checked
+  against an independent answer. The temperature field came from an explicit
+  relaxation, `T += 0.01 * (laplacian + Q)`, run for 1000 sweeps and clamped to
+  +/-1e6. An elliptic problem has no time derivative to march, and that fixed
+  pseudo-step was about sixteen times the explicit stability limit for the
+  default grid, so it diverged: 380 of 441 nodes ended pinned at the clamp and
+  the limit state returned exactly `threshold` for every input, with no
+  dependence on the random field at all.
+
+  Four parameters also disagreed with section 4.5: the correlation length was
+  `0.5` against `l = 0.2`, the threshold `100` against equation (48)'s `10`,
+  the covariance `exp(-r/l)` against equation (46)'s `exp(-r^2/l^2)`, and the
+  heat source's y extent was computed and then discarded, leaving a
+  full-height strip instead of the square `A`.
+
+  The field is now a direct sparse solve of the five-point conservative
+  discretisation, which reproduces the analytic solution of the uniform case to
+  machine precision. Safe-ICE estimates the failure probability at `2.83e-07`
+  against the paper's `4.69e-07`, a factor of 0.60, using finite differences on
+  21x21 where the paper uses finite elements over 25040 triangles.
+
+  Two further defects came out of the same work. Region membership used exact
+  floating-point comparisons on bounds that a `linspace` reproduces at some
+  grid sizes and misses by an ulp at others, so a region silently lost a row of
+  nodes at `grid_size=31`. And assigning `Q` to each source node made the
+  discrete heat input `((0.1 + h) / 0.1)^2` times too large -- 2.25x at
+  `grid_size=21` against 1.44x at 51 -- which was the whole of the problem's
+  apparent grid dependence. Spreading `Q` over the region's area fixes it: the
+  nominal average temperature on `B` is now 4.553 at every grid size tested,
+  against 10.24, 8.09, 7.11 and 6.56 before.
+
+  Boundary conditions follow Figure 11 -- zero Dirichlet on the top edge, zero
+  Neumann on the other three. The text of section 4.5 says the opposite, and
+  the two cannot both hold: with three edges able to shed heat the nominal
+  average temperature on `B` is 0.49 against a threshold of 10, which is 51
+  standard deviations away and could never produce the reported probability.
+
 - **The penalty coefficient did not follow equation (23).** `_update_beta`
   called itself a "simple adaptive heuristic" and was one: it measured each
   weight's deviation from the mean rather than its change since the previous
