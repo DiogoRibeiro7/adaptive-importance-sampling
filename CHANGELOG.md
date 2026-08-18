@@ -273,7 +273,7 @@ on a linear limit state -- were both symptoms of the bugs fixed in this
 release, and no longer occur. The four-mode reference itself was wrong: it was
 quoted as `1.22e-5` against a measured `5.815e-05`.
 
-## [0.1.0] - 2025-01-27
+## 0.1.0 - 2025-01-27
 
 ### Added
 
@@ -286,4 +286,3 @@ quoted as `1.22e-5` against a measured `5.815e-05`.
 
 [Unreleased]: https://github.com/DiogoRibeiro7/adaptive-importance-sampling-ice/compare/v0.2.0...HEAD
 [0.2.0]: https://github.com/DiogoRibeiro7/adaptive-importance-sampling-ice/releases/tag/v0.2.0
-[0.1.0]: https://github.com/DiogoRibeiro7/adaptive-importance-sampling-ice/releases/tag/v0.1.0
