@@ -28,6 +28,7 @@ Implements the method described in:
 
 - [Installation](#installation)
 - [Quick start](#quick-start)
+- [Notebooks](notebooks/)
 - [How it works](#how-it-works)
 - [Reproducibility](#reproducibility)
 - [Further usage](#further-usage)
@@ -128,6 +129,18 @@ vectorised function.
 
 `iterations` is a list of records, so the iteration *count* is
 `len(results["iterations"])`.
+
+## Notebooks
+
+Four notebooks in [notebooks/](notebooks/), executed with their outputs saved
+so the plots and numbers render on GitHub without running anything:
+
+| Notebook | What it shows |
+| --- | --- |
+| [Getting started](notebooks/01_getting_started.ipynb) | One run on a benchmark, against crude Monte Carlo |
+| [Benchmarks](notebooks/02_benchmarks.ipynb) | All five problems from the paper, against independent references |
+| [High dimensions](notebooks/03_high_dimensions.ipynb) | `d=2` to `d=200` against the exact chi-square tail |
+| [How it works](notebooks/04_how_it_works.ipynb) | The smoothed indicator, sigma schedule, penalised EM and heavy-tailed component |
 
 ## How it works
 

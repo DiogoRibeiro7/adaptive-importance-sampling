@@ -7,6 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Four notebooks in `notebooks/`, executed with their outputs saved so the
+  plots and numbers render on GitHub without running anything: getting started,
+  the five benchmark problems against independent references, accuracy from
+  `d=2` to `d=200` against the exact chi-square tail, and a walk through the
+  smoothed indicator, sigma schedule, penalised EM and heavy-tailed component.
+
+  Every figure is measured when the notebook runs rather than typed in, and
+  references come from outside the package -- a closed form where one exists,
+  otherwise crude Monte Carlo. Results are reported as a spread across seeds
+  rather than a single run, since the estimator is stochastic and one run is a
+  draw from a distribution.
+
+  Each is paired with a jupytext percent-format `.py`, which is the file to
+  edit: it reviews as a normal diff where an `.ipynb` diff is mostly base64
+  image data. `jupytext` is declared in the `benchmark` dependency group.
+
 ## [0.3.0] - 2026-08-18
 
 ### Removed

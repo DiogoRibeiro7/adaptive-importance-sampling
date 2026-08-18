@@ -107,6 +107,8 @@ benchmark = [
   "seaborn>=0.13.2,<1.0.0",
   "jupyter>=1.1.1,<2.0.0",
   "ipykernel>=7.3.0,<8.0.0",
+  # notebooks/ are authored as jupytext percent-format .py files.
+  "jupytext>=1.16,<2.0.0",
 ]
 
 # ==================== POETRY (build backend only) ====================
