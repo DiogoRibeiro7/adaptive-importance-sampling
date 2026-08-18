@@ -3,12 +3,21 @@
 Where the project is and what is planned next. Items are listed in the order
 they are likely to be worked on, not by importance.
 
-## Now: 0.2.0
+## Now: 0.3.0
 
-The first release since the package was reorganised. It is a correctness
-release: eight bugs that biased or broke every estimate were found by comparing
-against independent references, and the packaging, CI and test suite were
-rebuilt around catching that class of problem earlier.
+0.3.0 is a second correctness release, and the one that checked the
+implementation against the source paper equation by equation. It fixed the
+four-mode limit state, which had `sqrt(3.5)` where equation (37) has
+`7/sqrt(2)`; implemented the nonlinear oscillator and the heat transfer
+problem, neither of which worked; replaced the penalty coefficient with
+equations (23) and (24); and repaired the search for sigma in equation (10),
+which had been minimising an objective that is undefined over most of its
+domain. Coverage went from 53% to 85%.
+
+0.2.0 was the first release since the package was reorganised, also a
+correctness release: eight bugs that biased or broke every estimate were found
+by comparing against independent references, and the packaging, CI and test
+suite were rebuilt around catching that class of problem earlier.
 
 The estimator now agrees with closed-form answers to within a few percent from
 `d=2` through `d=200`, and with 2e7-sample Monte Carlo on the benchmark
@@ -65,6 +74,108 @@ tests for whatever was there:
   by design.
 
 ## Next
+
+These are the next items from a repository review on 2026-08-18. The estimator
+core is in much better shape than the surrounding product surface; the highest
+return is now to make the public API, docs, visualisation tools and release
+metadata line up with the corrected implementation.
+
+### Fix the result object contract
+
+`run()` currently returns internally useful data under names that promise
+something narrower than they contain. `results["final_samples"]` and
+`results["final_g_values"]` are all iteration samples, not the separate sample
+set used for the final probability estimate, and `results["final_weights"]` is
+an array of ones rather than the final importance weights. That is harmless for
+tests that only check shape and non-negativity, but it makes downstream plots
+and user analyses compute the wrong thing while looking plausible.
+
+Define the result schema explicitly before adding more analysis features:
+
+* keep per-iteration proposal samples separate from final-estimator samples;
+* expose the actual final importance weights used in equation (36);
+* record `n_failures`, `parameters`, `sigma`, `lambda`, `cv` and the current
+  estimate consistently for each iteration, or remove consumers that expect
+  them;
+* update README, Sphinx docs and tests to assert semantics, not just key
+  presence.
+
+### Repair the analysis and visualisation layer
+
+The numerical core is now covered; the plotting layer mostly has smoke tests.
+Several functions still depend on stale result fields:
+
+* `AdvancedAnalysis.analyze_component_evolution` reads `history["lambda"]`,
+  but `SafeICE` records `history["lambda_val"]`;
+* the Plotly convergence view hard-codes a target CV of `0.05`, while the
+  algorithm default is `delta_star = 1.5`;
+* the failure-count plot reads `n_failures`, which `run()` never records;
+* the mixture-evolution animation expects per-iteration `parameters`, which are
+  not stored;
+* the dashboard computes a displayed probability from placeholder weights
+  rather than from the importance-sampling estimator.
+
+Fix these after the result schema is settled. Tests should check plotted values
+against a small deterministic run, not only that a figure object exists.
+
+### Refresh the public documentation
+
+The docs build cleanly, but some examples still describe the pre-0.3 API and
+old benchmark state. In particular, `docs/source/quickstart.rst` still cites
+the old four-mode reference (`1.22e-5`), reads `iter_data["delta"]` although
+iteration records expose `sigma`, and imports `VisualizationTools`, which is
+not part of the package. The install docs also still recommend Poetry commands
+even though project metadata and development groups now live in PEP 621/735.
+
+Bring README, Sphinx docs and examples back into one story: corrected
+benchmarks, current result keys, current dependency installation, and the
+actual analysis API.
+
+### Normalise repository identity before release
+
+GitHub reports that the repository has moved from
+`adaptive-importance-sampling-ice` to `adaptive-importance-sampling`. The old
+URL still appears in package metadata, docs, badges, Docker labels, citation
+metadata, Zenodo metadata and the CLI epilogue. Either keep the old URL
+deliberately as a redirect, or update all public links in one release-prep
+commit so badges, installation snippets, citation metadata and changelog links
+point at the canonical repository.
+
+### Finish 0.3.0 release hygiene
+
+The release branch already bumps `pyproject.toml`, `CITATION.cff`,
+`.zenodo.json` and the conda recipe to `0.3.0`, and the version-bump tooling
+now knows about `.zenodo.json`. Before tagging:
+
+* move the populated `CHANGELOG.md` `0.3.0` section out of any local-only state;
+* verify `python scripts/pyproject_editor.py --check bump-version patch`
+  reports companion-file changes without writing them;
+* run the full CI-equivalent suite with an installed package:
+  `ruff check .`, `ruff format --check .`, `mypy`,
+  `pytest -m "" -n auto`, Sphinx with `-W`, build, and `twine check`;
+* decide whether `.zenodo.json` should carry `version` even though Zenodo's
+  legacy JSON schema does not list it. Zenodo's GitHub integration documents
+  version metadata, but editor schema validation may complain if a strict
+  legacy schema is attached.
+
+### Preserve benchmark evidence outside the tests
+
+The package now relies on independent references: closed forms, 2e7-sample
+Monte Carlo for 2D benchmarks, 2e6-sample Monte Carlo for the oscillator, and a
+paper comparison for heat transfer. Those numbers are too expensive to
+regenerate in normal CI, so the project should keep the scripts, seeds,
+sample counts and resulting confidence intervals as auditable artefacts under
+`benchmarks/` or `paper/`. That makes future correctness releases easier to
+review and keeps README/CHANGELOG claims reproducible.
+
+### Improve local validation ergonomics
+
+`ruff` and formatting are fast, mypy passes, and docs build with warnings as
+errors. The default local test run is still long enough that it is easy to hit
+tooling timeouts, while CI gets parallelism from `pytest -n auto`. Make the
+local workflow clearer by documenting the intended quick, full and release
+commands, and consider adding a Makefile target that mirrors CI exactly after
+installing the dev group.
 
 ## Later
 

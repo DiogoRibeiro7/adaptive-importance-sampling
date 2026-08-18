@@ -233,6 +233,7 @@ def _bump_semver(v: str, level: VersionBump) -> str:
 # Each entry is (path relative to the project root, regex, replacement template).
 VERSION_COMPANIONS: tuple[tuple[str, str, str], ...] = (
     ("CITATION.cff", r"(?m)^version: .+$", "version: {version}"),
+    (".zenodo.json", r'(?m)^  "version": "[^"]+",$', '  "version": "{version}",'),
     (
         "conda.recipe/meta.yaml",
         r'(?m)^\{% set version = "[^"]+" %\}$',

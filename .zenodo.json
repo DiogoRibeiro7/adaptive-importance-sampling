@@ -1,6 +1,6 @@
 {
   "title": "Safe-ICE: Safe Cross-Entropy-Based Importance Sampling for rare event simulation",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "upload_type": "software",
   "creators": [
     {

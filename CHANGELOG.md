@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-08-18
+
 ### Removed
 
 - `safe_ice.utils`. Nothing in the package imported it, and where it overlapped
@@ -545,5 +547,6 @@ quoted as `1.22e-5` against a measured `5.815e-05`.
   Karhunen-Loève expansion.
 - Performance evaluation and convergence analysis utilities.
 
-[Unreleased]: https://github.com/DiogoRibeiro7/adaptive-importance-sampling-ice/compare/v0.2.0...HEAD
+[Unreleased]: https://github.com/DiogoRibeiro7/adaptive-importance-sampling-ice/compare/v0.3.0...HEAD
+[0.3.0]: https://github.com/DiogoRibeiro7/adaptive-importance-sampling-ice/releases/tag/v0.3.0
 [0.2.0]: https://github.com/DiogoRibeiro7/adaptive-importance-sampling-ice/releases/tag/v0.2.0

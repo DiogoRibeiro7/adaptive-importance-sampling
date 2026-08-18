@@ -30,6 +30,14 @@ requires_tomlkit = pytest.mark.skipif(
 )
 
 
+ZENODO_TEMPLATE = """{{
+  "title": "Safe-ICE",
+  "version": "{version}",
+  "upload_type": "software"
+}}
+"""
+
+
 @pytest.fixture
 def project(tmp_path: Path) -> Path:
     """A miniature copy of the files a bump has to keep in step."""
@@ -40,6 +48,10 @@ def project(tmp_path: Path) -> Path:
     )
     (tmp_path / "CITATION.cff").write_text(
         "cff-version: 1.2.0\ntitle: Safe-ICE\nversion: 1.2.3\nlicense: MIT\n",
+        encoding="utf-8",
+    )
+    (tmp_path / ".zenodo.json").write_text(
+        ZENODO_TEMPLATE.format(version="1.2.3"),
         encoding="utf-8",
     )
     (tmp_path / "conda.recipe" / "meta.yaml").write_text(
@@ -68,10 +80,22 @@ class TestBumpKeepsMetadataInStep:
 
         assert 'version = "1.3.0"' in (project / "pyproject.toml").read_text()
         assert "version: 1.3.0" in (project / "CITATION.cff").read_text()
+        assert '"version": "1.3.0"' in (project / ".zenodo.json").read_text()
         assert (
             '{% set version = "1.3.0" %}'
             in (project / "conda.recipe" / "meta.yaml").read_text()
         )
+
+    def test_the_zenodo_record_stays_valid_json(self, project: Path) -> None:
+        """A regex rewrite must not corrupt the surrounding document."""
+        import json
+
+        run_editor(project, "bump-version", "patch")
+
+        record = json.loads((project / ".zenodo.json").read_text(encoding="utf-8"))
+        assert record["version"] == "1.2.4"
+        assert record["title"] == "Safe-ICE"
+        assert record["upload_type"] == "software"
 
     def test_the_recipe_keeps_its_jinja_syntax(self, project: Path) -> None:
         """The replacement is a template, so a stray brace would corrupt it."""
@@ -96,6 +120,7 @@ class TestBumpKeepsMetadataInStep:
             for path in (
                 project / "pyproject.toml",
                 project / "CITATION.cff",
+                project / ".zenodo.json",
                 project / "conda.recipe" / "meta.yaml",
             )
         }
@@ -124,6 +149,9 @@ class TestTheRealRepositoryStaysConsistent:
 
         citation = (REPO_ROOT / "CITATION.cff").read_text(encoding="utf-8")
         assert f"version: {pyproject_version}" in citation
+
+        zenodo = (REPO_ROOT / ".zenodo.json").read_text(encoding="utf-8")
+        assert f'"version": "{pyproject_version}"' in zenodo
 
         recipe_path = REPO_ROOT / "conda.recipe" / "meta.yaml"
         if recipe_path.exists():
