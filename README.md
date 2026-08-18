@@ -32,6 +32,7 @@ Implements the method described in:
 - [Reproducibility](#reproducibility)
 - [Further usage](#further-usage)
 - [Accuracy](#accuracy)
+- [Roadmap](ROADMAP.md)
 - [Development](#development)
 - [Citation](#citation)
 - [License](#license)
@@ -297,6 +298,9 @@ proposal component numerically and fails if the Jacobian is dropped again.
 - The reference value quoted for the four-mode problem used to be `1.22e-5`.
   Crude Monte Carlo over 2e7 samples puts it at `5.8e-5 ± 1.7e-6` for the
   default `z=3.8`.
+
+What is planned about these, and which modules are not yet covered by tests,
+is in [ROADMAP.md](ROADMAP.md).
 
 ## Development
 

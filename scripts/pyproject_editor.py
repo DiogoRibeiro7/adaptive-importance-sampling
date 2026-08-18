@@ -229,6 +229,45 @@ def _bump_semver(v: str, level: VersionBump) -> str:
     return f"{maj}.{min_}.{pat}"
 
 
+# Files that restate the version and must not drift from pyproject.toml.
+# Each entry is (path relative to the project root, regex, replacement template).
+VERSION_COMPANIONS: tuple[tuple[str, str, str], ...] = (
+    ("CITATION.cff", r"(?m)^version: .+$", "version: {version}"),
+    (
+        "conda.recipe/meta.yaml",
+        r'(?m)^\{% set version = "[^"]+" %\}$',
+        '{{% set version = "{version}" %}}',
+    ),
+)
+
+
+def _sync_version_companions(pyproject: Path, version: str, check: bool) -> list[str]:
+    """Rewrite the version in files that restate it, and report which changed.
+
+    A bump that touches only pyproject.toml leaves CITATION.cff and the conda
+    recipe claiming the previous release, which is the kind of drift that is
+    only noticed after the tag is published.
+    """
+    changed: list[str] = []
+    root = pyproject.parent
+
+    for relative_path, pattern, template in VERSION_COMPANIONS:
+        path = root / relative_path
+        if not path.exists():
+            continue
+
+        before = path.read_text(encoding="utf-8")
+        after = re.sub(pattern, template.format(version=version), before)
+        if before == after:
+            continue
+
+        changed.append(relative_path)
+        if not check:
+            path.write_text(after, encoding="utf-8")
+
+    return changed
+
+
 def _get_poetry_dep_table(doc: TOMLDocument, group: str | None) -> tomlkit.items.Table:
     """
     Return a writable table for dependencies in Poetry layout.
@@ -538,6 +577,10 @@ def main(argv: list[str] | None = None) -> int:
             new = _bump_semver(current, args.level)  # type: ignore[arg-type]
             _set_version(doc, new)
             print(f"Bumped version: {current} → {new}")
+
+            synced = _sync_version_companions(pyproject, new, args.check)
+            for relative_path in synced:
+                print(f"  also updated {relative_path}")
 
         elif args.cmd == "set-dep":
             _set_dep(doc, args.name.strip(), args.spec.strip(), args.group)

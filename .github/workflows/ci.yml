@@ -83,7 +83,9 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install -e .
-          pip install pytest pytest-cov pytest-xdist
+          # tomlkit is not a package dependency; it is needed by
+          # scripts/pyproject_editor.py, which tests/test_version_bump.py runs.
+          pip install pytest pytest-cov pytest-xdist tomlkit
 
       - name: Run tests
         # -m "" runs the slow tests too, which the default config skips.
