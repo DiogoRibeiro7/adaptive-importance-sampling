@@ -7,6 +7,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **`run()` now returns a value constrained to `[0, 1]`.** The estimator is
+  unbiased but unconstrained -- the weights `p(u)/q_safe(u)` are a ratio of
+  densities and nothing bounds them by 1 -- so a single run could return a
+  value above 1. Callers expect a probability, so the returned value is
+  clamped.
+
+  Clamping truncates overshoots without touching undershoots, which biases the
+  mean downwards: on a limit state that fails everywhere, the mean over 40 runs
+  goes from 1.0163 raw to 0.8811 clamped. It never fires in the rare-event
+  regime this package is for, where estimates sit two to four orders of
+  magnitude below 1.
+
+  An estimate above 1 is therefore treated as a diagnostic rather than a
+  nuisance: it means the proposal is not covering the target and the weights
+  have gone degenerate, so a few samples carry the whole sum. Returning `1.0`
+  silently would present such a run as converged. The raw value is kept in
+  `results["pf_unclamped"]` and a `RuntimeWarning` explains the cause.
+
+  `test_certain_failure` was a non-strict `xfail` because of this; it is now a
+  real test.
+
 ## [0.2.0] - 2026-08-18
 
 ### Added

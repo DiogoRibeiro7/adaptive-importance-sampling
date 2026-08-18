@@ -226,9 +226,10 @@ class SafeICE:
         # --- Final estimate via importance sampling (not crude MC) ---
         final_samples: NDArrayF = self._generate_safe_mixture_samples(phi_t, lambda_t)
         final_g_values: NDArrayF = self._evaluate_limit_state(final_samples)
-        pf_estimate: float = self._estimate_failure_probability(
+        pf_unclamped: float = self._estimate_failure_probability(
             final_samples, final_g_values, phi_t, lambda_t
         )
+        pf_estimate: float = self._clamp_to_probability(pf_unclamped)
 
         self.history["pf_estimates"].append(float(pf_estimate))
 
@@ -238,6 +239,7 @@ class SafeICE:
 
         results: dict[str, Any] = {
             "failure_probability": float(pf_estimate),
+            "pf_unclamped": float(pf_unclamped),
             "iterations": iteration_records,
             "final_components": int(phi_t.K),
             "final_sigma": float(sigma_t),
@@ -610,6 +612,54 @@ class SafeICE:
         # Monte Carlo estimate
         pf_estimate: float = float(np.mean(indicators * importance_weights))
         return pf_estimate
+
+    @staticmethod
+    def _clamp_to_probability(pf_estimate: float) -> float:
+        """Constrain the estimate to [0, 1], warning if that changed anything.
+
+        The importance-sampling estimator is unbiased but unconstrained: the
+        weights p(u)/q_safe(u) are a ratio of densities and nothing bounds them
+        by 1, so a single run can return a value above 1 even though the mean
+        over runs is exactly right. Callers expect a probability, so the
+        returned value is clamped.
+
+        Clamping is not free in principle -- truncating the overshoots without
+        touching the undershoots biases the mean downwards, by about 12% on a
+        limit state that fails everywhere. In the rare-event regime this
+        package is for it never fires at all: estimates there sit two to four
+        orders of magnitude below 1.
+
+        That makes an estimate above 1 a useful signal rather than a nuisance.
+        It means the proposal is not covering the target, so the weights have
+        gone degenerate and a few samples are carrying the whole sum. Silently
+        returning 1.0 would present such a run as a converged one, so the raw
+        value is kept in ``results["pf_unclamped"]`` and a warning is issued.
+        """
+        if 0.0 <= pf_estimate <= 1.0:
+            return float(pf_estimate)
+
+        clamped = min(max(pf_estimate, 0.0), 1.0)
+        if pf_estimate > 1.0:
+            detail = (
+                "A value above 1 means the proposal does not cover the target: "
+                "the importance weights are degenerate and a few samples carry "
+                "the whole estimate. Treat the run as unconverged rather than "
+                "as a probability of 1."
+            )
+        else:
+            # Unreachable: the estimate is a mean of an indicator times a
+            # non-negative weight. Kept so a future change cannot make a
+            # negative probability pass silently.
+            detail = "A negative value indicates a bug in the weight computation."
+
+        warnings.warn(
+            f"Failure probability estimate {pf_estimate:.6g} is outside [0, 1] "
+            f"and has been clamped to {clamped:g}. {detail} The raw value is "
+            "available as results['pf_unclamped'].",
+            RuntimeWarning,
+            stacklevel=3,
+        )
+        return float(clamped)
 
     def _evaluate_prior_density(self, samples: NDArrayF) -> NDArrayF:
         """Evaluate standard Gaussian prior density p(u) = N(0, I_d)."""
