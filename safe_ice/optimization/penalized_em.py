@@ -17,9 +17,7 @@ NDArrayF = npt.NDArray[np.float64]
 class PenalizedEMOptimizer:
     """Penalized EM algorithm for automatic component selection."""
 
-    def __init__(
-        self, max_em_iterations: int = 100, em_tolerance: float = 1e-6
-    ) -> None:
+    def __init__(self, max_em_iterations: int = 20, em_tolerance: float = 1e-6) -> None:
         self.max_em_iterations = int(max_em_iterations)
         self.em_tolerance = float(em_tolerance)
 
@@ -72,13 +70,11 @@ class PenalizedEMOptimizer:
                 data, radii, directions, params, weights
             )
 
-            # M-step with penalization
-            params, K = self._penalized_m_step(
+            # M-step with penalization, which also returns the next penalty
+            # coefficient: equation (23) needs the pre-pruning weight vectors.
+            params, K, beta = self._penalized_m_step(
                 data, radii, directions, responsibilities, weights, params, beta
             )
-
-            # Update penalty parameter
-            beta = self._update_beta(params, beta, K)
 
             # Check convergence
             current_log_likelihood: float = self._weighted_log_likelihood(
@@ -153,8 +149,12 @@ class PenalizedEMOptimizer:
         weights: NDArrayF,
         params: vMFNMParameters,
         beta: float,
-    ) -> tuple[vMFNMParameters, int]:
-        """Penalized M-step with automatic component removal."""
+    ) -> tuple[vMFNMParameters, int, float]:
+        """Penalized M-step with automatic component removal.
+
+        Returns the updated parameters, the surviving component count, and the
+        penalty coefficient for the next iteration (equation 23).
+        """
         _n, d = data.shape
         int(params.K)
 
@@ -163,18 +163,26 @@ class PenalizedEMOptimizer:
             np.float64, copy=False
         )
 
-        # Update mixture weights with penalization
-        new_pi: NDArrayF = self._update_mixture_weights_penalized(
+        # Update mixture weights with penalization, equation (21)
+        new_pi, pi_em = self._update_mixture_weights_penalized(
             weighted_resp, params.pi, beta
         )
 
-        # Remove components with negligible weights
-        active_components = new_pi > 1e-4
+        # The next penalty coefficient, equation (23), is computed before
+        # pruning: it compares the weights component by component against the
+        # previous iterate, so both vectors must still have K_j entries.
+        next_beta = self._update_beta(params.pi, new_pi, pi_em, int(_n), int(d))
+
+        # Equation (22): discard the components driven to zero by the penalty.
+        active_components = new_pi > 0.0
         K_new: int = int(np.sum(active_components))
 
         if K_new == 0:
+            # Everything was pruned at once; keep the largest so the mixture
+            # stays well formed.
             K_new = 1
-            active_components[0] = True
+            active_components = np.zeros_like(active_components)
+            active_components[int(np.argmax(new_pi))] = True
 
         # Extract active components
         active_indices = np.where(active_components)[0]
@@ -212,18 +220,23 @@ class PenalizedEMOptimizer:
             pi=new_pi, m=new_m, Omega=new_Omega, mu=new_mu, kappa=new_kappa
         )
 
-        return new_params, K_new
+        return new_params, K_new, next_beta
 
     def _update_mixture_weights_penalized(
         self, weighted_resp: NDArrayF, old_pi: NDArrayF, beta: float
-    ) -> NDArrayF:
-        """Update mixture weights with cross-entropy-like penalty."""
+    ) -> tuple[NDArrayF, NDArrayF]:
+        """Equation (21): the EM weight update plus the cross-entropy penalty.
+
+        Returns the penalised weights and the unpenalised EM weights of
+        equation (19); equation (23) needs both to set the next beta.
+        """
         # Standard EM update
         total_weight: float = float(np.sum(weighted_resp))
         if total_weight <= 0.0:
             # fallback uniform
             K = int(weighted_resp.shape[1])
-            return np.full(K, 1.0 / float(K), dtype=np.float64)
+            uniform = np.full(K, 1.0 / float(K), dtype=np.float64)
+            return uniform, uniform
 
         pi_em: NDArrayF = (np.sum(weighted_resp, axis=0) / total_weight).astype(
             np.float64, copy=False
@@ -246,23 +259,21 @@ class PenalizedEMOptimizer:
         safe_old = np.maximum(old_pi.astype(np.float64, copy=False), 1e-15)
         mean_log_pi: float = float(np.sum(safe_old * np.log(safe_old)))
 
-        # Normalize factor (total_weight/total_weight == 1), kept explicit for clarity
+        # Normalize factor (total_weight/total_weight == 1), kept explicit for
+        # clarity. Equation (21) writes it as
+        # sum_i W_i / sum_i sum_s gamma_s^(i) W_i, and the responsibilities sum
+        # to one over components, so the two sums are equal.
         norm_factor: float = 1.0
         penalty_term: NDArrayF = (
             float(beta) * norm_factor * safe_old * (np.log(safe_old) - mean_log_pi)
         ).astype(np.float64, copy=False)
 
+        # Equation (21). The penalty is a zero-sum redistribution -- summing it
+        # over k gives E - E = 0 -- so this still sums to one and needs no
+        # renormalisation. Entries may be negative; equation (22) prunes those.
         new_pi: NDArrayF = (pi_em + penalty_term).astype(np.float64, copy=False)
 
-        # Ensure non-negativity and renormalization
-        new_pi = np.maximum(new_pi, 0.0)
-        s = float(np.sum(new_pi))
-        if s > 0.0:
-            new_pi = (new_pi / s).astype(np.float64, copy=False)
-        else:
-            new_pi = np.full(K, 1.0 / float(K), dtype=np.float64)
-
-        return new_pi
+        return new_pi, pi_em
 
     def _update_nakagami_parameters(
         self, radii: NDArrayF, responsibilities: NDArrayF
@@ -351,29 +362,57 @@ class PenalizedEMOptimizer:
         """von Mises–Fisher PDF for a batch of unit rows w.r.t. surface area measure."""
         return vmf_pdf_batch(X, mu, kappa)
 
-    def _update_beta(self, params: vMFNMParameters, beta: float, K: int) -> float:
-        """Update penalty parameter beta (simple adaptive heuristic)."""
-        # Use mixture spread as a guide; keep bounded in [0, 1].
-        min_pi: float = float(np.min(params.pi))
-        max_pi: float = float(np.max(params.pi))
+    @staticmethod
+    def _update_beta(
+        pi_old: NDArrayF,
+        pi_new: NDArrayF,
+        pi_em: NDArrayF,
+        n_samples: int,
+        d: int,
+    ) -> float:
+        """Next penalty coefficient, equations (23) and (24).
 
-        # Dimension based factor (similar spirit to paper’s dependence on d)
-        d: int = int(params.mu.shape[1])
-        eta: float = float(min(1.0, 0.5 ** (max(0, int(d / 2) - 1))))
+            beta = min{ (1/K) sum_k exp(-eta N |pi_k(j+1) - pi_k(j)|),
+                        (1 - max_k pi_em_k) / (-max_k pi_k(j) * E) }
 
-        # Heuristic terms
-        # Encourage spreading when weights are peaky (max_pi large, min_pi small)
-        term1: float = float(
-            (1.0 / float(K))
-            * np.sum(
-                np.exp(-eta * float(K) * np.abs(params.pi - float(np.mean(params.pi))))
-            )
-        )
-        term2: float = float((1.0 - max_pi) / max(min_pi, 1e-15))
+        with ``eta = min(1, 0.5^(floor(d/2) - 1))`` and
+        ``E = sum_k pi_k(j) ln pi_k(j)``, which is negative, so the second
+        denominator is positive.
 
-        new_beta: float = float(min(term1, term2))
-        # Blend with previous beta to avoid oscillations
-        return float(0.5 * beta + 0.5 * max(0.0, min(1.0, new_beta)))
+        The first term falls towards zero while the weights are still moving,
+        which keeps the penalty from pruning during the unsettled early
+        iterations; the second caps it so at least one component survives.
+
+        This was previously an unrelated heuristic: it measured each weight's
+        deviation from the mean rather than its change since the last
+        iteration, scaled by the number of components rather than the number of
+        samples, replaced the entropy term with ``(1 - max pi) / min pi``, and
+        blended the result with the previous beta.
+        """
+        K = int(pi_old.shape[0])
+        if K == 0:
+            return 0.0
+        if K == 1:
+            # E = 1 * ln 1 = 0, so the second term is undefined. With a single
+            # component there is nothing left to prune.
+            return 0.0
+
+        eta = min(1.0, 0.5 ** max(0, d // 2 - 1))
+
+        drift = np.abs(np.asarray(pi_new, dtype=np.float64) - pi_old)
+        term1 = float(np.mean(np.exp(-eta * float(n_samples) * drift)))
+
+        safe_old = np.clip(np.asarray(pi_old, dtype=np.float64), 1e-300, None)
+        entropy_sum = float(np.sum(safe_old * np.log(safe_old)))  # E, negative
+        largest_old = float(np.max(safe_old))
+        denominator = -largest_old * entropy_sum
+
+        if denominator <= 0.0:
+            # Reachable only if every weight is 1, i.e. E == 0.
+            return float(min(term1, 1.0))
+
+        term2 = (1.0 - float(np.max(pi_em))) / denominator
+        return float(max(0.0, min(term1, term2)))
 
     def _weighted_log_likelihood(
         self, data: NDArrayF, params: vMFNMParameters, weights: NDArrayF

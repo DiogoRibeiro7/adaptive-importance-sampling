@@ -9,6 +9,49 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **The penalty coefficient did not follow equation (23).** `_update_beta`
+  called itself a "simple adaptive heuristic" and was one: it measured each
+  weight's deviation from the mean rather than its change since the previous
+  iteration, scaled that by the number of components rather than the number of
+  samples, replaced equation (24)'s entropy term with `(1 - max pi) / min pi`,
+  and blended the result with the previous beta. Beta governs how aggressively
+  redundant components are pruned, which is one of the paper's two headline
+  contributions. It now implements equations (23) and (24).
+- **Component pruning did not follow equation (22).** Components were dropped
+  at `pi > 1e-4` after clamping negatives to zero and renormalising. Equation
+  (21) is a zero-sum redistribution, so it already preserves the normalisation
+  and can drive a weight negative; the paper prunes exactly those. It now does.
+- **The stopping rule of section 3.2 was missing.** The criterion reads the
+  vMFNM samples, so when `lambda` is 0 there are none and the CV is set to
+  infinity to force another iteration. This was approximated by an ad-hoc
+  "at least two iterations" guard, which is now unnecessary: `lambda_0` is
+  always 0 because `M = sigma0`.
+- `em_max_iter` now defaults to 20, the value stated in section 4, rather
+  than 100.
+
+Accuracy is unchanged to slightly better, and pruning now does what it is for:
+the mixture settles at K=1 for the unimodal sphere at d=50 and for the
+oscillator, K=8 for the four-mode problem, from K0=20.
+
+| Problem | reference | median | ratio |
+| --- | --- | --- | --- |
+| four-mode `z=1.0` | `6.465e-05` | `6.446e-05` | 1.00x |
+| three-mode `z=3.0` | `3.475e-03` | `3.641e-03` | 1.05x |
+| two-mode `z=3.0` | `2.700e-03` | `2.879e-03` | 1.07x |
+| oscillator `z=0.05` | `1.798e-03` | `1.773e-03` | 0.99x |
+| sphere `d=10` | `5.346e-03` | `5.410e-03` | 1.01x |
+| sphere `d=50` | `3.610e-03` | `3.565e-03` | 0.99x |
+
+### Documented
+
+- The `lambda_max` cap is recorded as a deliberate divergence from equation
+  (35), which reaches exactly 1. Section 3.2 relies on that to argue the final
+  estimate is sound, but it removes the heavy-tailed component that makes the
+  method "safe" and leaves the weights unbounded.
+- `nakagami_ratio_problem` is not one of the paper's benchmarks. Sections 4.1
+  to 4.5 cover the four-mode, three-mode, oscillator, two-mode and heat
+  transfer problems; this is an extra exercise for the Nakagami code.
+
 - **The four-mode benchmark had the wrong constant, and every reference
   measured against it was wrong too.** The last two branches of equation (37)
   are `u1 - u2 + 7/sqrt(2)`; the code had `sqrt(3.5)`, reading the fraction

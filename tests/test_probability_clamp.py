@@ -113,19 +113,36 @@ class TestTheRawValueSurvives:
     """The point of option three: nothing is hidden."""
 
     def test_unclamped_value_is_reported_unchanged(self) -> None:
-        with warnings.catch_warnings(record=True) as caught:
-            warnings.simplefilter("always")
-            pf, results = SafeICE(
-                limit_state_function=always_fails,
-                dimension=2,
-                N=100,
-                max_iterations=2,
-                random_state=10,
-            ).run(verbose=False)
+        """On whichever seeds overshoot, the raw value and warning must appear.
 
-        raw = results["pf_unclamped"]
-        assert raw > 1.0, "this seed is chosen because it overshoots"
-        assert pf == 1.0
-        assert any("clamped" in str(w.message) for w in caught)
-        # The raw value is the diagnostic; it must not itself be clamped.
-        assert raw == pytest.approx(1.159, abs=0.01)
+        Which seeds overshoot depends on the sampling path, so this scans a
+        range rather than pinning one. Hard-coding a seed and its exact value
+        made this test fail whenever an unrelated change moved the stream.
+        """
+        overshooting = 0
+
+        for seed in range(15):
+            with warnings.catch_warnings(record=True) as caught:
+                warnings.simplefilter("always")
+                pf, results = SafeICE(
+                    limit_state_function=always_fails,
+                    dimension=2,
+                    N=100,
+                    max_iterations=2,
+                    random_state=seed,
+                ).run(verbose=False)
+
+            raw = results["pf_unclamped"]
+            warned = any("clamped" in str(w.message) for w in caught)
+
+            if raw > 1.0:
+                overshooting += 1
+                assert pf == 1.0, f"seed {seed}: raw {raw} was not clamped"
+                assert warned, f"seed {seed}: clamped {raw} silently"
+            else:
+                assert pf == raw, f"seed {seed}: altered an in-range estimate"
+                assert not warned, f"seed {seed}: warned without clamping"
+
+        assert overshooting > 0, (
+            "no seed overshot 1, so the clamp path was never exercised"
+        )
