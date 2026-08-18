@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-08-18
+
 ### Added
 
 - `random_state` on `PerformanceEvaluator.run_monte_carlo_reference`, so
@@ -258,13 +260,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 Recorded as `xfail` tests, not silenced:
 
-- The estimator does not reliably reproduce the reference probability on the
-  four-mode series benchmark (6 of 12 seeds land in range; estimates span
-  `6e-6` to `5e-1` against a reference of `1.22e-5`).
-- On a linear limit state with a closed-form answer, the estimate is
-  systematically about `0.54x` the analytical value, and the gap does not
-  shrink with more samples.
-- Estimates are not constrained to `[0, 1]`.
+- Estimates are not constrained to `[0, 1]`. The estimator is unbiased but
+  unconstrained, so on a limit state that fails everywhere it scatters around
+  the true value of 1 and can land above it. Clamping would fix it at the cost
+  of introducing bias, which is a modelling decision. See `ROADMAP.md`.
+- The nonlinear oscillator benchmark cannot fail as parameterised, so it
+  measures nothing. Fixing the scaling requires the source paper.
+
+The two accuracy gaps previously listed here -- the four-mode benchmark
+reproducing its reference on only 6 of 12 seeds, and a systematic `0.54x` bias
+on a linear limit state -- were both symptoms of the bugs fixed in this
+release, and no longer occur. The four-mode reference itself was wrong: it was
+quoted as `1.22e-5` against a measured `5.815e-05`.
 
 ## [0.1.0] - 2025-01-27
 
@@ -277,5 +284,6 @@ Recorded as `xfail` tests, not silenced:
   Karhunen-Loève expansion.
 - Performance evaluation and convergence analysis utilities.
 
-[Unreleased]: https://github.com/DiogoRibeiro7/adaptive-importance-sampling-ice/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/DiogoRibeiro7/adaptive-importance-sampling-ice/compare/v0.2.0...HEAD
+[0.2.0]: https://github.com/DiogoRibeiro7/adaptive-importance-sampling-ice/releases/tag/v0.2.0
 [0.1.0]: https://github.com/DiogoRibeiro7/adaptive-importance-sampling-ice/releases/tag/v0.1.0

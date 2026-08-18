@@ -8,7 +8,7 @@ build-backend = "poetry.core.masonry.api"
 
 [project]
 name = "safe-ice"
-version = "0.1.0"
+version = "0.2.0"
 description = "Safe Cross-Entropy-Based Importance Sampling for rare event simulation"
 readme = "README.md"
 license = "MIT"
