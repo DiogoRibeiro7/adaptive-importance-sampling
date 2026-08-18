@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import time
+import warnings
 
 import numpy as np
 import pytest
@@ -401,34 +402,58 @@ class TestEdgeCases:
         # Should give very small probability
         assert pf < 1e-6
 
-    @pytest.mark.xfail(
-        strict=False,
-        reason=(
-            "Degenerate problem: the limit state fails everywhere, so the "
-            "true probability is exactly 1. The importance-sampling estimator "
-            "is unbiased but unconstrained, so with N=100 it scatters around "
-            "1 and lands either side of the 0.99 threshold; across seeds the "
-            "median is about 1.07. Not strict, because which side it falls on "
-            "depends on the platform and NumPy version. Clamping the estimate "
-            "to [0, 1] would fix this, but that is a modelling decision rather "
-            "than a bug."
-        ),
-    )
-    def test_certain_failure(self, seed):
-        """Test with certain failure (large failure probability)."""
+    def test_certain_failure(self):
+        """Test with certain failure (large failure probability).
+
+        This was an ``xfail`` asserting ``pf > 0.99`` on a single seed. The
+        limit state fails everywhere, so the true probability is exactly 1, but
+        this is the estimator's worst case: with no failure boundary anywhere
+        there is nothing for the smoothing parameter to concentrate on, and the
+        proposal never sharpens. Over 200 seeds at N=100 the estimate ranges
+        from 0.20 to 1.00 with a median of 1.00, so no single run clears any
+        useful lower threshold reliably.
+
+        What does hold is the upper bound, which is the clamp's guarantee, and
+        the median over seeds. Both are asserted below.
+        """
 
         def certain_failure_limit_state(u):
             return -1.0 - np.linalg.norm(u, axis=-1)  # Always negative
 
-        ice = SafeICE(
-            limit_state_function=certain_failure_limit_state,
-            dimension=2,
-            N=100,
-            max_iterations=2,
-            random_state=seed,
-        )
+        estimates = []
+        clamped_runs = 0
 
-        pf, _results = ice.run(verbose=False)
+        for s in range(9):
+            ice = SafeICE(
+                limit_state_function=certain_failure_limit_state,
+                dimension=2,
+                N=100,
+                max_iterations=2,
+                random_state=s,
+            )
+            # Overshooting 1 is expected here and warns; capture rather than
+            # let the suite's filterwarnings=error turn it into a failure.
+            with warnings.catch_warnings(record=True) as caught:
+                warnings.simplefilter("always")
+                pf, results = ice.run(verbose=False)
 
-        # Should give probability close to 1
-        assert pf > 0.99
+            # The returned value is always a probability, whatever the run did.
+            assert 0.0 <= pf <= 1.0, f"seed {s} returned {pf}"
+            # The unclamped estimate is kept so a degenerate run stays visible.
+            assert results["pf_unclamped"] >= pf
+
+            if results["pf_unclamped"] > 1.0:
+                clamped_runs += 1
+                assert pf == 1.0
+                assert any("clamped" in str(w.message) for w in caught), (
+                    f"seed {s} clamped {results['pf_unclamped']} silently"
+                )
+            else:
+                assert pf == results["pf_unclamped"]
+                assert not any("clamped" in str(w.message) for w in caught)
+
+            estimates.append(pf)
+
+        assert float(np.median(estimates)) > 0.9, f"estimates: {estimates}"
+        # If none overshot, the clamp path above was never exercised.
+        assert clamped_runs > 0, "expected at least one run above 1 at N=100"

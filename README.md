@@ -118,6 +118,7 @@ vectorised function.
 
 | Key                   | Type             | Meaning                                           |
 | --------------------- | ---------------- | ------------------------------------------------- |
+| `pf_unclamped`        | `float`          | The estimate before clamping to `[0, 1]`          |
 | `iterations`          | `list[dict]`     | One record per iteration (`K`, `sigma`, `lambda`) |
 | `final_components`    | `int`            | Mixture components remaining at convergence       |
 | `final_samples`       | `ndarray (n, d)` | Samples from the final proposal                   |
@@ -284,10 +285,17 @@ proposal component numerically and fails if the Jacobian is dropped again.
 
 ### Remaining limitations
 
-- **Estimates are not constrained to `[0, 1]`.** The estimator is unbiased but
-  unconstrained, so for a limit state that fails everywhere (true probability
-  exactly 1) it scatters around 1 and can land slightly above. Clamping would
-  fix it, but that is a modelling decision rather than a bug.
+- **Estimates are clamped to `[0, 1]`, and an overshoot warns.** The estimator
+  is unbiased but unconstrained: the weights are a ratio of densities and
+  nothing bounds them by 1, so on a limit state that fails everywhere (true
+  probability exactly 1) a run can land above it. The returned value is
+  clamped so it is always a probability. Clamping truncates overshoots without
+  touching undershoots, which biases the mean down by about 12% in that
+  degenerate case, but it never fires on a rare-event problem: estimates there
+  sit two to four orders of magnitude below 1. An overshoot means the proposal
+  is not covering the target and the weights have gone degenerate, so it is
+  reported rather than hidden -- `results["pf_unclamped"]` holds the raw value
+  and a `RuntimeWarning` explains it.
 - **High dimensions now work.** The apparent ceiling above `d=20` was a fixed
   `1e-15` floor applied to the proposal density before dividing it into the
   prior. Densities on `R^d` shrink geometrically with dimension, so that floor

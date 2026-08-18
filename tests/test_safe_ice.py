@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import warnings
+
 import numpy as np
 import pytest
 
@@ -330,10 +332,15 @@ class TestErrorHandling:
             random_state=seed,
         )
 
-        pf, _results = ice.run(verbose=False)
+        # True P_f is 1.0, which is the estimator's worst case: with no failure
+        # boundary anywhere there is nothing for sigma to concentrate on, so the
+        # raw estimate scatters either side of 1 and an overshoot warns.
+        with warnings.catch_warnings(record=True):
+            warnings.simplefilter("always")
+            pf, results = ice.run(verbose=False)
 
-        # Should give high probability (IS estimate may be < 1 due to
-        # weight mismatch when the true P_f is 1.0)
+        assert 0.0 <= pf <= 1.0
+        assert results["pf_unclamped"] >= pf
         assert pf > 0.5
 
     def test_no_samples_fail(self, seed):

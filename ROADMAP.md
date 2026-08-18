@@ -15,16 +15,16 @@ The estimator now agrees with closed-form answers to within a few percent from
 problems. See [Accuracy](README.md#accuracy) for the measured numbers and
 [CHANGELOG.md](CHANGELOG.md) for the full list.
 
+### Decided: estimates are clamped to `[0, 1]`
+
+Returned values are clamped, so `run()` always yields a probability. The raw
+estimate stays in `results["pf_unclamped"]` and an overshoot raises a
+`RuntimeWarning`, because a value above 1 means the proposal is not covering
+the target and the run should be treated as unconverged rather than as a
+probability of 1. Clamping never fires in the rare-event regime, where
+estimates sit two to four orders of magnitude below 1.
+
 ## Next
-
-### Decide whether estimates should be clamped to `[0, 1]`
-
-The estimator is unbiased but unconstrained, so on a limit state that fails
-everywhere (true probability exactly 1) it scatters around 1 and can land above
-it. Clamping would make every return value a valid probability, at the cost of
-making the estimator biased. This is a modelling decision rather than a bug, so
-it is recorded as an `xfail` on `test_certain_failure` rather than silently
-resolved either way.
 
 ### Fix or remove the nonlinear oscillator benchmark
 
