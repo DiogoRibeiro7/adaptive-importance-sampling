@@ -48,26 +48,23 @@ objective returned arbitrary points. It is now bracketed from above, and the
 worst individual seed across nine problems sits at 0.83x its reference, where
 two of six seeds on the heat transfer problem previously returned 1e-27.
 
+### Done: every module is now covered
+
+Line coverage is 85%, from 53% when the roadmap was written. The three modules
+that were at 0% were each resolved on their merits rather than by writing
+tests for whatever was there:
+
+* the advanced problem generators turned out to be correct, so they were
+  exported and pinned to closed-form answers (89%);
+* `utils/performance.py` was removed. Nothing imported it, and where it
+  overlapped `distributions/_numeric.py` it was the weaker of the two --
+  `norm * exp(kappa * dot)` overflows at `kappa = 800` where the log-space
+  form in use does not;
+* the Plotly visualiser has smoke tests (73%). It draws rather than computes,
+  so a defect there misleads rather than corrupts, and the tests are shallow
+  by design.
+
 ## Next
-
-### Cover the untested modules
-
-Overall line coverage is 74%. The core algorithm, the distributions, the
-optimiser, the benchmarks, the heat transfer problem and the advanced problem
-generators are at 87-99%. Two modules remain untested:
-
-| Module | Coverage | Notes |
-| --- | --- | --- |
-| `analysis/interactive_visualization.py` | 0% | Plotly figures; not exported from `safe_ice.analysis` |
-| `utils/performance.py` | 0% | Unused by the package, and duplicates `distributions/_numeric.py` |
-
-`utils/performance.py` needs a decision rather than tests. Nothing in the
-package imports it, and where it overlaps `_numeric.py` it is the weaker of the
-two: its `evaluate_vmf_density_batch` computes `norm * exp(kappa * dot)`
-directly and overflows to infinity at `kappa = 800`, where the log-space form
-in use stays finite. Its caching and batching duplicate what `OptimizedSafeICE`
-already does. Either it is removed, or it is tested and one of the two
-implementations is deleted.
 
 ## Later
 
