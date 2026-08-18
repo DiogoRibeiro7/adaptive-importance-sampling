@@ -169,8 +169,14 @@ class HeatTransferProblem:
         )
         f_field: NDArrayF = np.asarray(self.eigenvecs @ coeffs, dtype=np.float64)
 
-        # Lognormal field
-        kappa_field: NDArrayF = np.exp(a_kappa + b_kappa * f_field, dtype=np.float64)
+        # Lognormal field. The exponent is clipped because the estimator's
+        # heavy-tailed proposal reaches far enough into the tail to underflow
+        # kappa to zero, which leaves the conduction matrix singular and the
+        # solve returning NaN. The bounds are already absurd for a field whose
+        # mean is 1 and standard deviation 0.3, so realistic samples are
+        # untouched; without them a run would occasionally fail outright.
+        exponent = np.clip(a_kappa + b_kappa * f_field, -30.0, 30.0)
+        kappa_field: NDArrayF = np.exp(exponent, dtype=np.float64)
 
         return np.asarray(
             kappa_field.reshape(self.grid_size, self.grid_size), dtype=np.float64

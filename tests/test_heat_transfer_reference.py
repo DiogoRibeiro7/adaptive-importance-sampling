@@ -113,6 +113,20 @@ class TestTheSolver:
         assert float(np.min(temperature[0, 1:-1])) > 0.0
         assert np.all(np.isfinite(temperature))
 
+    def test_extreme_samples_stay_finite(self) -> None:
+        """The estimator's heavy tails reach far enough to underflow kappa.
+
+        ``kappa = exp(a + b f)`` goes to zero for a large enough negative
+        field, which leaves the conduction matrix singular and the solve
+        returning NaN. A run would then fail outright on the sample that hit
+        it, so the exponent is clipped.
+        """
+        limit_state = HeatTransferProblem().create_limit_state_function()
+        rng = np.random.default_rng(0)
+        for scale in (1.0, 10.0, 100.0, 1000.0):
+            values = np.asarray(limit_state(rng.standard_normal((10, 10)) * scale))
+            assert np.all(np.isfinite(values)), f"non-finite at scale {scale}"
+
     def test_field_is_finite_and_bounded(self) -> None:
         """The relaxation left 380 of 441 nodes pinned at a +/-1e6 clamp."""
         problem = HeatTransferProblem()
