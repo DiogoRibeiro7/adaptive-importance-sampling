@@ -193,8 +193,16 @@ class TestLimitState:
         """Within an order of magnitude, given a different discretisation.
 
         The paper solves the field with finite elements over 25040 triangles;
-        this is second-order finite differences on 21x21. The measured median
-        is 2.83e-07 against the paper's 4.69e-07.
+        this is second-order finite differences on 21x21. The median over
+        seeds is about 3e-07 against the paper's 4.69e-07.
+
+        The median rather than each run: on this problem the estimator
+        collapses on a minority of seeds. Sigma falls too far in the first two
+        iterations -- 1 to 0.37 to 0.13 -- and then stalls, the weight CV never
+        comes down from 6-8 against a target of 4, and the run ends many orders
+        of magnitude low. Two of six seeds did that in one measurement. It is
+        a property of the sigma schedule of equation (10) on a 10-dimensional
+        problem with a smooth limit state, not of this module; see ROADMAP.md.
         """
         limit_state = HeatTransferProblem().create_limit_state_function()
 
