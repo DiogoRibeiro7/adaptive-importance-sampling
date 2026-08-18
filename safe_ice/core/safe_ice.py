@@ -17,7 +17,6 @@ from typing import Any, TypedDict
 import numpy as np
 import numpy.typing as npt
 import scipy.stats as stats
-from scipy.optimize import minimize_scalar
 from scipy.special import loggamma
 
 from ..distributions._numeric import radii_and_directions, vmf_pdf_batch
@@ -522,31 +521,82 @@ class SafeICE:
         lambda_val: float,
         sigma_prev: float,
     ) -> float:
-        """Determine next smoothing parameter σ by solving the 1-D problem (10)."""
+        """Determine the next smoothing parameter sigma, equation (10).
 
-        def cv_objective(sigma: float) -> float:
-            """Objective: (δ_W_t(σ) - δ_target)^2 for 0 < σ < σ_prev."""
-            if sigma >= sigma_prev or sigma <= 0.0:
-                return 1e10  # reject invalid region
-            weights = self._calculate_intermediate_weights(
-                samples, g_values, sigma, params, lambda_val
+        Equation (10) minimises ``(CV(W_t(sigma)) - delta_target)^2`` over
+        ``(0, sigma_prev)``. The CV rises monotonically as sigma falls -- a
+        sharper indicator concentrates the weights on fewer samples -- so the
+        minimiser is the sigma at which the CV first reaches the target, and
+        this brackets it from above rather than searching the whole interval.
+
+        Searching the whole interval does not work, in two different ways.
+        Below some sigma the smoothed indicator ``Phi(-g/sigma)`` underflows to
+        zero for every sample, the weights all vanish and the CV is undefined;
+        on a rare-event problem that is most of the interval, and a bounded
+        minimiser handed a mostly-infinite objective returns arbitrary points.
+        That took sigma from 1 to 0.373 on the heat transfer problem, where the
+        CV is 18.75, when 0.999 was available at 9.5 against a target of 4;
+        sigma then fell faster than the proposal could follow and the run ended
+        twenty orders of magnitude low. Fixing the search to find the true
+        global minimum is worse still: just above the underflow region only a
+        handful of samples carry any weight, and the CV of one surviving sample
+        out of N is about sqrt(N), so it sweeps through the target on its way
+        to infinity. Those spurious minima sit at a sigma hundreds of times too
+        small, and are exactly what the old minimiser was accidentally missing.
+
+        The densities in ``W_t`` do not depend on sigma, so they are evaluated
+        once and only the smoothed indicator is recomputed per candidate.
+        """
+        upper = float(sigma_prev) * 0.999
+        if upper <= 0.0:
+            return 1e-8
+
+        # Sigma-independent part of W_t = h(u; sigma) * p(u) / q_safe(u).
+        prior_densities = self._evaluate_prior_density(samples)
+        safe_densities = self._evaluate_safe_mixture_density(
+            samples, params, lambda_val
+        )
+        density_ratio = prior_densities / np.maximum(safe_densities, DENSITY_FLOOR)
+
+        def cv_at(sigma: float) -> float:
+            h_values = np.asarray(
+                stats.norm.cdf(-g_values / float(sigma)), dtype=np.float64
             )
-            cv = self._coefficient_of_variation(weights)
-            return float((cv - self.delta_target) ** 2)
+            return self._coefficient_of_variation(h_values * density_ratio)
 
-        # Minimize over (tiny, sigma_prev)
-        try:
-            result = minimize_scalar(
-                cv_objective,
-                bounds=(1e-8, float(sigma_prev) * 0.999),
-                method="bounded",
-            )
-            new_sigma = float(result.x)
-        except Exception:
-            # Fallback: conservative reduction
-            new_sigma = float(sigma_prev) * 0.8
+        def too_degenerate(sigma: float) -> bool:
+            """Has the CV reached the target, or stopped being computable?"""
+            cv = cv_at(sigma)
+            return (not np.isfinite(cv)) or cv >= self.delta_target
 
-        return float(max(new_sigma, 1e-8))
+        # Already at or past the target: sigma cannot usefully fall yet. Hold
+        # it and let the EM update improve the proposal first.
+        if too_degenerate(upper):
+            return upper
+
+        # Walk down until the target is crossed, then bisect on that bracket.
+        lower = upper
+        bracket_found = False
+        for candidate in np.geomspace(upper, upper * 1e-6, 32)[1:]:
+            if too_degenerate(float(candidate)):
+                lower = float(candidate)
+                bracket_found = True
+                break
+
+        if not bracket_found:
+            # The target is out of reach across the scanned range; take the
+            # smallest sigma still known to be well behaved.
+            return float(max(upper * 1e-6, 1e-8))
+
+        high = upper
+        for _ in range(40):
+            mid = float(np.sqrt(lower * high))
+            if too_degenerate(mid):
+                lower = mid
+            else:
+                high = mid
+
+        return float(min(max(high, 1e-8), upper))
 
     def _calculate_intermediate_weights(
         self,

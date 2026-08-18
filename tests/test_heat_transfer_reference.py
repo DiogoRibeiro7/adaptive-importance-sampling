@@ -196,13 +196,9 @@ class TestLimitState:
         this is second-order finite differences on 21x21. The median over
         seeds is about 3e-07 against the paper's 4.69e-07.
 
-        The median rather than each run: on this problem the estimator
-        collapses on a minority of seeds. Sigma falls too far in the first two
-        iterations -- 1 to 0.37 to 0.13 -- and then stalls, the weight CV never
-        comes down from 6-8 against a target of 4, and the run ends many orders
-        of magnitude low. Two of six seeds did that in one measurement. It is
-        a property of the sigma schedule of equation (10) on a 10-dimensional
-        problem with a smooth limit state, not of this module; see ROADMAP.md.
+        Every seed lands in range. Two of six used to collapse to 1e-27 and
+        1e-34, which was the sigma search of equation (10) rather than anything
+        in this module.
         """
         limit_state = HeatTransferProblem().create_limit_state_function()
 
@@ -218,8 +214,8 @@ class TestLimitState:
             pf, _ = ice.run(verbose=False)
             estimates.append(pf)
 
-        median = float(np.median(estimates))
-        assert PAPER_REFERENCE_PF / 10 < median < PAPER_REFERENCE_PF * 10, (
-            f"median {median:.3e} against the paper's {PAPER_REFERENCE_PF:.3e}; "
-            f"estimates {estimates}"
-        )
+        for seed, pf in enumerate(estimates):
+            assert PAPER_REFERENCE_PF / 10 < pf < PAPER_REFERENCE_PF * 10, (
+                f"seed {seed} returned {pf:.3e} against the paper's "
+                f"{PAPER_REFERENCE_PF:.3e}"
+            )
