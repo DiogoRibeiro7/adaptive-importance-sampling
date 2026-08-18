@@ -24,9 +24,30 @@ class BenchmarkProblems:
 
     @staticmethod
     def four_mode_series_system(
-        z: float = 3.8,
+        z: float = 1.0,
     ) -> Callable[[npt.ArrayLike], float | npt.NDArray[np.float64]]:
-        """Four-mode series system from Section 4.1 (Equation 37)."""
+        """Four-mode series system from Section 4.1 (Equation 37).
+
+        Failure is ``g(u) + z <= 0``, so larger ``z`` makes it rarer. Crude
+        Monte Carlo over 2e7 samples, against the paper's Figure 4:
+
+            z      failures        pf        rel. s.e.
+            0.0       44376    2.2188e-03      0.5%
+            0.5        8249    4.1245e-04      1.1%
+            1.0        1293    6.4650e-05      2.8%
+            1.5         187    9.3500e-06      7.3%
+            2.0          21    1.0500e-06     21.8%
+
+        Notes
+        -----
+        The last two branches of equation (37) are ``u1 - u2 + 7/sqrt(2)``.
+        They were written as ``sqrt(3.5)``, reading the fraction ``7/sqrt(2)``
+        as ``sqrt(7/2)``: 1.8708 instead of 4.9497. That put the failure region
+        far closer to the origin, giving 1.88e-01 at ``z=0`` where the paper
+        reports about 1e-03 -- above the top of Figure 4's axis. The default
+        ``z`` was 3.8, chosen against the broken function; 1.0 is one of the
+        thresholds tabulated in the paper's Table 1.
+        """
 
         def limit_state_function(
             u: npt.ArrayLike,
@@ -40,8 +61,8 @@ class BenchmarkProblems:
 
             g1 = 0.1 * (u1 - u2) ** 2 - (u1 + u2) / np.sqrt(2.0) + 3.0
             g2 = 0.1 * (u1 - u2) ** 2 + (u1 + u2) / np.sqrt(2.0) + 3.0
-            g3 = u1 - u2 + np.sqrt(3.5)
-            g4 = u2 - u1 + np.sqrt(3.5)
+            g3 = u1 - u2 + 7.0 / np.sqrt(2.0)
+            g4 = u2 - u1 + 7.0 / np.sqrt(2.0)
 
             g_min = np.minimum(np.minimum(g1, g2), np.minimum(g3, g4)) + z
             if is_single:

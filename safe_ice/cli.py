@@ -47,7 +47,7 @@ def run_demo() -> None:
         print("Results:")
         print(f"  Estimated failure probability: {pf:.6e}")
         print(f"  Number of samples generated: {len(results['final_samples'])}")
-        print("  Reference probability: ~5.8e-5")
+        print("  Reference probability: ~6.5e-5")
         print("=" * 60)
 
     except Exception as e:
@@ -68,7 +68,7 @@ def run_benchmark(
     # over 2e7 standard-normal samples; see
     # tests/test_benchmark_ground_truth.py.
     available: dict[str, tuple[Callable[[], LimitStateFunction], int, float | None]] = {
-        "four-mode": (problems.four_mode_series_system, 2, 5.815e-05),
+        "four-mode": (problems.four_mode_series_system, 2, 6.465e-05),
         "three-mode": (problems.three_mode_problem, 2, 3.475e-03),
         "two-mode": (problems.two_mode_opposite_directions, 2, 2.690e-03),
         "oscillator": (problems.nonlinear_oscillator, 10, 1.798e-03),

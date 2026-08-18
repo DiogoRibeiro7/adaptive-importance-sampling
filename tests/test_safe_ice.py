@@ -226,8 +226,7 @@ class TestBenchmarkProblems:
         pf, _results = ice.run(verbose=False)
 
         # Crude Monte Carlo over 2e7 samples puts the reference at
-        # 5.8e-5 +/- 1.7e-6 for the default z=3.8. (An earlier comment here
-        # claimed 1.22e-5, which does not match this problem's parameters.)
+        # 6.465e-05 +/- 2.8% for the default z=1.0.
         assert pf > 1e-6
         assert pf < 1e-4
 

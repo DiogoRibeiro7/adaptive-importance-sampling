@@ -221,7 +221,7 @@ Reference probabilities, from crude Monte Carlo over 2e7 samples:
 
 | Problem | `P_F` |
 | --- | --- |
-| `four_mode_series_system` | `5.8e-5` |
+| `four_mode_series_system` | `6.5e-5` |
 | `three_mode_problem` | `3.5e-3` |
 | `two_mode_opposite_directions` | `2.7e-3` |
 | `nakagami_ratio_problem` | `5.2e-2` |
@@ -277,7 +277,7 @@ Current accuracy against problems with known answers, median over seeds:
 | Sphere `d=20`, closed form | `1.54e-2` | `1.01` |
 | Sphere `d=50`, closed form | `3.61e-3` | `0.98` |
 | Sphere `d=200`, closed form | `4.57e-3` | `1.01` |
-| Four-mode series system, 2e7-sample MC | `5.8e-5` | `1.01` |
+| Four-mode series system, 2e7-sample MC | `6.5e-5` | `1.01` |
 
 `tests/test_proposal_normalisation.py` pins this down: it integrates each
 proposal component numerically and fails if the Jacobian is dropped again.
@@ -302,9 +302,14 @@ proposal component numerically and fails if the Jacobian is dropped again.
   estimate to `~1e-9` against a true `1.6e-2`. With the floor at the smallest
   positive float instead, the sphere problem holds to within a few percent
   through `d=200`.
-- The reference value quoted for the four-mode problem used to be `1.22e-5`.
-  Crude Monte Carlo over 2e7 samples puts it at `5.8e-5 ± 1.7e-6` for the
-  default `z=3.8`.
+- **The four-mode limit state had the wrong constant.** The last two branches
+  of equation (37) are `u1 - u2 + 7/√2`; the code had `√3.5`, reading the
+  fraction as `√(7/2)` — `1.8708` instead of `4.9497`. That put the failure
+  region far closer to the origin: `1.88e-1` at `z=0` where the paper reports
+  about `1e-3`, above the top of its Figure 4 axis. Any reference measured
+  against it was measuring the wrong problem, including the `5.8e-5` that
+  replaced an earlier `1.22e-5` here. The corrected function gives `2.22e-3` at
+  `z=0` and `6.465e-5` at the new default `z=1.0`, a threshold from Table 1.
 
 What is planned about these, and which modules are not yet covered by tests,
 is in [ROADMAP.md](ROADMAP.md).
