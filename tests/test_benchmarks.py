@@ -252,22 +252,28 @@ class TestHeatTransferProblem:
         )
         g = problem.get_limit_state_function()
 
-        # kappa = exp(a + b f), so positive coefficients raise the
-        # conductivity. A better conductor carries the same heat with a
-        # smaller temperature difference, so the field is cooler and
-        # g = threshold - T is larger.
+        # The random field must actually change the answer -- the limit state
+        # used to return exactly `threshold` for every input.
         u_positive = np.ones(problem.n_terms) * 3
-        result_positive = g(u_positive)
+        u_negative = -u_positive
 
-        u_negative = -np.ones(problem.n_terms) * 3
-        result_negative = g(u_negative)
+        result_positive = float(g(u_positive))
+        result_negative = float(g(u_negative))
 
         assert np.isfinite(result_positive)
         assert np.isfinite(result_negative)
-        # This asserted the opposite, hedged with "depends on grid resolution
-        # and iteration count" -- which it did, because the relaxation it was
-        # written against never converged.
-        assert result_positive > result_negative
+        assert result_positive != result_negative
+
+        # The unambiguous physical statement: for a uniform conductivity the
+        # steady-state field satisfies T ~ 1/kappa exactly, so doubling the
+        # conductivity halves the temperature. There is no such monotone
+        # relation for the mean of a random field -- conduction is limited by
+        # the low-kappa parts of the path, not by the average -- which is why
+        # this is checked on a uniform field.
+        ones = np.ones((problem.grid_size, problem.grid_size))
+        base = problem.solve_heat_equation(ones)
+        doubled = problem.solve_heat_equation(2.0 * ones)
+        assert doubled == pytest.approx(base / 2.0, rel=1e-10)
 
 
 class TestBenchmarkComparison:

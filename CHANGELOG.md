@@ -41,6 +41,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   nominal average temperature on `B` is now 4.553 at every grid size tested,
   against 10.24, 8.09, 7.11 and 6.56 before.
 
+  The Karhunen-Loeve modes are now sign-canonicalised. An eigenvector is only
+  defined up to sign and LAPACK's choice varies between builds, so the same
+  coefficients produced mirror-image conductivity fields on different machines;
+  a test asserting a direction passed locally and failed in CI. Anchoring each
+  mode on its largest-magnitude entry makes the expansion reproducible.
+
   Boundary conditions follow Figure 11 -- zero Dirichlet on the top edge, zero
   Neumann on the other three. The text of section 4.5 says the opposite, and
   the two cannot both hold: with three edges able to shed heat the nominal

@@ -112,6 +112,17 @@ class HeatTransferProblem:
         # Broadcasted normalization: (n_points, n_terms) / (1, n_terms)
         self.eigenvecs = self.eigenvecs / norms
 
+        # Fix the sign of each mode. An eigenvector is only defined up to sign,
+        # and LAPACK's choice varies between builds, so the same coefficients
+        # produced mirror-image fields on different machines: a test asserting
+        # that positive coefficients raise the conductivity passed locally and
+        # failed in CI. Anchoring on the largest-magnitude entry makes the
+        # expansion reproducible.
+        dominant = np.argmax(np.abs(self.eigenvecs), axis=0)
+        signs = np.sign(self.eigenvecs[dominant, np.arange(self.eigenvecs.shape[1])])
+        signs[signs == 0.0] = 1.0
+        self.eigenvecs = self.eigenvecs * signs
+
         # Assign eigenvectors alias AFTER normalization so it exposes
         # the normalized modes, not the stale pre-normalization ones.
         self.eigenvectors = self.eigenvecs[:50, :]
