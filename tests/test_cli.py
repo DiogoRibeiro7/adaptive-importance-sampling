@@ -91,11 +91,11 @@ class TestBenchmarkRun:
     def test_reference_values_match_monte_carlo_ground_truth(self, capsys) -> None:
         """The printed references must be the measured ones.
 
-        four-mode was quoted as 1.22e-5 against a measured 5.8e-5, and
-        three-mode as 2.3e-3 against 3.5e-3.
+        four-mode is 6.465e-05 at the default z=1.0, and three-mode
+        3.475e-03 at z=3.0.
         """
         expected = {
-            "four-mode": 5.815e-05,
+            "four-mode": 6.465e-05,
             "three-mode": 3.475e-03,
             "two-mode": 2.690e-03,
             "oscillator": 1.798e-03,

@@ -34,7 +34,7 @@ from safe_ice import AdaptiveSafeICE, OptimizedSafeICE, SafeICE
 from safe_ice.problems.benchmarks import BenchmarkProblems
 
 # From crude Monte Carlo over 2e7 samples; see test_benchmark_ground_truth.py.
-FOUR_MODE_PF = 5.815e-05
+FOUR_MODE_PF = 6.465e-05
 
 VARIANTS = [SafeICE, OptimizedSafeICE, AdaptiveSafeICE]
 

@@ -9,6 +9,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **The four-mode benchmark had the wrong constant, and every reference
+  measured against it was wrong too.** The last two branches of equation (37)
+  are `u1 - u2 + 7/sqrt(2)`; the code had `sqrt(3.5)`, reading the fraction
+  `7/sqrt(2)` as `sqrt(7/2)` -- 1.8708 instead of 4.9497. That placed the
+  failure region far closer to the origin: crude Monte Carlo gives `1.88e-01`
+  at `z=0`, where the paper reports about `1e-03`, which is above the top of
+  its Figure 4 axis. The corrected function gives `2.22e-03` there.
+
+  This invalidates the reference correction recorded below under 0.2.0, which
+  replaced a quoted `1.22e-5` with a measured `5.815e-05`: that measurement was
+  taken against the broken limit state. Corrected values from 2e7 samples:
+
+  | `z` | `pf` | rel. s.e. |
+  | --- | --- | --- |
+  | 0.0 | `2.2188e-03` | 0.5% |
+  | 0.5 | `4.1245e-04` | 1.1% |
+  | 1.0 | `6.4650e-05` | 2.8% |
+  | 1.5 | `9.3500e-06` | 7.3% |
+  | 2.0 | `1.0500e-06` | 21.8% |
+
+  The default `z` moves from 3.8 to 1.0. 3.8 was chosen against the broken
+  function; 1.0 is one of the thresholds tabulated in the paper's Table 1, and
+  is rare enough to be a meaningful benchmark while still having a Monte Carlo
+  reference. Safe-ICE estimates it at `6.543e-05`, 1.01x the reference.
+
 - **The nonlinear oscillator benchmark now implements the paper's model.** It
   computed the displacement as `force_rms / (k * (1 - alpha))`, a closed form
   appearing nowhere in the source and which never integrated the equations of

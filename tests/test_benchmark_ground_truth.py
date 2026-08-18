@@ -7,13 +7,16 @@ make unnecessary, which makes it an independent check rather than a restatement
 of the implementation.
 
     problem                          failures / 2e7      pf        rel. s.e.
-    four_mode_series_system                   1163    5.815e-05      2.9%
+    four_mode_series_system                   1293    6.4650e-05     2.8%
     three_mode_problem                       69490    3.475e-03      0.4%
     two_mode_opposite_directions             53800    2.690e-03      0.4%
     nakagami_ratio_problem                 1037533    5.188e-02      0.1%
 
-An earlier comment in the test suite put the four-mode reference at 1.22e-5,
-which does not match this problem at its default z=3.8.
+The four-mode reference was previously recorded here as 5.815e-05. That was
+measured against a limit-state function whose last two branches used sqrt(3.5)
+where equation (37) has 7/sqrt(2), which placed the failure region far closer
+to the origin. The value above is for the corrected function at its new default
+of z=1.0, one of the thresholds tabulated in the paper's Table 1.
 """
 
 from __future__ import annotations
@@ -32,7 +35,7 @@ GROUND_TRUTH = [
         "four_mode_series_system",
         BenchmarkProblems.four_mode_series_system,
         2,
-        5.815e-05,
+        6.465e-05,
     ),
     ("three_mode_problem", BenchmarkProblems.three_mode_problem, 2, 3.475e-03),
     (
