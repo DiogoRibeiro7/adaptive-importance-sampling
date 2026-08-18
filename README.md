@@ -225,13 +225,12 @@ Reference probabilities, from crude Monte Carlo over 2e7 samples:
 | `three_mode_problem` | `3.5e-3` |
 | `two_mode_opposite_directions` | `2.7e-3` |
 | `nakagami_ratio_problem` | `5.2e-2` |
+| `nonlinear_oscillator` | `1.8e-3` |
 
-> `nonlinear_oscillator` and `nonlinear_oscillator_simplified` **cannot fail as
-> parameterised** and so measure nothing: displacement comes out around `4e-7`
-> against a threshold of `0.05`, needing `‖u‖ ≈ 7.3e5` where a 10-dimensional
-> standard normal averages `3.1`. Any estimator returns `0`. Fixing the scaling
-> needs the source paper, so the defect is documented rather than guessed at;
-> the problems are excluded from the CLI.
+All are 2-dimensional except `nonlinear_oscillator`, which is 10-dimensional
+and takes its threshold from `z` (the paper sweeps `0.05` to `0.08`, giving
+`1.8e-3` down to `1.5e-7`). Its reference comes from 2e6 samples rather than
+2e7, because each evaluation integrates the equations of motion.
 
 ## Accuracy
 

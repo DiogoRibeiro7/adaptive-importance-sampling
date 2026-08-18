@@ -76,80 +76,168 @@ class BenchmarkProblems:
         return limit_state_function
 
     @staticmethod
-    def nonlinear_oscillator_simplified(
-        d: int = 10, z: float = 0.05
+    def nonlinear_oscillator(
+        dimension: int = 10, z: float = 0.05, t_end: float = 8.0, dt: float = 0.01
     ) -> Callable[[npt.ArrayLike], float | npt.NDArray[np.float64]]:
-        """Simplified nonlinear oscillator problem.
+        r"""Hysteretic single-degree-of-freedom oscillator, Section 4.3.
 
-        .. warning::
+        A Bouc-Wen oscillator (equation 39) driven by white-noise ground
+        acceleration discretised in the frequency domain (equation 41):
 
-           This problem cannot fail as parameterised, so it measures nothing.
-           Displacement is computed as ``force_rms / (k * (1 - alpha))`` with
-           ``k = 5e6``, giving values around ``4e-7`` against a threshold of
-           ``z = 0.05``. Reaching the threshold needs ``||u||`` of about
-           ``7.3e5``, where the norm of a 10-dimensional standard normal
-           averages ``3.1``. Crude Monte Carlo over 2e7 samples finds zero
-           failures, and any estimator will return ``0``.
+        .. math::
 
-           The scaling is inconsistent by a factor of roughly ``1e5``.
-           Reconstructing the intended formulation needs the source paper, so
-           the defect is documented rather than guessed at. See
-           ``tests/test_benchmark_ground_truth.py::TestNonlinearOscillator``.
+            m\ddot{x} + c\dot{x} + k[\alpha x + (1-\alpha) x_y z] = f(t)
+
+        with the hysteretic variable following the Bouc-Wen law (equation 40).
+        The equations of motion are integrated with the classical fourth-order
+        Runge-Kutta method, and the limit state (equation 42) is
+
+        .. math::
+
+            g(u) = z - x(t_{end})
+
+        so failure is a displacement at ``t_end`` exceeding the threshold.
+
+        Parameters
+        ----------
+        dimension:
+            Number of frequency components, which is also the dimension of
+            ``u``. Must be even; the paper uses 10.
+        z:
+            Displacement threshold in metres. The paper varies it from 0.05 to
+            0.08, giving failure probabilities from about 1.8e-03 to 1.5e-07.
+        t_end:
+            Time at which the displacement is compared against ``z``.
+        dt:
+            Runge-Kutta step. The paper uses 0.01 s.
+
+        Notes
+        -----
+        This previously computed the displacement as
+        ``force_rms / (k * (1 - alpha))``, a closed form that appears nowhere
+        in the paper and never integrated the equations of motion. It returned
+        values around 4e-07 against a threshold of 0.05, so the problem could
+        not fail and every estimator returned exactly 0. Crude Monte Carlo over
+        the implementation below gives 1.798e-03 at ``z=0.05``, 1.475e-04 at
+        ``0.06`` and 4.5e-06 at ``0.07``, matching the paper's Figure 7.
         """
+        d = int(dimension)
+        if d < 2 or d % 2 != 0:
+            raise ValueError(
+                f"nonlinear_oscillator needs an even dimension of at least 2, got {d}."
+            )
+
+        # Structural parameters (Section 4.3). SI units throughout.
+        mass = 6e4  # kg
+        stiffness = 5e6  # N/m
+        damping_ratio = 0.05
+        yield_displacement = 0.04  # m
+        alpha = 0.1  # elastic / hysteretic split of the restoring force
+        damping = 2.0 * mass * damping_ratio * float(np.sqrt(stiffness / mass))
+
+        # Bouc-Wen law (equation 40).
+        bw_a, bw_beta, bw_gamma, bw_n = 1.0, 0.5, 0.5, 3
+        # The exact solution satisfies |z| <= (A / (beta + gamma))^(1/n); the
+        # hysteretic variable saturates there. Measured peaks are 0.9264 for
+        # ordinary samples and 0.9993 in the failure region, so enforcing the
+        # bound changes nothing that is sampled. It matters only for extreme
+        # inputs, where discretisation error lets z drift past saturation and
+        # the |z|^3 term then amplifies it until the integration overflows.
+        hyst_bound = (bw_a / (bw_beta + bw_gamma)) ** (1.0 / bw_n)
+
+        # Frequency discretisation of the load (equation 41). The cut-off is
+        # 15*pi, which is exactly the highest retained frequency d/2 * domega.
+        half = d // 2
+        domega = 30.0 * float(np.pi) / d
+        omega = np.arange(1, half + 1, dtype=np.float64) * domega
+        intensity = 0.005  # white-noise intensity S, m^2/s^3
+        sigma = float(np.sqrt(2.0 * intensity * domega))
+
+        # RK4 evaluates the load at t, t + dt/2 and t + dt, so the load is
+        # tabulated once on the half-step grid and reused for every call.
+        n_steps = round(float(t_end) / float(dt))
+        sample_times = np.arange(2 * n_steps + 1, dtype=np.float64) * (float(dt) / 2.0)
+        cos_table = np.cos(np.outer(sample_times, omega))
+        sin_table = np.sin(np.outer(sample_times, omega))
+        force_amplitude = -mass * sigma
 
         def limit_state_function(
             u: npt.ArrayLike,
         ) -> float | npt.NDArray[np.float64]:
-            # Parameters from the paper (kept as floats)
-            k = 5e6  # stiffness
-            alpha = 0.1  # force partition
-            S = 0.005  # white-noise intensity
-
-            # Frequency discretization
-            d_eff = max(int(d), 2)
-            omega_cut = 15.0 * float(np.pi)
-            domega = omega_cut / (d_eff / 2.0)
-
-            # Force amplitude
-            sigma = float(np.sqrt(2.0 * S * domega))
-
-            # Construct force “RMS” proxy from u
             arr, is_single = BenchmarkProblems._as_2d_input(u)
-            if arr.shape[1] < d_eff:
-                padded = np.zeros((arr.shape[0], d_eff), dtype=np.float64)
-                padded[:, : arr.shape[1]] = arr
-                arr_eff = padded
-            else:
-                arr_eff = arr[:, :d_eff]
+            if arr.shape[1] != d:
+                raise ValueError(f"nonlinear_oscillator expects dimension {d}.")
 
-            force_rms = sigma * np.sqrt(np.sum(arr_eff**2, axis=1))
+            u_cos = arr[:, :half]
+            u_sin = arr[:, half:]
 
-            # Simplified response calculation
-            response_scale = force_rms / (k * (1.0 - alpha))
+            def load(index: int) -> npt.NDArray[np.float64]:
+                combined = u_cos @ cos_table[index] + u_sin @ sin_table[index]
+                return np.asarray(force_amplitude * combined, dtype=np.float64)
 
-            # Approximate maximum displacement
-            max_displacement = response_scale * (1.0 + 0.5 * force_rms / (k * 0.04))
-            g_values = z - max_displacement
+            def derivatives(
+                x: npt.NDArray[np.float64],
+                v: npt.NDArray[np.float64],
+                hyst: npt.NDArray[np.float64],
+                f: npt.NDArray[np.float64],
+            ) -> tuple[
+                npt.NDArray[np.float64],
+                npt.NDArray[np.float64],
+                npt.NDArray[np.float64],
+            ]:
+                # Clamp on use, not only on the accepted state: RK4's
+                # intermediate stages are unclamped, and with a large enough
+                # load h * dz overshoots saturation there, after which the
+                # |z|^3 feedback amplifies the overshoot until it overflows.
+                hyst = np.clip(hyst, -hyst_bound, hyst_bound)
+                abs_hyst = np.abs(hyst)
+                d_hyst = (
+                    bw_a * v
+                    - bw_beta * np.abs(v) * abs_hyst ** (bw_n - 1) * hyst
+                    - bw_gamma * v * abs_hyst**bw_n
+                ) / yield_displacement
+                d_v = (
+                    f
+                    - damping * v
+                    - stiffness
+                    * (alpha * x + (1.0 - alpha) * yield_displacement * hyst)
+                ) / mass
+                return v, d_v, d_hyst
 
+            n = arr.shape[0]
+            x = np.zeros(n, dtype=np.float64)
+            v = np.zeros(n, dtype=np.float64)
+            hyst = np.zeros(n, dtype=np.float64)
+            h = float(dt)
+
+            for step in range(n_steps):
+                f_start = load(2 * step)
+                f_mid = load(2 * step + 1)
+                f_end = load(2 * step + 2)
+
+                x1, v1, h1 = derivatives(x, v, hyst, f_start)
+                x2, v2, h2 = derivatives(
+                    x + h / 2 * x1, v + h / 2 * v1, hyst + h / 2 * h1, f_mid
+                )
+                x3, v3, h3 = derivatives(
+                    x + h / 2 * x2, v + h / 2 * v2, hyst + h / 2 * h2, f_mid
+                )
+                x4, v4, h4 = derivatives(x + h * x3, v + h * v3, hyst + h * h3, f_end)
+
+                x = x + h / 6 * (x1 + 2 * x2 + 2 * x3 + x4)
+                v = v + h / 6 * (v1 + 2 * v2 + 2 * v3 + v4)
+                hyst = np.clip(
+                    hyst + h / 6 * (h1 + 2 * h2 + 2 * h3 + h4),
+                    -hyst_bound,
+                    hyst_bound,
+                )
+
+            g_values = float(z) - x
             if is_single:
                 return float(g_values[0])
             return np.asarray(g_values, dtype=np.float64)
 
         return limit_state_function
-
-    @staticmethod
-    def nonlinear_oscillator(
-        dimension: int = 10, z: float = 0.05
-    ) -> Callable[[npt.ArrayLike], float | npt.NDArray[np.float64]]:
-        """Compatibility wrapper for nonlinear oscillator benchmark.
-
-        .. warning::
-
-           Delegates to :meth:`nonlinear_oscillator_simplified` and shares its
-           defect: the failure region is unreachable, so this returns a
-           probability of zero for any estimator.
-        """
-        return BenchmarkProblems.nonlinear_oscillator_simplified(d=dimension, z=z)
 
     @staticmethod
     def two_mode_opposite_directions(

@@ -24,18 +24,16 @@ the target and the run should be treated as unconverged rather than as a
 probability of 1. Clamping never fires in the rare-event regime, where
 estimates sit two to four orders of magnitude below 1.
 
+### Done: the nonlinear oscillator benchmark works
+
+It previously computed the displacement in closed form and never integrated the
+equations of motion, so it could not fail and every estimator returned 0. It
+now implements the paper's Bouc-Wen model (equations 39-42) with fourth-order
+Runge-Kutta, and reproduces Figure 7: 1.798e-03 at `z=0.05`, 1.475e-04 at
+`0.06` and 4.5e-06 at `0.07`. Safe-ICE estimates the first to within 1% of the
+Monte Carlo value. It is available from the CLI again.
+
 ## Next
-
-### Fix or remove the nonlinear oscillator benchmark
-
-`nonlinear_oscillator` and `nonlinear_oscillator_simplified` cannot fail as
-parameterised: displacement comes out around `4e-7` against a threshold of
-`0.05`, so reaching failure needs a norm of about `7.3e5` where a
-10-dimensional standard normal averages `3.1`. Crude Monte Carlo over 2e7
-samples finds zero failures. The scaling is inconsistent by roughly `1e5`.
-Reconstructing the intended formulation needs the source paper, so the defect
-is recorded (`test_should_be_a_usable_rare_event_benchmark`, a strict `xfail`)
-rather than guessed at. It has been withdrawn from the CLI in the meantime.
 
 ### Cover the untested modules
 

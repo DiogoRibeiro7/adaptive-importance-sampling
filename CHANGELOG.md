@@ -7,6 +7,40 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **The nonlinear oscillator benchmark now implements the paper's model.** It
+  computed the displacement as `force_rms / (k * (1 - alpha))`, a closed form
+  appearing nowhere in the source and which never integrated the equations of
+  motion. It produced values around `4e-07` against a threshold of `0.05`, so
+  the problem could not fail: crude Monte Carlo over 2e7 samples found zero
+  failures and every estimator returned exactly `0`. It was recorded as a
+  strict `xfail` and withdrawn from the CLI.
+
+  It now integrates the Bouc-Wen hysteretic oscillator of Section 4.3
+  (equations 39-42) with fourth-order Runge-Kutta at `dt = 0.01`, and
+  reproduces Figure 7 of the paper:
+
+  | `z` | this implementation | paper |
+  | --- | --- | --- |
+  | 0.05 | `1.798e-03` | ~`1.5e-03` |
+  | 0.06 | `1.475e-04` | ~`1.2e-04` |
+  | 0.07 | `4.5e-06` | ~`5e-06` |
+
+  Safe-ICE estimates the first at `1.797e-03`, within 1% of the Monte Carlo
+  value, from 1000 samples per iteration against 2e6 for crude Monte Carlo.
+  The benchmark is available from the CLI again.
+
+  The limit-state function now rejects input of the wrong dimension instead of
+  zero-padding it, which had been hiding a test that passed 2-column input to
+  a 10-dimensional problem.
+
+### Removed
+
+- `BenchmarkProblems.nonlinear_oscillator_simplified`. It existed only as the
+  closed-form approximation described above; there is no simplified variant in
+  the paper. Use `nonlinear_oscillator`.
+
 ### Changed
 
 - **`run()` now returns a value constrained to `[0, 1]`.** The estimator is

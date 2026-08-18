@@ -99,53 +99,91 @@ class TestAgainstMonteCarlo:
 
 
 class TestNonlinearOscillator:
-    """The oscillator benchmark cannot fail, and so measures nothing.
+    """The Bouc-Wen oscillator of Section 4.3, checked against crude MC.
 
-    Its displacement is computed as force_rms / (k * (1 - alpha)) with
-    k = 5e6, giving values around 4e-7 against a threshold of z = 0.05. Reaching
-    the threshold needs ||u|| of about 7.3e5, where the norm of a 10-dimensional
-    standard normal averages 3.1. Crude Monte Carlo over 2e7 samples finds zero
-    failures, and the CLI's `safe-ice benchmark oscillator` reports exactly 0.
+    This benchmark used to compute the displacement as
+    ``force_rms / (k * (1 - alpha))``, a closed form appearing nowhere in the
+    paper, which never integrated the equations of motion. It produced values
+    around 4e-07 against a threshold of 0.05, so the problem could not fail and
+    every estimator returned exactly 0. The tests here recorded that defect as
+    a strict xfail; they now check the real model.
 
-    The scaling is inconsistent by a factor of roughly 1e5. Reconstructing the
-    intended formulation needs the source paper, so the defect is recorded here
-    rather than guessed at.
+    Crude Monte Carlo over 2e6 samples of the implementation gives:
+
+        z       failures      pf          rel. s.e.    paper, Figure 7
+        0.05    3597          1.798e-03   1.7%         ~1.5e-03
+        0.06     295          1.475e-04   5.8%         ~1.2e-04
+        0.07       9          4.500e-06   33%          ~5e-06
     """
 
-    def test_failure_region_is_unreachable(self, rng) -> None:
-        """Records the defect. Delete this test once the problem is fixed."""
-        limit_state = BenchmarkProblems.nonlinear_oscillator_simplified()
-        u = rng.standard_normal((50_000, 10))
-        g = np.asarray(limit_state(u)).reshape(-1)
+    REFERENCE_PF = 1.798e-03  # z = 0.05
 
-        # Every value sits just under the threshold, varying only at ~1e-7.
-        assert float(g.min()) > 0.0499
-        assert float((g <= 0).mean()) == 0.0
+    def test_failure_region_is_reachable(self, rng) -> None:
+        """Crude sampling must find failures at roughly the reference rate."""
+        limit_state = BenchmarkProblems.nonlinear_oscillator(z=0.05)
+        u = rng.standard_normal((60_000, 10))
+        observed = float((np.asarray(limit_state(u)) <= 0).mean())
 
-    @pytest.mark.xfail(
-        strict=True,
-        reason=(
-            "The nonlinear oscillator cannot fail: displacement is ~4e-7 "
-            "against a threshold of 0.05, so ||u|| of about 7.3e5 would be "
-            "needed where chi_10 averages 3.1. Crude Monte Carlo over 2e7 "
-            "samples finds no failures. Fixing the scaling requires the source "
-            "paper. Remove this marker once the problem is usable."
-        ),
-    )
-    def test_should_be_a_usable_rare_event_benchmark(self, rng) -> None:
-        """What the problem ought to do: fail sometimes, rarely."""
-        limit_state = BenchmarkProblems.nonlinear_oscillator_simplified()
-        u = rng.standard_normal((200_000, 10))
-        g = np.asarray(limit_state(u)).reshape(-1)
+        assert self.REFERENCE_PF / 3 < observed < self.REFERENCE_PF * 3, (
+            f"observed {observed:.3e} against reference {self.REFERENCE_PF:.3e}"
+        )
 
-        observed = float((g <= 0).mean())
-        assert 0.0 < observed < 1e-2, f"observed failure rate {observed:.3e}"
+    @pytest.mark.slow
+    def test_estimate_matches_reference(self) -> None:
+        """The estimator should reproduce the Monte Carlo value."""
+        estimates = []
+        for s in range(4):
+            ice = SafeICE(
+                limit_state_function=BenchmarkProblems.nonlinear_oscillator(z=0.05),
+                dimension=10,
+                N=1000,
+                max_iterations=15,
+                random_state=s,
+            )
+            pf, _ = ice.run(verbose=False)
+            estimates.append(pf)
 
-    def test_wrapper_delegates_to_the_simplified_form(self, rng) -> None:
-        """nonlinear_oscillator is a thin wrapper, so it shares the defect."""
-        u = rng.standard_normal((1000, 10))
-        wrapper = np.asarray(BenchmarkProblems.nonlinear_oscillator()(u)).reshape(-1)
-        direct = np.asarray(
-            BenchmarkProblems.nonlinear_oscillator_simplified()(u)
-        ).reshape(-1)
-        assert np.allclose(wrapper, direct)
+        median = float(np.median(estimates))
+        assert self.REFERENCE_PF / 3 < median < self.REFERENCE_PF * 3, (
+            f"median {median:.3e} against reference {self.REFERENCE_PF:.3e}; "
+            f"estimates {estimates}"
+        )
+
+    @pytest.mark.slow
+    @pytest.mark.parametrize(("z", "reference"), [(0.05, 1.798e-03), (0.06, 1.475e-04)])
+    def test_threshold_controls_rarity(self, z: float, reference: float, rng) -> None:
+        """Raising z must make failure rarer, by the measured amount."""
+        limit_state = BenchmarkProblems.nonlinear_oscillator(z=z)
+        # 100k samples give ~180 failures at z=0.05 and ~15 at z=0.06, so the
+        # 3x band below is comfortable. Each evaluation integrates 800 RK4
+        # steps, so this is the most expensive test in the suite; doubling the
+        # count doubles its runtime for no extra confidence.
+        u = rng.standard_normal((100_000, 10))
+        observed = float((np.asarray(limit_state(u)) <= 0).mean())
+
+        assert reference / 3 < observed < reference * 3, (
+            f"z={z}: observed {observed:.3e} against reference {reference:.3e}"
+        )
+
+    def test_response_is_bounded_for_extreme_inputs(self, rng) -> None:
+        """The |z|^3 term used to overflow once integration error unsaturated z.
+
+        The exact solution obeys |z| <= (A/(beta+gamma))^(1/n) = 1. Enforcing
+        that bound is a no-op for sampled inputs -- peaks are 0.9993 in the
+        failure region -- but keeps absurd ones from producing inf or NaN.
+        """
+        limit_state = BenchmarkProblems.nonlinear_oscillator()
+        for scale in (1e-3, 1.0, 1e3):
+            g = np.asarray(limit_state(rng.standard_normal((20, 10)) * scale))
+            assert np.all(np.isfinite(g)), f"non-finite response at scale {scale}"
+
+    def test_dimension_must_be_even(self) -> None:
+        """d/2 frequency components are drawn from the first and second half."""
+        with pytest.raises(ValueError, match="even dimension"):
+            BenchmarkProblems.nonlinear_oscillator(dimension=7)
+
+    def test_input_dimension_is_checked(self) -> None:
+        """It silently zero-padded mismatched input before, hiding mistakes."""
+        limit_state = BenchmarkProblems.nonlinear_oscillator()
+        with pytest.raises(ValueError, match="expects dimension 10"):
+            limit_state(np.zeros((5, 2)))

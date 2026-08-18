@@ -70,12 +70,8 @@ def run_benchmark(
     available: dict[str, tuple[Callable[[], LimitStateFunction], int, float | None]] = {
         "four-mode": (problems.four_mode_series_system, 2, 5.815e-05),
         "three-mode": (problems.three_mode_problem, 2, 3.475e-03),
-        # "oscillator" is deliberately absent. nonlinear_oscillator cannot fail
-        # as parameterised -- displacement is ~4e-7 against a threshold of 0.05
-        # -- so this subcommand reported a failure probability of exactly 0 with
-        # an infinite coefficient of variation. Offering it as a benchmark is
-        # worse than not offering it. See the warning on the problem itself.
         "two-mode": (problems.two_mode_opposite_directions, 2, 2.690e-03),
+        "oscillator": (problems.nonlinear_oscillator, 10, 1.798e-03),
     }
 
     if problem_name is None or problem_name not in available:
@@ -154,7 +150,9 @@ For more information, visit:
     # Benchmark command
     benchmark_parser = subparsers.add_parser("benchmark", help="Run benchmark problems")
     benchmark_parser.add_argument(
-        "problem", nargs="?", help="Problem name (four-mode, three-mode, two-mode)"
+        "problem",
+        nargs="?",
+        help="Problem name (four-mode, three-mode, two-mode, oscillator)",
     )
     benchmark_parser.add_argument(
         "--samples",
