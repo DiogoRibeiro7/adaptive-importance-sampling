@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-08-19
+
 ### Added
 
 - `scripts/check_notebooks.py` and a `Notebooks` workflow, because the
@@ -91,6 +93,44 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   It is implemented as described rather than patched around, since those
   properties are the reason it is here.
 
+- **A worked example on real data**: `notebooks/05_flood_risk_real_data.ipynb`,
+  with `data/usgs_01646500_annual_peaks.csv` and `scripts/fetch_usgs_peaks.py`
+  to refetch it. Ninety-five water years of annual peak discharge on the
+  Potomac River, public domain, used to estimate the probability of a levee
+  being overtopped in a given year.
+
+  The discharge record is real; the channel hydraulics are a stylised wide
+  rectangular channel with a Manning roughness, and the notebook says so. Three
+  estimates, two of which share no machinery:
+
+  | method | P(overtopping) | evaluations |
+  | --- | --- | --- |
+  | crude Monte Carlo | `5.750e-05` | 2,000,000 |
+  | Safe-ICE | `5.391e-05` | 3,000 |
+  | subset simulation | `4.765e-05` | 10,000 |
+
+  The closing section is the point of using real data at all. Ninety-five years
+  cannot separate a Gumbel tail from a lognormal one -- neither is rejected by a
+  Kolmogorov-Smirnov test -- but they disagree about the answer by a factor of
+  nine, which dwarfs the 20% spread between the estimators. The estimator is
+  precise; the answer is not.
+
+- Four notebooks in `notebooks/`, executed with their outputs saved so the
+  plots and numbers render on GitHub without running anything: getting started,
+  the five benchmark problems against independent references, accuracy from
+  `d=2` to `d=200` against the exact chi-square tail, and a walk through the
+  smoothed indicator, sigma schedule, penalised EM and heavy-tailed component.
+
+  Every figure is measured when the notebook runs rather than typed in, and
+  references come from outside the package -- a closed form where one exists,
+  otherwise crude Monte Carlo. Results are reported as a spread across seeds
+  rather than a single run, since the estimator is stochastic and one run is a
+  draw from a distribution.
+
+  Each is paired with a jupytext percent-format `.py`, which is the file to
+  edit: it reviews as a normal diff where an `.ipynb` diff is mostly base64
+  image data. `jupytext` is declared in the `benchmark` dependency group.
+
 ### Changed
 
 - **`sigma0` now defaults to `"auto"`, chosen from the limit state rather than
@@ -127,30 +167,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   1.09x of their references, worst individual seeds between 0.79x and 1.30x.
   The pilot advances the random stream, so individual runs differ from before
   even where `sigma0` is identical.
-
-### Added
-
-- **A worked example on real data**: `notebooks/05_flood_risk_real_data.ipynb`,
-  with `data/usgs_01646500_annual_peaks.csv` and `scripts/fetch_usgs_peaks.py`
-  to refetch it. Ninety-five water years of annual peak discharge on the
-  Potomac River, public domain, used to estimate the probability of a levee
-  being overtopped in a given year.
-
-  The discharge record is real; the channel hydraulics are a stylised wide
-  rectangular channel with a Manning roughness, and the notebook says so. Three
-  estimates, two of which share no machinery:
-
-  | method | P(overtopping) | evaluations |
-  | --- | --- | --- |
-  | crude Monte Carlo | `5.750e-05` | 2,000,000 |
-  | Safe-ICE | `5.391e-05` | 3,000 |
-  | subset simulation | `4.765e-05` | 10,000 |
-
-  The closing section is the point of using real data at all. Ninety-five years
-  cannot separate a Gumbel tail from a lognormal one -- neither is rejected by a
-  Kolmogorov-Smirnov test -- but they disagree about the answer by a factor of
-  nine, which dwarfs the 20% spread between the estimators. The estimator is
-  precise; the answer is not.
 
 ### Fixed
 
@@ -266,24 +282,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - `PenalizedEMOptimizer(penalized=False)` holds the penalty coefficient at
   zero, reducing the M-step to the plain weighted EM update of equation (19).
-
-### Added
-
-- Four notebooks in `notebooks/`, executed with their outputs saved so the
-  plots and numbers render on GitHub without running anything: getting started,
-  the five benchmark problems against independent references, accuracy from
-  `d=2` to `d=200` against the exact chi-square tail, and a walk through the
-  smoothed indicator, sigma schedule, penalised EM and heavy-tailed component.
-
-  Every figure is measured when the notebook runs rather than typed in, and
-  references come from outside the package -- a closed form where one exists,
-  otherwise crude Monte Carlo. Results are reported as a spread across seeds
-  rather than a single run, since the estimator is stochastic and one run is a
-  draw from a distribution.
-
-  Each is paired with a jupytext percent-format `.py`, which is the file to
-  edit: it reviews as a normal diff where an `.ipynb` diff is mostly base64
-  image data. `jupytext` is declared in the `benchmark` dependency group.
 
 ## [0.3.0] - 2026-08-18
 
@@ -825,6 +823,7 @@ quoted as `1.22e-5` against a measured `5.815e-05`.
   Karhunen-Loève expansion.
 - Performance evaluation and convergence analysis utilities.
 
-[Unreleased]: https://github.com/DiogoRibeiro7/adaptive-importance-sampling-ice/compare/v0.3.0...HEAD
+[Unreleased]: https://github.com/DiogoRibeiro7/adaptive-importance-sampling-ice/compare/v0.4.0...HEAD
+[0.4.0]: https://github.com/DiogoRibeiro7/adaptive-importance-sampling-ice/releases/tag/v0.4.0
 [0.3.0]: https://github.com/DiogoRibeiro7/adaptive-importance-sampling-ice/releases/tag/v0.3.0
 [0.2.0]: https://github.com/DiogoRibeiro7/adaptive-importance-sampling-ice/releases/tag/v0.2.0
