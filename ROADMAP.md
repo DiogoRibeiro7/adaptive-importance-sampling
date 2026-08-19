@@ -3,9 +3,24 @@
 Where the project is and what is planned next. Items are listed in the order
 they are likely to be worked on, not by importance.
 
-## Now: 0.3.0
+## Now: 0.4.0
 
-0.3.0 is a second correctness release, and the one that checked the
+0.4.0 widens the package from one estimator to four, and adds the layer that
+lets any of them be applied to measured data at all. `ICEvMFNM` is the baseline
+the paper's tables compare against, `SubsetSimulation` shares no machinery with
+the importance-sampling code, and `CrossEntropyGaussianMixture` is the older
+method ICE improved on. `MarginalTransform` maps a problem stated in physical
+units into the standard normal space the estimators work in.
+
+Building the transform exposed a trap in the main entry point: `sigma0`
+defaulted to 1, which assumes the limit state is of order one, and a limit
+state in physical units returned a third of the right answer without any sign
+of trouble. It is now chosen from the limit state itself. That was found
+because subset simulation disagreed with Safe-ICE on a problem where it had no
+reason to, which is the whole argument for having a method that cannot be wrong
+in the same way.
+
+0.3.0 was a second correctness release, and the one that checked the
 implementation against the source paper equation by equation. It fixed the
 four-mode limit state, which had `sqrt(3.5)` where equation (37) has
 `7/sqrt(2)`; implemented the nonlinear oscillator and the heat transfer
