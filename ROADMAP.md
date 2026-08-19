@@ -87,17 +87,26 @@ finite-difference discretisation and not the estimator. One method remains:
 * **Cross-entropy with a Gaussian mixture** (Kurtz and Song 2013, reference
   [25]), the older variant ICE improved on. A third point of comparison.
 
-### Real data, which needs an isoprobabilistic transform first
+### Make sigma0 aware of the limit state's scale
 
-The estimator works in standard normal space, and real inputs are not standard
-normal, so there is no way to apply it to measured data at present. The paper
-notes the same thing in its introduction: a Nataf or Rosenblatt transformation
-maps the original distributions to Gaussian ones. That layer has to exist
-before any real-data example can.
+`sigma0` defaults to 1, which assumes `g` is of order one. Every benchmark in
+the paper satisfies that, so the assumption is invisible there. A limit state in
+physical units does not: a resistance minus a load with a spread of 33 makes
+`Phi(-g/1)` a hard indicator, the annealing does nothing, and the answer comes
+back three to thirty times too small without any sign of trouble.
 
-Agreed example: river flood exceedance from USGS daily discharge records --
-fit marginals to a real gauge record, transform, and estimate the probability
-of exceeding a flood stage.
+`MarginalTransform.wrap` divides by the spread of `g` for exactly this reason,
+which covers anyone coming through the transform. Anyone writing a limit state
+directly is still exposed. The fix is for `SafeICE` to estimate the spread from
+a pilot sample and set `sigma0` from it, defaulting to the current behaviour
+only when told to. That changes a default for every problem, so it needs
+re-validating across the whole benchmark set rather than being slipped in.
+
+### Real data: river flood exceedance
+
+The transform layer now exists, so this is unblocked. Fit marginals to a real
+USGS gauge record, transform, and estimate the probability of exceeding a flood
+stage.
 
 
 These are the next items from a repository review on 2026-08-18. The estimator

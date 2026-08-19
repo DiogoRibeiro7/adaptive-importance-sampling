@@ -26,6 +26,7 @@ from .problems import (
     SystemReliabilityProblem,
     TimeVariantProblem,
 )
+from .transforms import MarginalTransform
 
 try:
     __version__ = version("safe-ice")
@@ -40,6 +41,7 @@ __all__ = [
     "HeatTransferProblem",
     "ICEvMFNM",
     "InverseNakagamiDistribution",
+    "MarginalTransform",
     "NakagamiDistribution",
     "NetworkReliabilityProblem",
     "OptimizedSafeICE",

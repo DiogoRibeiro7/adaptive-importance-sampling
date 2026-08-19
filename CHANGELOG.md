@@ -9,6 +9,48 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- `MarginalTransform`, which maps a problem stated in physical units into the
+  standard normal space the estimators work in. Until now there was no way to
+  apply any of them to measured data at all: the prior is standard normal and
+  real inputs are lognormal discharges, Gumbel wind speeds, skewed strengths.
+  The paper notes the same gap in its introduction.
+
+  Independent marginals map exactly, `u_i = Phi^-1(F_i(x_i))`. Correlated ones
+  use the Nataf transformation: a prescribed physical correlation is not the
+  correlation of the underlying normals, because the marginal transforms are
+  non-linear and distort it. Two lognormals with a 30% coefficient of variation
+  asked for `+0.8` need a Gaussian correlation of `0.806`, and asked for `-0.5`
+  need `-0.535`. The Gaussian correlation is solved per pair by quadrature and a
+  bracketed root find, and the sample correlations come back within 0.002 of
+  their targets.
+
+  `wrap` converts a physical limit state into one the estimators accept, and
+  `sample` draws physical values with the requested marginals and correlation.
+
+  Validated against a closed form: two lognormal resistances with
+  `P(R < S) = 1.817e-05` exactly. Safe-ICE gives 1.05x of it and subset
+  simulation 0.96x.
+
+- **`wrap` rescales the limit state by default, and that turns out to matter a
+  great deal.** Safe-ICE smooths the failure indicator as `Phi(-g/sigma)`
+  starting from `sigma0 = 1`, which assumes `g` is of order one. A limit state
+  in physical units is not: on the lognormal problem above the spread of `g` is
+  33, so `Phi(-g/1)` is already a hard indicator and the smoothing the method
+  depends on does nothing at all. The run stops after two iterations with sigma
+  still at 0.999.
+
+  That turned the true `1.817e-05` into `5.13e-06`, with individual runs between
+  0.03x and 0.61x of the answer. Wrong, and not obviously so -- which is how
+  the discrepancy was noticed at all: subset simulation gave 0.97x on the same
+  problem while Safe-ICE gave 0.35x.
+
+  Dividing `g` by a positive constant cannot change the answer, since
+  `{g <= 0}` and `{g/c <= 0}` are the same set, so `wrap` divides by the spread
+  of `g` under the prior. With that the estimate is 1.05x with runs spanning
+  0.91x to 1.06x. Setting `sigma0` to the spread instead is exactly equivalent,
+  and there is a test asserting the two agree to 1e-12, because the method only
+  ever sees `g/sigma`.
+
 - `SubsetSimulation`, the method of Au and Beck (2001), reference [13]. It is
   not importance sampling: it factorises the rare event into nested ones,
   choosing each threshold so a fixed fraction `p0` of the current samples pass,
