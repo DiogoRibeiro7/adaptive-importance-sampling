@@ -196,16 +196,19 @@ class TestLimitStateScaling:
         assert np.array_equal(np.asarray(scaled(u)) <= 0, np.asarray(unscaled(u)) <= 0)
 
     @pytest.mark.slow
-    def test_scaling_is_what_makes_the_estimate_right(self) -> None:
-        """Recorded because the failure is quiet: a plausible, wrong answer.
+    def test_the_trap_now_needs_both_defences_disabled(self) -> None:
+        """Two things now stand between a physical limit state and a wrong answer.
 
-        Without it the smoothed indicator is already hard at sigma0 = 1, so the
-        annealing does nothing and the run stops after two iterations with sigma
-        still at 0.999.
+        ``wrap`` divides ``g`` by its spread, and ``SafeICE`` chooses ``sigma0``
+        from that same spread when it is left at ``"auto"``. Either alone is
+        enough. Turning off both reproduces the original failure: a smoothed
+        indicator that is already hard at ``sigma0 = 1``, so the annealing does
+        nothing, the run stops after two iterations, and the answer comes back
+        at a third of the truth with no sign of trouble.
         """
         transform = MarginalTransform([RESISTANCE, LOAD])
 
-        def median_over_seeds(wrapped):
+        def median_over_seeds(wrapped, **kwargs):
             return float(
                 np.median(
                     [
@@ -215,6 +218,7 @@ class TestLimitStateScaling:
                             N=1000,
                             max_iterations=15,
                             random_state=seed,
+                            **kwargs,
                         ).run(verbose=False)[0]
                         for seed in range(6)
                     ]
@@ -222,12 +226,22 @@ class TestLimitStateScaling:
             )
 
         scaled = median_over_seeds(transform.wrap(resistance_minus_load))
-        unscaled = median_over_seeds(transform.wrap(resistance_minus_load, scale=False))
+        unscaled_auto = median_over_seeds(
+            transform.wrap(resistance_minus_load, scale=False)
+        )
+        both_off = median_over_seeds(
+            transform.wrap(resistance_minus_load, scale=False), sigma0=1.0
+        )
 
-        assert EXACT_PF / 1.5 < scaled < EXACT_PF * 1.5, f"{scaled:.3e}"
-        assert unscaled < EXACT_PF / 2, (
-            f"unscaled gave {unscaled:.3e}, which is close to the answer "
-            f"{EXACT_PF:.3e}; if the trap has gone, drop this test"
+        assert EXACT_PF / 1.5 < scaled < EXACT_PF * 1.5, f"scaled: {scaled:.3e}"
+        assert EXACT_PF / 1.5 < unscaled_auto < EXACT_PF * 1.5, (
+            f"an automatic sigma0 should cover an unscaled limit state on its "
+            f"own, got {unscaled_auto:.3e} against {EXACT_PF:.3e}"
+        )
+        assert both_off < EXACT_PF / 2, (
+            f"with both defences off the estimate should collapse; got "
+            f"{both_off:.3e} against {EXACT_PF:.3e}. If this no longer holds, "
+            "the underlying trap has been fixed elsewhere and this test should go"
         )
 
     def test_setting_sigma0_to_the_spread_is_equivalent(self) -> None:
@@ -243,6 +257,9 @@ class TestLimitStateScaling:
             dimension=2,
             N=1000,
             max_iterations=15,
+            # Pinned, because the default is now "auto" and the point of this
+            # test is that dividing g and dividing sigma are the same thing.
+            sigma0=1.0,
             random_state=0,
         ).run(verbose=False)[0]
         by_sigma0 = SafeICE(

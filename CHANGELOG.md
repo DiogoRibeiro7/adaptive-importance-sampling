@@ -7,6 +7,43 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **`sigma0` now defaults to `"auto"`, chosen from the limit state rather than
+  assumed.** The smoothed indicator is `Phi(-g/sigma)`, so only the ratio
+  matters, and a fixed `sigma0 = 1` assumes `g` is of order one. Every
+  benchmark in the paper satisfies that, which is why the assumption was
+  invisible; a limit state in physical units does not.
+
+  The two ways of being wrong are not symmetric, and that is what the rule is
+  built on. Equation (10) searches `(0, sigma_prev)`, so sigma only ever falls:
+  too large costs an iteration or two of annealing and recovers, too small
+  cannot be undone. The nonlinear oscillator has a spread of 0.0195, so its
+  `sigma0 = 1` is fifty times too large, and it still lands within 2% of its
+  reference. A resistance minus a load with a spread of 33 has a `sigma0`
+  thirty times too small, and returned a third of the answer.
+
+  So the automatic choice errs upwards: `max(1, std(g))`, from a pilot sample
+  of 256 evaluations. Every benchmark in the package has a spread below one
+  except the Nakagami ratio problem, which measures the same either way, so
+  this leaves them all exactly as they were and acts only when the limit state
+  is on a scale that would otherwise break the smoothing:
+
+  | | old default | new default |
+  | --- | --- | --- |
+  | resistance minus load, physical units | 0.28x (worst seed 0.03x) | **1.00x** (worst 0.99x) |
+  | four-mode, three-mode, two-mode, spheres, oscillator | unchanged | unchanged |
+
+  Pass a float for `sigma0` to keep the old behaviour, and `sigma0_pilot` to
+  control what the estimate costs when each evaluation is expensive. The pilot
+  suppresses warnings from the limit state, since `run()` reports on its own
+  samples and warning twice for one problem is noise.
+
+  Accuracy across the benchmark set is unchanged: medians between 0.95x and
+  1.09x of their references, worst individual seeds between 0.79x and 1.30x.
+  The pilot advances the random stream, so individual runs differ from before
+  even where `sigma0` is identical.
+
 ### Added
 
 - **A worked example on real data**: `notebooks/05_flood_risk_real_data.ipynb`,
