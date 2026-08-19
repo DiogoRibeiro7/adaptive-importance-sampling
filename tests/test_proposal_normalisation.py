@@ -15,6 +15,7 @@ dropped.
 
 from __future__ import annotations
 
+import warnings
 from itertools import pairwise
 
 import numpy as np
@@ -471,3 +472,102 @@ class TestSigmaSchedule:
             assert reference / 5 < pf < reference * 5, (
                 f"seed {seed} returned {pf:.3e} against {reference:.3e}"
             )
+
+
+class TestAutomaticSigma0:
+    """sigma0 is chosen from the limit state rather than assumed to be 1.
+
+    The smoothed indicator is ``Phi(-g/sigma)``, so only the ratio matters. A
+    fixed ``sigma0 = 1`` assumes ``g`` is of order one, which every benchmark in
+    the paper satisfies and a limit state in physical units does not.
+
+    The two ways of being wrong are not symmetric, and that is what the rule
+    below is built on. Equation (10) searches ``(0, sigma_prev)``, so sigma only
+    falls: too large costs an iteration or two and recovers, too small cannot be
+    undone. The nonlinear oscillator's spread is 0.0195, so its ``sigma0 = 1``
+    is fifty times too large and it still lands within 2% of its reference. A
+    resistance minus a load with a spread of 33 has a ``sigma0`` thirty times
+    too small and returns a third of the answer.
+    """
+
+    @staticmethod
+    def estimator(limit_state, dimension=2, **kwargs):
+        return SafeICE(
+            limit_state_function=limit_state,
+            dimension=dimension,
+            N=200,
+            max_iterations=2,
+            random_state=0,
+            **kwargs,
+        )
+
+    def test_never_falls_below_one(self) -> None:
+        """Erring upwards is the safe direction, so 1 is a floor."""
+        for scale in (1e-6, 1e-3, 0.02, 0.5):
+            tiny = self.estimator(
+                lambda u, c=scale: c * (3.0 - np.linalg.norm(u, axis=-1))
+            )
+            assert tiny.sigma0 == 1.0
+
+    @pytest.mark.parametrize("scale", [10.0, 100.0, 1000.0])
+    def test_tracks_a_large_limit_state(self, scale: float) -> None:
+        estimator = self.estimator(
+            lambda u, c=scale: c * (3.0 - np.linalg.norm(u, axis=-1))
+        )
+        # The spread of 3 - ||u|| at d=2 is about 0.66, so expect 0.66 * scale.
+        assert estimator.sigma0 == pytest.approx(0.66 * scale, rel=0.25)
+
+    def test_leaves_the_paper_benchmarks_alone(self) -> None:
+        """Every one of them has a spread below one, so nothing changes."""
+        from safe_ice.problems.benchmarks import BenchmarkProblems
+
+        for limit_state, dimension in (
+            (BenchmarkProblems.four_mode_series_system(), 2),
+            (BenchmarkProblems.three_mode_problem(), 2),
+            (BenchmarkProblems.two_mode_opposite_directions(), 2),
+            (BenchmarkProblems.nonlinear_oscillator(), 10),
+        ):
+            assert self.estimator(limit_state, dimension).sigma0 == 1.0
+
+    def test_an_explicit_value_is_respected(self) -> None:
+        estimator = self.estimator(
+            lambda u: 1000.0 * (3.0 - np.linalg.norm(u, axis=-1)), sigma0=2.5
+        )
+        assert estimator.sigma0 == 2.5
+
+    def test_a_degenerate_limit_state_falls_back_to_one(self) -> None:
+        """A constant g has no spread, and a pilot of one has no variance."""
+        constant = self.estimator(lambda u: np.ones(np.atleast_2d(u).shape[0]))
+        assert constant.sigma0 == 1.0
+
+        no_pilot = self.estimator(
+            lambda u: 1000.0 * (3.0 - np.linalg.norm(u, axis=-1)), sigma0_pilot=1
+        )
+        assert no_pilot.sigma0 == 1.0
+
+    def test_non_finite_values_do_not_poison_the_estimate(self) -> None:
+        """NaNs are dropped rather than turning the spread into a NaN."""
+
+        def sometimes_nan(u):
+            values = 1000.0 * (3.0 - np.linalg.norm(np.atleast_2d(u), axis=-1))
+            values[::10] = np.nan
+            return values
+
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            estimator = self.estimator(sometimes_nan)
+
+        assert np.isfinite(estimator.sigma0)
+        assert estimator.sigma0 > 1.0
+
+    def test_the_pilot_does_not_warn_on_the_user_s_behalf(self) -> None:
+        """run() reports on its own samples; warning twice for one problem is noise."""
+
+        def nan_producing(u):
+            values = 3.0 - np.linalg.norm(np.atleast_2d(u), axis=-1)
+            values[0] = np.nan
+            return values
+
+        with warnings.catch_warnings():
+            warnings.simplefilter("error")
+            self.estimator(nan_producing)  # must not raise

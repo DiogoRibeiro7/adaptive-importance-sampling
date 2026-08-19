@@ -77,7 +77,11 @@ class SafeICE:
     N:
         Number of samples per iteration.
     sigma0:
-        Initial smoothing parameter for the smoothed indicator.
+        Initial smoothing parameter, or ``"auto"`` to choose one from the
+        limit state itself. See :meth:`_automatic_sigma0`.
+    sigma0_pilot:
+        Limit-state evaluations spent estimating the scale when ``sigma0`` is
+        ``"auto"``. Worth lowering if each evaluation is expensive.
     em_max_iter:
         Maximum EM iterations per ICE step.
     """
@@ -91,10 +95,11 @@ class SafeICE:
         delta_star: float = 1.5,
         max_iterations: int = 20,
         N: int = 1000,
-        sigma0: float = 1.0,
+        sigma0: float | str = "auto",
         em_max_iter: int = 20,
         cv_tolerance: float = 0.01,
         lambda_max: float = 0.95,
+        sigma0_pilot: int = 256,
         random_state: int | np.random.Generator | None = None,
     ) -> None:
         self.g = limit_state_function
@@ -104,7 +109,6 @@ class SafeICE:
         self.delta_star = float(delta_star)
         self.max_iterations = int(max_iterations)
         self.N = int(N)
-        self.sigma0 = float(sigma0)
         self.cv_tolerance = float(cv_tolerance)
         self.lambda_max = float(lambda_max)
 
@@ -115,6 +119,13 @@ class SafeICE:
             self._rng = random_state
         else:
             self._rng = np.random.default_rng(int(random_state))
+
+        # Needs self.g, self.d and the generator, so it comes after them.
+        self.sigma0 = (
+            self._automatic_sigma0(int(sigma0_pilot))
+            if isinstance(sigma0, str)
+            else float(sigma0)
+        )
 
         # Initialize EM optimizer
         self.em_optimizer = PenalizedEMOptimizer(max_em_iterations=int(em_max_iter))
@@ -274,6 +285,50 @@ class SafeICE:
             print(f"Final CV: {self.history['cv'][-1]:.4f}")
 
         return float(pf_estimate), results
+
+    def _automatic_sigma0(self, pilot: int) -> float:
+        """Choose an initial sigma from the spread of ``g`` under the prior.
+
+        The smoothed indicator is ``Phi(-g/sigma)``, so what matters is the
+        ratio, not either term. A fixed ``sigma0 = 1`` therefore assumes ``g``
+        is of order one, which every benchmark in the paper happens to satisfy
+        and a limit state in physical units does not.
+
+        The two ways of being wrong are not symmetric, which is what decides
+        the rule here. Equation (10) searches ``(0, sigma_prev)``, so sigma only
+        ever falls: too large costs an iteration or two of annealing and
+        recovers, while too small cannot be undone. The nonlinear oscillator has
+        a spread of 0.0195, so its ``sigma0 = 1`` is fifty times too large, and
+        it still estimates its reference to within 2%. A resistance minus a load
+        with a spread of 33 has a ``sigma0`` thirty times too small, and returns
+        a third of the right answer with no sign of trouble.
+
+        So this errs upwards: ``max(1, std(g))``. Every benchmark in the package
+        has a spread below one except the Nakagami ratio problem, which measures
+        the same either way, so the automatic choice leaves them all exactly as
+        they were and only acts when the limit state is on a scale that would
+        otherwise break the smoothing.
+        """
+        if pilot <= 1:
+            return 1.0
+
+        samples = np.asarray(
+            self._rng.standard_normal((int(pilot), self.d)), dtype=np.float64
+        )
+        # This is a scale probe, not part of the estimate. Whatever the limit
+        # state complains about -- NaNs, overflow -- run() will report on its
+        # own samples, and warning twice for one problem is noise.
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            values = self._evaluate_limit_state(samples)
+        finite = values[np.isfinite(values)]
+        if finite.size < 2:
+            return 1.0
+
+        spread = float(np.std(finite))
+        if not np.isfinite(spread) or spread <= 0.0:
+            return 1.0
+        return max(1.0, spread)
 
     def _evaluate_limit_state(self, samples: NDArrayF) -> NDArrayF:
         """Evaluate limit state on a batch; fallback to row-wise when needed."""

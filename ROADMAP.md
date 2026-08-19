@@ -75,135 +75,19 @@ tests for whatever was there:
 
 ## Next
 
-### More estimators, for comparison and cross-checking
+### One more estimator
 
 `ICEvMFNM` is in, which is the baseline the paper's tables compare against.
-Two more were agreed:
+`SubsetSimulation` is in as well, and has already paid for itself twice: it
+confirmed that the heat transfer gap against the paper is the
+finite-difference discretisation and not the estimator, and it was the reason
+the limit-state scaling trap was noticed at all, by disagreeing with Safe-ICE
+on a problem where it had no reason to.
 
-`SubsetSimulation` is in as well, and has already paid for itself: it
-independently confirmed that the heat transfer gap against the paper is the
-finite-difference discretisation and not the estimator. One method remains:
+One of the three agreed methods remains:
 
 * **Cross-entropy with a Gaussian mixture** (Kurtz and Song 2013, reference
   [25]), the older variant ICE improved on. A third point of comparison.
-
-### Make sigma0 aware of the limit state's scale
-
-`sigma0` defaults to 1, which assumes `g` is of order one. Every benchmark in
-the paper satisfies that, so the assumption is invisible there. A limit state in
-physical units does not: a resistance minus a load with a spread of 33 makes
-`Phi(-g/1)` a hard indicator, the annealing does nothing, and the answer comes
-back three to thirty times too small without any sign of trouble.
-
-`MarginalTransform.wrap` divides by the spread of `g` for exactly this reason,
-which covers anyone coming through the transform. Anyone writing a limit state
-directly is still exposed. The fix is for `SafeICE` to estimate the spread from
-a pilot sample and set `sigma0` from it, defaulting to the current behaviour
-only when told to. That changes a default for every problem, so it needs
-re-validating across the whole benchmark set rather than being slipped in.
-
-
-These are the next items from a repository review on 2026-08-18. The estimator
-core is in much better shape than the surrounding product surface; the highest
-return is now to make the public API, docs, visualisation tools and release
-metadata line up with the corrected implementation.
-
-### Fix the result object contract
-
-`run()` currently returns internally useful data under names that promise
-something narrower than they contain. `results["final_samples"]` and
-`results["final_g_values"]` are all iteration samples, not the separate sample
-set used for the final probability estimate, and `results["final_weights"]` is
-an array of ones rather than the final importance weights. That is harmless for
-tests that only check shape and non-negativity, but it makes downstream plots
-and user analyses compute the wrong thing while looking plausible.
-
-Define the result schema explicitly before adding more analysis features:
-
-* keep per-iteration proposal samples separate from final-estimator samples;
-* expose the actual final importance weights used in equation (36);
-* record `n_failures`, `parameters`, `sigma`, `lambda`, `cv` and the current
-  estimate consistently for each iteration, or remove consumers that expect
-  them;
-* update README, Sphinx docs and tests to assert semantics, not just key
-  presence.
-
-### Repair the analysis and visualisation layer
-
-The numerical core is now covered; the plotting layer mostly has smoke tests.
-Several functions still depend on stale result fields:
-
-* `AdvancedAnalysis.analyze_component_evolution` reads `history["lambda"]`,
-  but `SafeICE` records `history["lambda_val"]`;
-* the Plotly convergence view hard-codes a target CV of `0.05`, while the
-  algorithm default is `delta_star = 1.5`;
-* the failure-count plot reads `n_failures`, which `run()` never records;
-* the mixture-evolution animation expects per-iteration `parameters`, which are
-  not stored;
-* the dashboard computes a displayed probability from placeholder weights
-  rather than from the importance-sampling estimator.
-
-Fix these after the result schema is settled. Tests should check plotted values
-against a small deterministic run, not only that a figure object exists.
-
-### Refresh the public documentation
-
-The docs build cleanly, but some examples still describe the pre-0.3 API and
-old benchmark state. In particular, `docs/source/quickstart.rst` still cites
-the old four-mode reference (`1.22e-5`), reads `iter_data["delta"]` although
-iteration records expose `sigma`, and imports `VisualizationTools`, which is
-not part of the package. The install docs also still recommend Poetry commands
-even though project metadata and development groups now live in PEP 621/735.
-
-Bring README, Sphinx docs and examples back into one story: corrected
-benchmarks, current result keys, current dependency installation, and the
-actual analysis API.
-
-### Normalise repository identity before release
-
-GitHub reports that the repository has moved from
-`adaptive-importance-sampling-ice` to `adaptive-importance-sampling`. The old
-URL still appears in package metadata, docs, badges, Docker labels, citation
-metadata, Zenodo metadata and the CLI epilogue. Either keep the old URL
-deliberately as a redirect, or update all public links in one release-prep
-commit so badges, installation snippets, citation metadata and changelog links
-point at the canonical repository.
-
-### Finish 0.3.0 release hygiene
-
-The release branch already bumps `pyproject.toml`, `CITATION.cff`,
-`.zenodo.json` and the conda recipe to `0.3.0`, and the version-bump tooling
-now knows about `.zenodo.json`. Before tagging:
-
-* move the populated `CHANGELOG.md` `0.3.0` section out of any local-only state;
-* verify `python scripts/pyproject_editor.py --check bump-version patch`
-  reports companion-file changes without writing them;
-* run the full CI-equivalent suite with an installed package:
-  `ruff check .`, `ruff format --check .`, `mypy`,
-  `pytest -m "" -n auto`, Sphinx with `-W`, build, and `twine check`;
-* decide whether `.zenodo.json` should carry `version` even though Zenodo's
-  legacy JSON schema does not list it. Zenodo's GitHub integration documents
-  version metadata, but editor schema validation may complain if a strict
-  legacy schema is attached.
-
-### Preserve benchmark evidence outside the tests
-
-The package now relies on independent references: closed forms, 2e7-sample
-Monte Carlo for 2D benchmarks, 2e6-sample Monte Carlo for the oscillator, and a
-paper comparison for heat transfer. Those numbers are too expensive to
-regenerate in normal CI, so the project should keep the scripts, seeds,
-sample counts and resulting confidence intervals as auditable artefacts under
-`benchmarks/` or `paper/`. That makes future correctness releases easier to
-review and keeps README/CHANGELOG claims reproducible.
-
-### Improve local validation ergonomics
-
-`ruff` and formatting are fast, mypy passes, and docs build with warnings as
-errors. The default local test run is still long enough that it is easy to hit
-tooling timeouts, while CI gets parallelism from `pytest -n auto`. Make the
-local workflow clearer by documenting the intended quick, full and release
-commands, and consider adding a Makefile target that mirrors CI exactly after
-installing the dev group.
 
 ## Later
 
