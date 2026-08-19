@@ -284,3 +284,89 @@ class TestArgumentChecking:
             CrossEntropyGaussianMixture(
                 limit_state_function=sphere(3.0), dimension=2, N=5, rho=0.1
             )
+
+
+class TestReportingAndAwkwardInputs:
+    def test_verbose_output_names_each_iteration(self, capsys) -> None:
+        pf, results = CrossEntropyGaussianMixture(
+            limit_state_function=sphere(4.0), dimension=2, N=2000, random_state=0
+        ).run(verbose=True)
+
+        out = capsys.readouterr().out
+        assert "Cross-entropy with a Gaussian mixture" in out
+        assert out.count("iteration ") >= results["n_iterations"]
+        assert "discarded" in out
+        assert f"{pf:.6e}" in out
+
+    def test_stopping_short_is_warned_about(self, capsys) -> None:
+        """An estimate that never reached g <= 0 should not pass for an answer."""
+        CrossEntropyGaussianMixture(
+            limit_state_function=sphere(8.0),
+            dimension=2,
+            N=2000,
+            max_iterations=1,
+            random_state=0,
+        ).run(verbose=True)
+
+        assert "stopped before the threshold reached zero" in capsys.readouterr().out
+
+    def test_accepts_a_scalar_only_limit_state(self) -> None:
+        """Not every limit state takes a batch; the fallback evaluates row-wise."""
+
+        def scalar_only(u: np.ndarray) -> float:
+            point = np.atleast_2d(u)
+            if point.shape[0] != 1:
+                raise TypeError("one point at a time")
+            return float(3.0 - np.linalg.norm(point[0]))
+
+        pf, _results = CrossEntropyGaussianMixture(
+            limit_state_function=scalar_only, dimension=2, N=1000, random_state=0
+        ).run(verbose=False)
+
+        exact = float(stats.chi2.sf(9.0, df=2))
+        assert exact / 4 < pf < exact * 4, f"{pf:.3e} against {exact:.3e}"
+
+    def test_a_generator_can_be_passed_directly(self) -> None:
+        """Sharing one generator across estimators has to give a repeatable run."""
+        first = CrossEntropyGaussianMixture(
+            limit_state_function=sphere(3.5),
+            dimension=2,
+            N=1000,
+            random_state=np.random.default_rng(11),
+        ).run(verbose=False)[0]
+        second = CrossEntropyGaussianMixture(
+            limit_state_function=sphere(3.5),
+            dimension=2,
+            N=1000,
+            random_state=np.random.default_rng(11),
+        ).run(verbose=False)[0]
+
+        assert first == second
+
+    def test_nan_is_treated_as_no_failure(self) -> None:
+        """A NaN must not be counted as passing a threshold."""
+        estimator = CrossEntropyGaussianMixture(
+            limit_state_function=lambda u: np.full(np.atleast_2d(u).shape[0], np.nan),
+            dimension=2,
+            N=1000,
+            random_state=0,
+        )
+        values = estimator._evaluate(np.zeros((4, 2)))
+
+        assert np.all(np.isposinf(values))
+
+    def test_it_gives_up_when_the_elite_set_is_too_small(self, capsys) -> None:
+        """Fewer elites than the mixture needs means there is nothing to refit."""
+        estimator = CrossEntropyGaussianMixture(
+            limit_state_function=sphere(6.0),
+            dimension=2,
+            K=8,
+            N=100,
+            rho=0.1,
+            random_state=0,
+        )
+        pf, results = estimator.run(verbose=True)
+
+        assert 0.0 <= pf <= 1.0
+        assert "too few elite samples" in capsys.readouterr().out
+        assert results["reached_failure_set"] is False
