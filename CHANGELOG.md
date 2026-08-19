@@ -9,6 +9,38 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **A worked example on real data**: `notebooks/05_flood_risk_real_data.ipynb`,
+  with `data/usgs_01646500_annual_peaks.csv` and `scripts/fetch_usgs_peaks.py`
+  to refetch it. Ninety-five water years of annual peak discharge on the
+  Potomac River, public domain, used to estimate the probability of a levee
+  being overtopped in a given year.
+
+  The discharge record is real; the channel hydraulics are a stylised wide
+  rectangular channel with a Manning roughness, and the notebook says so. Three
+  estimates, two of which share no machinery:
+
+  | method | P(overtopping) | evaluations |
+  | --- | --- | --- |
+  | crude Monte Carlo | `5.750e-05` | 2,000,000 |
+  | Safe-ICE | `5.391e-05` | 3,000 |
+  | subset simulation | `4.765e-05` | 10,000 |
+
+  The closing section is the point of using real data at all. Ninety-five years
+  cannot separate a Gumbel tail from a lognormal one -- neither is rejected by a
+  Kolmogorov-Smirnov test -- but they disagree about the answer by a factor of
+  nine, which dwarfs the 20% spread between the estimators. The estimator is
+  precise; the answer is not.
+
+### Fixed
+
+- `scripts/fetch_usgs_peaks.py` labelled each peak with the calendar year of its
+  date rather than its water year. A USGS water year runs from 1 October to 30
+  September and is named for the year it ends in, so an autumn peak belongs to
+  the next one. The mislabelled record had 95 rows spanning only 80 distinct
+  years, with 1934, 1937 and 2011 each appearing twice and others missing
+  entirely. Corrected, it is 95 consecutive water years with no gaps. Caught by
+  a test asserting the years are unique and ordered, not by reading the file.
+
 - `MarginalTransform`, which maps a problem stated in physical units into the
   standard normal space the estimators work in. Until now there was no way to
   apply any of them to measured data at all: the prior is standard normal and
