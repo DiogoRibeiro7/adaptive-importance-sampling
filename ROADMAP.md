@@ -80,12 +80,10 @@ tests for whatever was there:
 `ICEvMFNM` is in, which is the baseline the paper's tables compare against.
 Two more were agreed:
 
-* **Subset simulation** (Au and Beck 2001, reference [13]). A different family
-  entirely -- MCMC through nested intermediate failure levels rather than
-  importance sampling -- so it cross-checks rather than agrees. The paper used
-  it for the heat transfer reference. This is the more valuable of the two,
-  because an independent second opinion is what has actually caught defects
-  here.
+`SubsetSimulation` is in as well, and has already paid for itself: it
+independently confirmed that the heat transfer gap against the paper is the
+finite-difference discretisation and not the estimator. One method remains:
+
 * **Cross-entropy with a Gaussian mixture** (Kurtz and Song 2013, reference
   [25]), the older variant ICE improved on. A third point of comparison.
 

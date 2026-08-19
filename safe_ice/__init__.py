@@ -8,6 +8,7 @@ from .core import (
     ICEvMFNM,
     OptimizedSafeICE,
     SafeICE,
+    SubsetSimulation,
     vMFNMParameters,
 )
 from .distributions import (
@@ -46,6 +47,7 @@ __all__ = [
     "PerformanceEvaluator",
     "SafeICE",
     "StochasticProcessProblem",
+    "SubsetSimulation",
     "SystemReliabilityProblem",
     "TimeVariantProblem",
     "VonMisesFisherSampler",
