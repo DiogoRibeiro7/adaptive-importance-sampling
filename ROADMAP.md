@@ -102,12 +102,6 @@ a pilot sample and set `sigma0` from it, defaulting to the current behaviour
 only when told to. That changes a default for every problem, so it needs
 re-validating across the whole benchmark set rather than being slipped in.
 
-### Real data: river flood exceedance
-
-The transform layer now exists, so this is unblocked. Fit marginals to a real
-USGS gauge record, transform, and estimate the probability of exceeding a flood
-stage.
-
 
 These are the next items from a repository review on 2026-08-18. The estimator
 core is in much better shape than the surrounding product surface; the highest

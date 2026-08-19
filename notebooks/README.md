@@ -9,6 +9,7 @@ render directly on GitHub without running anything.
 | [02_benchmarks.ipynb](02_benchmarks.ipynb) | All five problems from the paper, each against an independently obtained reference |
 | [03_high_dimensions.ipynb](03_high_dimensions.ipynb) | Accuracy from `d=2` to `d=200`, against the exact chi-square tail |
 | [04_how_it_works.ipynb](04_how_it_works.ipynb) | The four moving parts — smoothed indicator, sigma schedule, penalised EM, heavy-tailed component |
+| [05_flood_risk_real_data.ipynb](05_flood_risk_real_data.ipynb) | A real problem: 95 years of USGS gauge data, a levee, and three estimators that agree |
 
 ## A note on the numbers
 
@@ -43,7 +44,7 @@ pip install -e ".[viz]"
 
 ## Runtime
 
-All four take a few minutes in total. The slowest cells are the ones that have
+All five take a few minutes in total. The slowest cells are the ones that have
 to be slow to make their point: `02` runs the heat transfer problem, where each
 limit-state evaluation is a finite-element solve, and `03` goes to 200
-dimensions.
+dimensions. `05` reads its data from `data/`, so it needs no network access.
