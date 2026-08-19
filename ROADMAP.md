@@ -73,6 +73,11 @@ tests for whatever was there:
   so a defect there misleads rather than corrupts, and the tests are shallow
   by design.
 
+### Done: a notebook comparing all four
+
+`notebooks/06_comparing_estimators.ipynb` runs them on the same problems and
+records where each one stops, including Safe-ICE.
+
 ### Done: all three comparison estimators are in
 
 `ICEvMFNM` is the baseline the paper's tables compare against.
@@ -89,13 +94,18 @@ side by side on the same problems would be a reasonable next step.
 
 ## Next
 
-### A comparison notebook
+### Keep the notebooks from going quietly stale
 
-Four estimators now solve the same problems by different means: Safe-ICE,
-ICE-vMFNM, subset simulation and cross-entropy with a Gaussian mixture. Putting
-them side by side on one set of problems, with their costs, would make the
-paper's argument visible rather than tabulated -- and would show where each one
-stops, which is the more useful half.
+All six carry saved outputs so they render on GitHub, and nothing re-executes
+them. Every number in them is pinned to the behaviour of the version that ran
+them, so a change to an estimator leaves them wrong in a way no test catches --
+`tests/test_flood_data.py` guards one notebook's claims, and the rest are
+unguarded.
+
+A workflow that re-runs them and fails on error would close it, at a few
+minutes per build. Re-running on every push would also churn the committed
+outputs, so it probably wants to run on a schedule, or on changes to
+`safe_ice/` only, and report rather than commit.
 
 ## Later
 

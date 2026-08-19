@@ -132,7 +132,7 @@ vectorised function.
 
 ## Notebooks
 
-Five notebooks in [notebooks/](notebooks/), executed with their outputs saved
+Six notebooks in [notebooks/](notebooks/), executed with their outputs saved
 so the plots and numbers render on GitHub without running anything:
 
 | Notebook | What it shows |
@@ -142,6 +142,7 @@ so the plots and numbers render on GitHub without running anything:
 | [High dimensions](notebooks/03_high_dimensions.ipynb) | `d=2` to `d=200` against the exact chi-square tail |
 | [How it works](notebooks/04_how_it_works.ipynb) | The smoothed indicator, sigma schedule, penalised EM and heavy-tailed component |
 | [Flood risk, real data](notebooks/05_flood_risk_real_data.ipynb) | 95 years of USGS gauge data, a levee, and three estimators that agree |
+| [Comparing estimators](notebooks/06_comparing_estimators.ipynb) | All four estimators on the same problems, and where each one stops |
 
 ## How it works
 
