@@ -9,6 +9,44 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- `SubsetSimulation`, the method of Au and Beck (2001), reference [13]. It is
+  not importance sampling: it factorises the rare event into nested ones,
+  choosing each threshold so a fixed fraction `p0` of the current samples pass,
+  and generating the conditional samples for the next level by MCMC seeded from
+  the ones that did. It shares nothing with the importance-sampling machinery
+  -- no proposal, no mixture, no weights, no EM -- which is what makes
+  agreement between the two informative about the answer rather than about the
+  code.
+
+  It earned that immediately. The paper's heat transfer reference of `4.69e-07`
+  came from its own subset simulation, and ours does not reproduce it either:
+
+  | | estimate | vs the paper |
+  | --- | --- | --- |
+  | our subset simulation | `2.808e-07` | 0.60x |
+  | our Safe-ICE | `3.174e-07` | 0.68x |
+  | the two against each other | | 0.88x |
+
+  Two methods sharing no code landing within 12% of each other, both about a
+  third below the paper, is evidence that the difference is the
+  finite-difference discretisation of the PDE rather than either estimator.
+  That had been recorded as a plausible explanation; it is now a measured one.
+
+  Accuracy behaves as the method should. On the sphere at `d=2`, the mean over
+  twelve runs is 0.90x, 1.01x and 1.02x of the exact value for `N` of 1000,
+  4000 and 16000, with the coefficient of variation falling from 18.9% to 6.9%.
+  It is markedly less efficient than Safe-ICE, needing tens of thousands of
+  evaluations for what Safe-ICE reaches in three, which is the trade for
+  needing no proposal family at all.
+
+  Two details worth recording, both found by testing rather than reasoning.
+  Intermediate levels use `p0` exactly rather than counting `g <= threshold`:
+  rejected MCMC moves leave duplicate states, and a duplicate sitting on the
+  threshold is counted too, which measured 0.1005 against 0.1 and compounds
+  over levels in one direction. And the seed count must divide `N`, not merely
+  be a whole number -- `p0=0.15` with `N=1000` gives 150 whole seeds but chains
+  of 6, filling 900 of the 1000 places.
+
 - `ICEvMFNM`, the ICE-vMFNM baseline of reference [26] that Safe-ICE is
   measured against. Safe-ICE is that method plus a heavy-tailed proposal
   component and a penalised EM step, so it is implemented as exactly that
