@@ -43,6 +43,21 @@ with the package installed:
 pip install -e ".[viz]"
 ```
 
+## Keeping them honest
+
+They are committed with outputs, so nothing about a stale one looks stale.
+`scripts/check_notebooks.py` catches both ways that happens:
+
+```bash
+python scripts/check_notebooks.py --sync      # does each .ipynb match its .py?
+python scripts/check_notebooks.py --execute   # does each one still run?
+```
+
+The first runs in CI on every change here. The second runs weekly, because it
+re-executes everything. Neither rewrites a notebook: regenerating changes the
+embedded images, so when to refresh a published figure is a decision for
+whoever is editing.
+
 ## Runtime
 
 All six take a few minutes in total. The slowest cells are the ones that have

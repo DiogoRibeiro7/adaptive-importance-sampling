@@ -73,6 +73,11 @@ tests for whatever was there:
   so a defect there misleads rather than corrupts, and the tests are shallow
   by design.
 
+### Done: the notebooks are checked rather than trusted
+
+`scripts/check_notebooks.py` catches both ways they go stale: `--sync` on every
+change, `--execute` weekly. Neither rewrites anything.
+
 ### Done: a notebook comparing all four
 
 `notebooks/06_comparing_estimators.ipynb` runs them on the same problems and
@@ -94,18 +99,8 @@ side by side on the same problems would be a reasonable next step.
 
 ## Next
 
-### Keep the notebooks from going quietly stale
-
-All six carry saved outputs so they render on GitHub, and nothing re-executes
-them. Every number in them is pinned to the behaviour of the version that ran
-them, so a change to an estimator leaves them wrong in a way no test catches --
-`tests/test_flood_data.py` guards one notebook's claims, and the rest are
-unguarded.
-
-A workflow that re-runs them and fails on error would close it, at a few
-minutes per build. Re-running on every push would also churn the committed
-outputs, so it probably wants to run on a schedule, or on changes to
-`safe_ice/` only, and report rather than commit.
+Nothing outstanding. What remains below was deferred deliberately rather than
+left undone.
 
 ## Later
 

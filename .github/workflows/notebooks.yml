@@ -1,0 +1,92 @@
+name: Notebooks
+
+# The notebooks are committed with their outputs saved so they render on GitHub
+# without anyone running them, which means their numbers are pinned to whatever
+# the code did when they were produced. Two things can go wrong quietly, and
+# they need different cadences.
+#
+# Being out of step with their .py source is cheap to detect, so it runs on
+# every change that could cause it.
+#
+# Being out of date with the package is only detectable by re-running them,
+# which takes minutes, so it runs weekly and on demand. It reports rather than
+# committing: regenerating rewrites embedded images and would churn the diff on
+# every build, and deciding when to refresh a published figure belongs to
+# whoever is editing.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'notebooks/**'
+      - 'scripts/check_notebooks.py'
+  pull_request:
+    paths:
+      - 'notebooks/**'
+      - 'scripts/check_notebooks.py'
+  schedule:
+    # Mondays at 05:00 UTC. Only ever runs on the default branch.
+    - cron: '0 5 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: notebooks-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  in-step:
+    name: Notebooks match their sources
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+
+      - name: Install jupytext
+        run: |
+          python -m pip install --upgrade pip
+          # Reading the pair needs nothing but jupytext; the package itself is
+          # only required to run them, which this job does not do.
+          pip install jupytext
+
+      - name: Check each notebook matches its .py
+        run: python scripts/check_notebooks.py --sync
+
+  still-run:
+    name: Notebooks still run
+    # Only on a schedule or by hand: this executes every notebook, including a
+    # finite-element problem and a 200-dimensional sweep.
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+
+      - name: Install the package and the notebook tooling
+        run: |
+          python -m pip install --upgrade pip
+          # Nothing in the notebooks needs the viz extra; they plot with matplotlib.
+          pip install -e .
+          pip install jupytext ipykernel
+
+      - name: Re-run every notebook
+        run: python scripts/check_notebooks.py --execute
+
+      - name: Say what to do about it
+        if: failure()
+        run: |
+          echo "A notebook stopped running against the current package."
+          echo "Its committed outputs are now claims about a version that no"
+          echo "longer exists. Regenerate the affected ones with:"
+          echo "  jupytext --to ipynb --execute notebooks/<name>.py"
