@@ -9,6 +9,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- `ICEvMFNM`, the ICE-vMFNM baseline of reference [26] that Safe-ICE is
+  measured against. Safe-ICE is that method plus a heavy-tailed proposal
+  component and a penalised EM step, so it is implemented as exactly that
+  minus the two: `lambda` held at 1, and the penalty coefficient held at 0.
+  Everything else -- the smoothed indicator, the sigma schedule, the weights,
+  the estimator -- is shared, and a test asserts as much, since a comparison
+  only means something if the methods differ in the ways being compared and in
+  no others.
+
+  It reproduces the paper's actual claim, which is not that Safe-ICE is
+  slightly better but that the baseline's accuracy depends on a choice the user
+  has to make blind. Ten runs each on the four-mode problem:
+
+  | Method | rel. err. of mean | CV |
+  | --- | --- | --- |
+  | Safe-ICE | 0.010 | 0.109 |
+  | ICE-vMFNM (K=2) | 0.084 | 0.180 |
+  | ICE-vMFNM (K=4) | 0.276 | 0.366 |
+  | ICE-vMFNM (K=8) | 0.290 | 0.214 |
+
+  Adding components makes it worse, which is what the paper observes.
+
+- `PenalizedEMOptimizer(penalized=False)` holds the penalty coefficient at
+  zero, reducing the M-step to the plain weighted EM update of equation (19).
+
+### Added
+
 - Four notebooks in `notebooks/`, executed with their outputs saved so the
   plots and numbers render on GitHub without running anything: getting started,
   the five benchmark problems against independent references, accuracy from

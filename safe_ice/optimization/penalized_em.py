@@ -17,9 +17,27 @@ NDArrayF = npt.NDArray[np.float64]
 class PenalizedEMOptimizer:
     """Penalized EM algorithm for automatic component selection."""
 
-    def __init__(self, max_em_iterations: int = 20, em_tolerance: float = 1e-6) -> None:
+    def __init__(
+        self,
+        max_em_iterations: int = 20,
+        em_tolerance: float = 1e-6,
+        penalized: bool = True,
+    ) -> None:
+        """Create the optimiser.
+
+        Parameters
+        ----------
+        penalized:
+            Apply the cross-entropy penalty of equation (21). With ``False``
+            the penalty coefficient is held at zero, which reduces the update
+            to the plain weighted EM step of equation (19) and leaves the
+            number of components fixed. That is what the ICE-vMFNM baseline
+            of reference [26] does, and it is the difference this package's
+            :class:`~safe_ice.core.ice_vmfnm.ICEvMFNM` relies on.
+        """
         self.max_em_iterations = int(max_em_iterations)
         self.em_tolerance = float(em_tolerance)
+        self.penalized = bool(penalized)
 
     def fit(
         self,
@@ -48,7 +66,7 @@ class PenalizedEMOptimizer:
         """
         _n, _d = data.shape
         params = self._copy_parameters(initial_params)
-        beta: float = float(beta_init)
+        beta: float = float(beta_init) if self.penalized else 0.0
         K: int = int(params.K)
 
         # Precompute data in polar coordinates
@@ -171,7 +189,11 @@ class PenalizedEMOptimizer:
         # The next penalty coefficient, equation (23), is computed before
         # pruning: it compares the weights component by component against the
         # previous iterate, so both vectors must still have K_j entries.
-        next_beta = self._update_beta(params.pi, new_pi, pi_em, int(_n), int(d))
+        next_beta = (
+            self._update_beta(params.pi, new_pi, pi_em, int(_n), int(d))
+            if self.penalized
+            else 0.0
+        )
 
         # Equation (22): discard the components driven to zero by the penalty.
         active_components = new_pi > 0.0
