@@ -7,6 +7,43 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- `CrossEntropyGaussianMixture`, the method of Kurtz and Song (2013),
+  reference [25], and the last of the three comparison estimators. It is the
+  older approach ICE was introduced to improve on, and it differs from ICE in
+  two places: the intermediate level is a hard threshold at the `rho`-quantile
+  of the sampled `g` rather than a smoothed indicator, and the proposal is a
+  Gaussian mixture on R^d rather than a von Mises-Fisher Nakagami mixture in
+  polar form.
+
+  Having it makes the Safe-ICE paper's case for ICE testable rather than
+  quotable. Both of its claims about cross-entropy hold:
+
+  *"discards most samples by relying solely on an elite subset"* -- on the
+  four-mode problem, 10,417 of 14,000 evaluations never inform the fit.
+
+  *"in high dimensions, its Gaussian proposals collapse onto a thin shell"* --
+  and not marginally:
+
+  | d | exact | CE-GM | Safe-ICE |
+  | --- | --- | --- | --- |
+  | 2 | `2.19e-03` | 0.72x | 1.00x |
+  | 10 | `5.35e-03` | 0.45x | 1.00x |
+  | 50 | `3.61e-03` | **0.01x** | 1.01x |
+  | 100 | `2.63e-03` | **3.5e-10** | 1.04x |
+
+  A third weakness turned up that the paper mentions only in passing, and it is
+  measurable: on the four-mode problem the fitted mixture covers a median of
+  three of the four lobes, against four out of four for Safe-ICE on every seed.
+  A missing lobe is a missing share of the probability, which is why the
+  estimate sits at 0.46x to 0.60x of the reference for every `K` from 1 to 8.
+  No choice of `K` rescues it, because the difficulty is that an elite-fitted
+  mixture concentrates wherever the first elites landed.
+
+  It is implemented as described rather than patched around, since those
+  properties are the reason it is here.
+
 ### Changed
 
 - **`sigma0` now defaults to `"auto"`, chosen from the limit state rather than

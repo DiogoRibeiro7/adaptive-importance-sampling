@@ -73,21 +73,29 @@ tests for whatever was there:
   so a defect there misleads rather than corrupts, and the tests are shallow
   by design.
 
+### Done: all three comparison estimators are in
+
+`ICEvMFNM` is the baseline the paper's tables compare against.
+`SubsetSimulation` shares no machinery with the importance-sampling code and
+has paid for itself twice, first confirming the heat transfer gap was
+discretisation rather than the estimator, then catching the limit-state scaling
+trap by disagreeing with Safe-ICE where it had no reason to.
+`CrossEntropyGaussianMixture` is the older method ICE improved on, and confirms
+both of the paper's claims about it: it discards three quarters of its
+evaluations, and at d=100 it returns 3.5e-10 for a true 2.6e-3.
+
+Nothing further is planned here. A comparison notebook putting all four
+side by side on the same problems would be a reasonable next step.
+
 ## Next
 
-### One more estimator
+### A comparison notebook
 
-`ICEvMFNM` is in, which is the baseline the paper's tables compare against.
-`SubsetSimulation` is in as well, and has already paid for itself twice: it
-confirmed that the heat transfer gap against the paper is the
-finite-difference discretisation and not the estimator, and it was the reason
-the limit-state scaling trap was noticed at all, by disagreeing with Safe-ICE
-on a problem where it had no reason to.
-
-One of the three agreed methods remains:
-
-* **Cross-entropy with a Gaussian mixture** (Kurtz and Song 2013, reference
-  [25]), the older variant ICE improved on. A third point of comparison.
+Four estimators now solve the same problems by different means: Safe-ICE,
+ICE-vMFNM, subset simulation and cross-entropy with a Gaussian mixture. Putting
+them side by side on one set of problems, with their costs, would make the
+paper's argument visible rather than tabulated -- and would show where each one
+stops, which is the more useful half.
 
 ## Later
 

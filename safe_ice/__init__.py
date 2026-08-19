@@ -5,6 +5,7 @@ from importlib.metadata import PackageNotFoundError, version
 from .analysis import AdvancedAnalysis, PerformanceEvaluator
 from .core import (
     AdaptiveSafeICE,
+    CrossEntropyGaussianMixture,
     ICEvMFNM,
     OptimizedSafeICE,
     SafeICE,
@@ -38,6 +39,7 @@ __all__ = [
     "AdaptiveSafeICE",
     "AdvancedAnalysis",
     "BenchmarkProblems",
+    "CrossEntropyGaussianMixture",
     "HeatTransferProblem",
     "ICEvMFNM",
     "InverseNakagamiDistribution",
