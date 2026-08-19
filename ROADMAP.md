@@ -75,6 +75,33 @@ tests for whatever was there:
 
 ## Next
 
+### More estimators, for comparison and cross-checking
+
+`ICEvMFNM` is in, which is the baseline the paper's tables compare against.
+Two more were agreed:
+
+* **Subset simulation** (Au and Beck 2001, reference [13]). A different family
+  entirely -- MCMC through nested intermediate failure levels rather than
+  importance sampling -- so it cross-checks rather than agrees. The paper used
+  it for the heat transfer reference. This is the more valuable of the two,
+  because an independent second opinion is what has actually caught defects
+  here.
+* **Cross-entropy with a Gaussian mixture** (Kurtz and Song 2013, reference
+  [25]), the older variant ICE improved on. A third point of comparison.
+
+### Real data, which needs an isoprobabilistic transform first
+
+The estimator works in standard normal space, and real inputs are not standard
+normal, so there is no way to apply it to measured data at present. The paper
+notes the same thing in its introduction: a Nataf or Rosenblatt transformation
+maps the original distributions to Gaussian ones. That layer has to exist
+before any real-data example can.
+
+Agreed example: river flood exceedance from USGS daily discharge records --
+fit marginals to a real gauge record, transform, and estimate the probability
+of exceeding a flood stage.
+
+
 These are the next items from a repository review on 2026-08-18. The estimator
 core is in much better shape than the surrounding product surface; the highest
 return is now to make the public API, docs, visualisation tools and release

@@ -3,7 +3,13 @@
 from importlib.metadata import PackageNotFoundError, version
 
 from .analysis import AdvancedAnalysis, PerformanceEvaluator
-from .core import AdaptiveSafeICE, OptimizedSafeICE, SafeICE, vMFNMParameters
+from .core import (
+    AdaptiveSafeICE,
+    ICEvMFNM,
+    OptimizedSafeICE,
+    SafeICE,
+    vMFNMParameters,
+)
 from .distributions import (
     InverseNakagamiDistribution,
     NakagamiDistribution,
@@ -31,6 +37,7 @@ __all__ = [
     "AdvancedAnalysis",
     "BenchmarkProblems",
     "HeatTransferProblem",
+    "ICEvMFNM",
     "InverseNakagamiDistribution",
     "NakagamiDistribution",
     "NetworkReliabilityProblem",
