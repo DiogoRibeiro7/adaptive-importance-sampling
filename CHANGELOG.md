@@ -9,6 +9,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- `scripts/check_notebooks.py` and a `Notebooks` workflow, because the
+  notebooks are committed with their outputs saved and nothing was re-running
+  them. Two things can go wrong quietly there, and they need different checks
+  at different cadences.
+
+  **Out of step.** Editing a `.py` and forgetting to regenerate leaves the
+  `.ipynb` showing older text and older numbers, and nothing about it looks
+  stale. `--sync` compares the cells of both, takes a second, and runs on every
+  change to `notebooks/`.
+
+  **Out of date.** The saved outputs are pinned to whatever the code did when
+  they were produced, so a change to an estimator silently turns them into
+  claims about a version that no longer exists. `--execute` re-runs each one and
+  fails if a cell raises. It takes minutes, so it runs weekly and on demand.
+
+  Neither writes anything. Regenerating rewrites embedded images and would churn
+  the diff on every build, and deciding when to refresh a published figure
+  belongs to whoever is editing.
+
 - `notebooks/06_comparing_estimators.ipynb`, running all four estimators on the
   same problems. The useful half is where each one stops rather than where they
   agree, and on a two-dimensional, gently-shaped problem they all land on the
