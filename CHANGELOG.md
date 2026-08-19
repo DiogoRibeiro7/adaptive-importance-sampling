@@ -9,6 +9,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- `notebooks/06_comparing_estimators.ipynb`, running all four estimators on the
+  same problems. The useful half is where each one stops rather than where they
+  agree, and on a two-dimensional, gently-shaped problem they all land on the
+  answer, so the differences below are not about implementation quality.
+
+  Multiple modes separate them, and for different reasons. On the four-mode
+  problem, lobes reached out of four across six seeds:
+
+  | | lobes | worst seed |
+  | --- | --- | --- |
+  | Safe-ICE | `[4,4,4,4,4,4]` | 0.79x |
+  | ICE-vMFNM | `[4,4,1,4,4,4]` | 0.13x |
+  | CE-GM | `[3,3,4,3,4,2]` | 0.17x |
+  | subset simulation | `[4,4,4,4,4,4]` | 0.58x |
+
+  CE-GM is consistently short because it fits to the best tenth of each
+  iteration. ICE-vMFNM usually finds all four but collapsed onto one on a single
+  seed, having no penalty holding its components apart -- which is the mechanism
+  Safe-ICE adds. Subset simulation reaches all four because its chains walk
+  rather than fit, so there is no fitted object to collapse.
+
+  Dimension separates them too: on the sphere problem CE-GM is fine at `d=10`
+  and returns 0.00x by `d=50`, while the other three hold from `d=2` to `d=100`.
+
+  The closing section is deliberately even-handed about Safe-ICE's own limits:
+  its sensitivity to the scale of `g`, and its need for a limit state with a
+  usable gradient, which a connectivity problem returning +/-1 does not have.
+
 - `CrossEntropyGaussianMixture`, the method of Kurtz and Song (2013),
   reference [25], and the last of the three comparison estimators. It is the
   older approach ICE was introduced to improve on, and it differs from ICE in
