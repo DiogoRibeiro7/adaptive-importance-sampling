@@ -21,6 +21,11 @@ sdist/
 var/
 wheels/
 pip-wheel-metadata/
+# ...except the small, documented records the notebooks depend on. Everything
+# else under data/ stays ignored, so a working copy of a large download does
+# not get committed by accident.
+!data/README.md
+!data/usgs_*_annual_peaks.csv
 share/python-wheels/
 *.egg-info/
 .installed.cfg
@@ -153,12 +158,19 @@ cython_debug/
 !docs/images/*.gif
 
 # Data files (uncommit if needed)
-data/
+data/*
 *.csv
 *.h5
 *.hdf5
 *.pkl
 *.pickle
+
+# ...except the small, documented records the notebooks read. These have to
+# come after the rules above, since the last matching pattern wins, and the
+# directory is excluded as `data/*` rather than `data/`: git cannot re-include
+# a file whose parent directory is itself excluded.
+!data/README.md
+!data/usgs_*_annual_peaks.csv
 
 # Logs
 logs/
