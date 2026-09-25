@@ -56,7 +56,7 @@ class TestHelp:
         assert main([]) == 0
         out = plain(capsys.readouterr().out)
         assert "your-username" not in out
-        assert "DiogoRibeiro7/adaptive-importance-sampling-ice" in out
+        assert "DiogoRibeiro7/adaptive-importance-sampling" in out
 
 
 class TestBenchmarkListing:
