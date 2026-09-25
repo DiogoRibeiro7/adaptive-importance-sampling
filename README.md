@@ -1,6 +1,6 @@
 # Safe-ICE
 
-[![CI](https://github.com/DiogoRibeiro7/adaptive-importance-sampling-ice/actions/workflows/ci.yml/badge.svg)](https://github.com/DiogoRibeiro7/adaptive-importance-sampling-ice/actions/workflows/ci.yml)
+[![CI](https://github.com/DiogoRibeiro7/adaptive-importance-sampling/actions/workflows/ci.yml/badge.svg)](https://github.com/DiogoRibeiro7/adaptive-importance-sampling/actions/workflows/ci.yml)
 [![Python 3.11+](https://img.shields.io/badge/python-3.11%20%7C%203.12%20%7C%203.13%20%7C%203.14-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Checked with mypy](https://img.shields.io/badge/mypy-strict-2a6db2.svg)](https://mypy-lang.org/)
@@ -43,14 +43,14 @@ Implements the method described in:
 Requires Python 3.11 or newer.
 
 ```bash
-pip install git+https://github.com/DiogoRibeiro7/adaptive-importance-sampling-ice.git
+pip install git+https://github.com/DiogoRibeiro7/adaptive-importance-sampling.git
 ```
 
 The package is not on PyPI yet. For a local checkout:
 
 ```bash
-git clone https://github.com/DiogoRibeiro7/adaptive-importance-sampling-ice.git
-cd adaptive-importance-sampling-ice
+git clone https://github.com/DiogoRibeiro7/adaptive-importance-sampling.git
+cd adaptive-importance-sampling
 pip install -e .
 ```
 
@@ -332,8 +332,8 @@ is in [ROADMAP.md](ROADMAP.md).
 ## Development
 
 ```bash
-git clone https://github.com/DiogoRibeiro7/adaptive-importance-sampling-ice.git
-cd adaptive-importance-sampling-ice
+git clone https://github.com/DiogoRibeiro7/adaptive-importance-sampling.git
+cd adaptive-importance-sampling
 
 pip install -e .
 pip install --group dev          # pip >= 25.1; or: uv sync --group dev
