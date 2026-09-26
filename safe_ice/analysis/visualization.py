@@ -14,11 +14,13 @@ class AdvancedAnalysis:
     """Advanced analysis tools for Safe-ICE results"""
 
     @staticmethod
-    def analyze_component_evolution(results: dict[str, Any]) -> None:
-        """Analyze how mixture components evolve during optimization"""
+    def analyze_component_evolution(results: dict[str, Any], show: bool = True) -> Any:
+        """Analyze how mixture components evolve during optimization."""
         history = results["history"]
+        metrics = results.get("convergence_metrics", {})
+        cv_threshold = float(metrics.get("cv_threshold", 1.5))
 
-        _fig, axes = plt.subplots(2, 2, figsize=(12, 8))
+        fig, axes = plt.subplots(2, 2, figsize=(12, 8))
 
         # Component count evolution
         axes[0, 0].plot(history["components"], "b-o")
@@ -35,7 +37,7 @@ class AdvancedAnalysis:
         axes[0, 1].grid(True, alpha=0.3)
 
         # Lambda evolution
-        axes[1, 0].plot(history["lambda"], "r-^")
+        axes[1, 0].plot(history["lambda_val"], "r-^")
         axes[1, 0].set_title("Cosine Annealing Schedule")
         axes[1, 0].set_xlabel("Iteration")
         axes[1, 0].set_ylabel("λ (Light-tail Weight)")
@@ -43,7 +45,13 @@ class AdvancedAnalysis:
 
         # CV evolution with target
         axes[1, 1].semilogy(history["cv"], "m-d")
-        axes[1, 1].axhline(y=1.5, color="k", linestyle="--", alpha=0.7, label="Target")
+        axes[1, 1].axhline(
+            y=cv_threshold,
+            color="k",
+            linestyle="--",
+            alpha=0.7,
+            label="Target",
+        )
         axes[1, 1].set_title("Coefficient of Variation")
         axes[1, 1].set_xlabel("Iteration")
         axes[1, 1].set_ylabel("CV")
@@ -51,7 +59,9 @@ class AdvancedAnalysis:
         axes[1, 1].grid(True, alpha=0.3)
 
         plt.tight_layout()
-        plt.show()
+        if show:
+            plt.show()
+        return fig
 
     @staticmethod
     def analyze_sample_distribution(
