@@ -134,13 +134,29 @@ class TestMixtureEvolution:
 
 
 class TestParameterSensitivity:
-    def test_plots_one_series_per_parameter(self, visualizer, results) -> None:
+    def test_uses_safe_ice_failure_probability(self, visualizer, results) -> None:
+        outputs = []
+        for pf in (1e-4, 2e-4, 4e-4):
+            result = dict(results)
+            result["failure_probability"] = pf
+            outputs.append(result)
+
         figure = visualizer.create_parameter_sensitivity_plot(
             {"N": [100.0, 200.0, 400.0]},
-            [results, results, results],
+            outputs,
             show=False,
         )
         assert figure is not None
+
+        dimensions = figure.data[0].dimensions
+        failure_dimension = next(
+            dimension
+            for dimension in dimensions
+            if dimension["label"] == "Failure Probability"
+        )
+        assert list(failure_dimension["values"]) == pytest.approx(
+            [1e-4, 2e-4, 4e-4]
+        )
 
 
 class TestDashboard:
