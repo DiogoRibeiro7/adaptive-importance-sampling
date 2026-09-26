@@ -99,7 +99,7 @@ def run_dimension_study():
             "dimension": d,
             "pf": pf,
             "time": elapsed_time,
-            "total_samples": len(ice_results["final_samples"]),
+            "total_samples": len(ice_results["all_samples"]),
             "iterations": len(ice_results["iterations"]),
             "final_K": ice_results["iterations"][-1]["K"],
             "cv": ice_results["convergence_metrics"]["cv_values"][-1],
