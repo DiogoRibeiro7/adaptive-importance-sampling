@@ -51,6 +51,22 @@ class TestConvergencePlot:
         figure = visualizer.plot_convergence_interactive(results, show=False)
         assert len(figure.data) > 0
 
+    def test_uses_recorded_cv_threshold(self, visualizer) -> None:
+        ice = SafeICE(
+            limit_state_function=lambda u: 3.0 - np.linalg.norm(u, axis=-1),
+            dimension=2,
+            N=100,
+            max_iterations=2,
+            delta_star=0.75,
+            random_state=2,
+        )
+        _pf, output = ice.run(verbose=False)
+
+        figure = visualizer.plot_convergence_interactive(output, show=False)
+        threshold_shape = figure.layout.shapes[0]
+        assert threshold_shape.y0 == pytest.approx(0.75)
+        assert threshold_shape.y1 == pytest.approx(0.75)
+
     def test_does_not_mutate_the_results(self, visualizer, results) -> None:
         before = set(results)
         visualizer.plot_convergence_interactive(results, show=False)
