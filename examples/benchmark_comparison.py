@@ -99,7 +99,7 @@ def main():
             test_case["max_iterations"],
         )
 
-        total_samples_ice = len(results_ice["final_samples"])
+        total_samples_ice = len(results_ice["all_samples"])
         cv_ice = results_ice["convergence_metrics"]["cv_values"][-1]
 
         print(f"  Pf estimate: {pf_ice:.6e}")

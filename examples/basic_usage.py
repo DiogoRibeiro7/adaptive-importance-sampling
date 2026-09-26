@@ -56,7 +56,7 @@ def main():
     print(f"Estimated failure probability: {pf:.6e}")
     print("Analytical failure probability: 1.11e-2")
     print(f"Relative error: {abs(pf - 0.0111) / 0.0111:.2%}")
-    print(f"\nTotal samples used: {len(results['final_samples'])}")
+    print(f"\nTotal samples used: {len(results['all_samples'])}")
     print(f"Number of iterations: {len(results['iterations'])}")
 
     # Analyze convergence
