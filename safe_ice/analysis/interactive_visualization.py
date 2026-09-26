@@ -505,7 +505,8 @@ class InteractiveVisualizer:
 def create_interactive_dashboard(
     results: dict[str, Any],
     limit_state_func: Any | None = None,  # noqa: ARG001 - reserved for plotting the failure boundary
-) -> None:
+    show: bool = True,
+) -> go.Figure | None:
     """
     Create comprehensive interactive dashboard.
 
@@ -518,7 +519,7 @@ def create_interactive_dashboard(
     """
     if not PLOTLY_AVAILABLE:
         warnings.warn("Plotly not available. Cannot create dashboard.", stacklevel=2)
-        return
+        return None
 
     InteractiveVisualizer()
 
@@ -535,8 +536,8 @@ def create_interactive_dashboard(
             "Sample Distribution",
             "Component Evolution",
             "Weight Distribution",
-            "Failure Probability",
-            "Performance Metrics",
+            "Sigma Evolution",
+            "Final Failure Probability",
         ),
         specs=[
             [{"type": "scatter"}, {"type": "scatter"}],
@@ -558,6 +559,7 @@ def create_interactive_dashboard(
     # 1. Convergence plot
     iter_nums = list(range(1, len(iterations) + 1))
     cv_values = metrics.get("cv_values", [])
+    sigma_values = metrics.get("sigma_values", [])
 
     fig.add_trace(
         go.Scatter(
@@ -608,33 +610,22 @@ def create_interactive_dashboard(
         col=2,
     )
 
-    # 5. Failure probability evolution
-    pf_evolution = []
-    for i in range(len(iterations)):
-        # Approximate pf at each iteration
-        iter_weights = weights[: min((i + 1) * results.get("N", 1000), len(weights))]
-        iter_g = g_values[: len(iter_weights)]
-        if np.sum(iter_weights) > 0:
-            pf_i = np.sum((iter_g <= 0) * iter_weights) / np.sum(iter_weights)
-            pf_evolution.append(pf_i)
-
+    # 5. Sigma evolution from the recorded iteration diagnostics
     fig.add_trace(
         go.Scatter(
-            x=iter_nums[: len(pf_evolution)],
-            y=pf_evolution,
+            x=iter_nums[: len(sigma_values)],
+            y=sigma_values,
             mode="lines+markers",
+            name="Sigma",
             line={"color": "red"},
         ),
         row=3,
         col=1,
     )
 
-    # 6. Performance indicator
-    final_pf = (
-        np.sum((g_values <= 0) * weights) / np.sum(weights)
-        if np.sum(weights) > 0
-        else 0
-    )
+    # 6. Final probability from the estimator itself. Do not recompute this as
+    # a self-normalized ratio: Safe-ICE uses mean(I[g <= 0] * p/q).
+    final_pf = float(results.get("failure_probability", 0.0))
 
     fig.add_trace(
         go.Indicator(
@@ -662,9 +653,10 @@ def create_interactive_dashboard(
     fig.update_yaxes(title_text="u₂", row=1, col=2)
     fig.update_yaxes(title_text="K", row=2, col=1)
     fig.update_yaxes(title_text="Count", row=2, col=2)
-    fig.update_yaxes(title_text="Pf", row=3, col=1)
+    fig.update_yaxes(title_text="Sigma", row=3, col=1)
 
-    fig.show()
+    if show:
+        fig.show()
 
     print("\nDashboard created successfully!")
     print("Interactive features:")
@@ -672,3 +664,5 @@ def create_interactive_dashboard(
     print("- Zoom/pan with mouse")
     print("- Double-click to reset view")
     print("- Click legend items to toggle visibility")
+
+    return fig

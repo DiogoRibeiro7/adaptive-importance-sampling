@@ -101,7 +101,19 @@ class TestParameterSensitivity:
 
 class TestDashboard:
     def test_builds_without_a_limit_state(self, results) -> None:
-        assert create_interactive_dashboard(results) is None
+        figure = create_interactive_dashboard(results, show=False)
+        assert figure is not None
+
+    def test_uses_recorded_sigma_and_final_probability(self, results) -> None:
+        figure = create_interactive_dashboard(results, show=False)
+        assert figure is not None
+
+        sigma = results["convergence_metrics"]["sigma_values"]
+        sigma_trace = next(trace for trace in figure.data if trace.name == "Sigma")
+        assert list(sigma_trace.y) == pytest.approx(sigma)
+
+        indicator = next(trace for trace in figure.data if trace.type == "indicator")
+        assert indicator.value == pytest.approx(results["failure_probability"])
 
 
 class TestRealtimeMonitor:
