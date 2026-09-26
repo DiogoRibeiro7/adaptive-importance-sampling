@@ -85,6 +85,9 @@ class TestSafeICEExecution:
         assert pf < 1
         assert "final_samples" in results
         assert "final_weights" in results
+        assert results["convergence_metrics"]["cv_threshold"] == pytest.approx(
+            ice.delta_star
+        )
         assert results["final_samples"].shape[1] == 2
         assert len(results["final_weights"]) == len(results["final_samples"])
         assert np.all(results["final_weights"] >= 0)
