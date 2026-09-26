@@ -519,7 +519,7 @@ def create_interactive_dashboard(
     """
     if not PLOTLY_AVAILABLE:
         warnings.warn("Plotly not available. Cannot create dashboard.", stacklevel=2)
-        return
+        return None
 
     InteractiveVisualizer()
 
@@ -559,6 +559,7 @@ def create_interactive_dashboard(
     # 1. Convergence plot
     iter_nums = list(range(1, len(iterations) + 1))
     cv_values = metrics.get("cv_values", [])
+    sigma_values = metrics.get("sigma_values", [])
 
     fig.add_trace(
         go.Scatter(
