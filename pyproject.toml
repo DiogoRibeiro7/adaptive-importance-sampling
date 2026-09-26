@@ -71,11 +71,11 @@ all = [
 safe-ice = "safe_ice.cli:main"
 
 [project.urls]
-Homepage = "https://github.com/DiogoRibeiro7/adaptive-importance-sampling-ice"
+Homepage = "https://github.com/DiogoRibeiro7/adaptive-importance-sampling"
 Documentation = "https://safe-ice.readthedocs.io/"
-Repository = "https://github.com/DiogoRibeiro7/adaptive-importance-sampling-ice"
-Issues = "https://github.com/DiogoRibeiro7/adaptive-importance-sampling-ice/issues"
-Changelog = "https://github.com/DiogoRibeiro7/adaptive-importance-sampling-ice/blob/main/CHANGELOG.md"
+Repository = "https://github.com/DiogoRibeiro7/adaptive-importance-sampling"
+Issues = "https://github.com/DiogoRibeiro7/adaptive-importance-sampling/issues"
+Changelog = "https://github.com/DiogoRibeiro7/adaptive-importance-sampling/blob/main/CHANGELOG.md"
 
 # ==================== DEVELOPMENT GROUPS (PEP 735) ====================
 # Not published with the package. Install with:

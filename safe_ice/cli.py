@@ -133,7 +133,7 @@ Examples:
   safe-ice --help                  Show this help message
 
 For more information, visit:
-  https://github.com/DiogoRibeiro7/adaptive-importance-sampling-ice
+  https://github.com/DiogoRibeiro7/adaptive-importance-sampling
         """,
     )
 
