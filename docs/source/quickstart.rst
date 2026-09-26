@@ -51,7 +51,7 @@ Here's a simple example using a spherical limit state function:
 
    # Print results
    print(f"Failure probability: {pf:.2e}")
-   print(f"Total samples used: {len(results['final_samples'])}")
+   print(f"Total samples used: {len(results['all_samples'])}")
 
 Using Benchmark Problems
 ~~~~~~~~~~~~~~~~~~~~~~~~~
