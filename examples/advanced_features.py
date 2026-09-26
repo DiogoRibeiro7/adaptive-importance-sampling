@@ -75,13 +75,6 @@ def demo_adaptive_safe_ice():
         # Run algorithm
         _pf, _results = ice.run(verbose=True)
 
-        print("\nAdaptive metrics:")
-        if ice.beta_history:
-            print(f"  Average β: {np.mean(ice.beta_history):.3f}")
-            print(
-                f"  β range: [{min(ice.beta_history):.3f}, {max(ice.beta_history):.3f}]"
-            )
-
 
 def demo_time_variant_problem():
     """Demonstrate time-variant reliability analysis."""
