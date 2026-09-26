@@ -25,6 +25,7 @@ from safe_ice.analysis.interactive_visualization import (  # noqa: E402
     InteractiveVisualizer,
     create_interactive_dashboard,
 )
+from safe_ice.distributions.mixture import vMFNMDistribution  # noqa: E402
 
 
 @pytest.fixture(scope="module")
@@ -102,18 +103,34 @@ class TestSampleEvolution:
 
 
 class TestMixtureEvolution:
-    def test_default_dimensions(self, visualizer, results) -> None:
-        figure = visualizer.plot_mixture_evolution(results, show=False)
+    def test_two_dimensional_run_uses_real_density(self, visualizer) -> None:
+        ice = SafeICE(
+            limit_state_function=lambda u: 3.0 - np.linalg.norm(u, axis=-1),
+            dimension=2,
+            N=100,
+            max_iterations=3,
+            random_state=3,
+        )
+        _pf, output = ice.run(verbose=False)
+
+        figure = visualizer.plot_mixture_evolution(output, show=False)
         assert figure is not None
-        assert len(figure.frames) == len(results["iterations"])
+        assert len(figure.frames) == len(output["iterations"])
         assert len(figure.data) > 0
 
-    def test_explicit_dimension_pair(self, visualizer, results) -> None:
-        figure = visualizer.plot_mixture_evolution(
-            results, dimension_indices=(1, 2), show=False
+        first = output["iterations"][0]["parameters"]
+        grid_point = np.array(
+            [[figure.frames[0].data[0].x[0], figure.frames[0].data[0].y[0]]]
         )
-        assert figure is not None
-        assert len(figure.frames) == len(results["iterations"])
+        expected = vMFNMDistribution(first).pdf(grid_point)[0]
+        assert figure.frames[0].data[0].z[0][0] == pytest.approx(expected)
+
+    def test_higher_dimensional_projection_is_rejected(
+        self, visualizer, results
+    ) -> None:
+        with pytest.warns(UserWarning, match="two-dimensional"):
+            figure = visualizer.plot_mixture_evolution(results, show=False)
+        assert figure is None
 
 
 class TestParameterSensitivity:
