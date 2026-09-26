@@ -63,7 +63,7 @@ def main():
     metrics = results["convergence_metrics"]
     print("\nConvergence metrics:")
     print(f"  Final CV: {metrics['cv_values'][-1]:.4f}")
-    print(f"  Final delta: {metrics['delta_values'][-1]:.4f}")
+    print(f"  Final sigma: {metrics['sigma_values'][-1]:.4f}")
 
     # Component evolution
     print("\nComponent evolution:")
