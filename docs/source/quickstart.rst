@@ -65,7 +65,7 @@ Safe-ICE includes several benchmark problems from the literature:
    # Load benchmark problems
    problems = BenchmarkProblems()
 
-   # Four-mode series system (2D, pf ≈ 1.22e-5)
+   # Four-mode series system (2D, pf ≈ 6.465e-5 at the default z=1.0)
    g = problems.four_mode_series_system()
 
    # Run Safe-ICE
@@ -177,12 +177,12 @@ The ``results`` dictionary contains detailed information:
    # Convergence metrics
    metrics = results['convergence_metrics']
    cv_values = metrics['cv_values']        # Coefficient of variation
-   delta_values = metrics['delta_values']  # Rarity parameters
+   sigma_values = metrics['sigma_values']  # Smoothing parameter
 
    # Iteration details
    iterations = results['iterations']      # Per-iteration data
    for i, iter_data in enumerate(iterations):
-       print(f"Iteration {i}: K={iter_data['K']}, delta={iter_data['delta']:.2f}")
+       print(f"Iteration {i}: K={iter_data['K']}, sigma={iter_data['sigma']:.3g}")
 
 Visualization
 ~~~~~~~~~~~~~
@@ -191,15 +191,15 @@ Visualize results for 2D problems:
 
 .. code-block:: python
 
-   from safe_ice.analysis.visualization import VisualizationTools
+   from safe_ice import AdvancedAnalysis
 
-   viz = VisualizationTools()
+   analysis = AdvancedAnalysis()
 
-   # Plot convergence
-   viz.plot_convergence(results)
+   # Plot component, sigma, lambda and CV evolution
+   analysis.analyze_component_evolution(results)
 
    # Analyze sample distribution (2D only)
-   viz.analyze_sample_distribution(results, g)
+   analysis.analyze_sample_distribution(results, g)
 
 Command-Line Interface
 ----------------------
