@@ -14,9 +14,7 @@ class AdvancedAnalysis:
     """Advanced analysis tools for Safe-ICE results"""
 
     @staticmethod
-    def analyze_component_evolution(
-        results: dict[str, Any], show: bool = True
-    ) -> Any:
+    def analyze_component_evolution(results: dict[str, Any], show: bool = True) -> Any:
         """Analyze how mixture components evolve during optimization."""
         history = results["history"]
         metrics = results.get("convergence_metrics", {})
