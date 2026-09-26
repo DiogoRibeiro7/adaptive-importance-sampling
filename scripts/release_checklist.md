@@ -9,7 +9,7 @@ decide to turn it on.
 
 ## 1. Before you start
 
-- [ ] `main` (or `develop`) is green in CI
+- [ ] `main` is green in CI
 - [ ] Working tree is clean: `git status`
 - [ ] You are up to date: `git pull`
 
