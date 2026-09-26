@@ -24,12 +24,12 @@
     "cross-entropy method",
     "structural reliability"
   ],
-  "notes": "Contact: dfr@esmad.ipp.pt. Source code: https://github.com/DiogoRibeiro7/adaptive-importance-sampling-ice. Documentation: https://safe-ice.readthedocs.io/.",
+  "notes": "Contact: dfr@esmad.ipp.pt. Source code: https://github.com/DiogoRibeiro7/adaptive-importance-sampling. Documentation: https://safe-ice.readthedocs.io/.",
   "language": "eng",
   "related_identifiers": [
     {
       "scheme": "url",
-      "identifier": "https://github.com/DiogoRibeiro7/adaptive-importance-sampling-ice",
+      "identifier": "https://github.com/DiogoRibeiro7/adaptive-importance-sampling",
       "relation": "isSupplementedBy",
       "resource_type": "software"
     },
