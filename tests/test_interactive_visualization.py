@@ -119,7 +119,9 @@ class TestMixtureEvolution:
         assert len(figure.data) > 0
 
         first = output["iterations"][0]["parameters"]
-        grid_point = np.array([[figure.frames[0].data[0].x[0], figure.frames[0].data[0].y[0]]])
+        grid_point = np.array(
+            [[figure.frames[0].data[0].x[0], figure.frames[0].data[0].y[0]]]
+        )
         expected = vMFNMDistribution(first).pdf(grid_point)[0]
         assert figure.frames[0].data[0].z[0][0] == pytest.approx(expected)
 
