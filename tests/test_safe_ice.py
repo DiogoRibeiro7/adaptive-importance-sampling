@@ -91,8 +91,7 @@ class TestSafeICEExecution:
         assert not np.allclose(results["final_weights"], 1.0)
         assert results["all_samples"].shape[0] == 100
         expected = np.mean(
-            (results["final_g_values"] <= 0.0).astype(float)
-            * results["final_weights"]
+            (results["final_g_values"] <= 0.0).astype(float) * results["final_weights"]
         )
         assert results["pf_unclamped"] == pytest.approx(expected)
 
