@@ -78,9 +78,9 @@ Development
 
 Contribution guidelines and the changelog live in the repository:
 `CONTRIBUTING.md
-<https://github.com/DiogoRibeiro7/adaptive-importance-sampling-ice/blob/main/CONTRIBUTING.md>`_
+<https://github.com/DiogoRibeiro7/adaptive-importance-sampling/blob/main/CONTRIBUTING.md>`_
 and `CHANGELOG.md
-<https://github.com/DiogoRibeiro7/adaptive-importance-sampling-ice/blob/main/CHANGELOG.md>`_.
+<https://github.com/DiogoRibeiro7/adaptive-importance-sampling/blob/main/CHANGELOG.md>`_.
 
 Indices and Tables
 ==================
