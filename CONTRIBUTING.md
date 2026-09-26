@@ -98,30 +98,31 @@ We maintain strict code quality standards:
 ### Example Docstring
 
 ```python
-def estimate_failure_probability(
-    self, initial_params: Optional[vMFNMParameters] = None
-) -> Tuple[float, NDArrayF, NDArrayF]:
-    """Estimate failure probability using Safe-ICE algorithm.
+def run(
+    self,
+    initial_params: vMFNMParameters | None = None,
+    verbose: bool = True,
+) -> tuple[float, dict[str, Any]]:
+    """Execute the Safe-ICE algorithm.
 
     Parameters
     ----------
     initial_params : vMFNMParameters, optional
-        Initial parameters for the vMFNM distribution.
-        If None, uses default initialization.
+        Initial proposal parameters. If omitted, Safe-ICE initializes them.
+    verbose : bool, default=True
+        Print iteration diagnostics.
 
     Returns
     -------
     pf : float
-        Estimated failure probability
-    samples : NDArrayF
-        Generated samples, shape (n_total_samples, dimension)
-    weights : NDArrayF
-        Importance weights, shape (n_total_samples,)
+        Estimated failure probability.
+    results : dict
+        Diagnostics, final proposal parameters, samples and weights.
 
     Examples
     --------
     >>> ice = SafeICE(g, dimension=2)
-    >>> pf, samples, weights = ice.estimate_failure_probability()
+    >>> pf, results = ice.run(verbose=False)
     >>> print(f"Failure probability: {pf:.2e}")
     """
 ```
@@ -231,7 +232,7 @@ git push origin feature/your-feature-name
 ```
 
 Then create a pull request on GitHub:
-- Target the `develop` branch
+- Target the `main` branch
 - Provide a clear description
 - Reference any related issues
 - Ensure CI checks pass
