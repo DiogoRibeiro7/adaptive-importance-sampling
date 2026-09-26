@@ -22,17 +22,17 @@ Using pip (Recommended)
 
 .. code-block:: bash
 
-   pip install git+https://github.com/DiogoRibeiro7/adaptive-importance-sampling-ice.git
+   pip install git+https://github.com/DiogoRibeiro7/adaptive-importance-sampling.git
 
 Install with optional dependencies:
 
 .. code-block:: bash
 
    # Include visualization tools
-   pip install "safe-ice[viz] @ git+https://github.com/DiogoRibeiro7/adaptive-importance-sampling-ice.git"
+   pip install "safe-ice[viz] @ git+https://github.com/DiogoRibeiro7/adaptive-importance-sampling.git"
 
    # Include all optional dependencies
-   pip install "safe-ice[all] @ git+https://github.com/DiogoRibeiro7/adaptive-importance-sampling-ice.git"
+   pip install "safe-ice[all] @ git+https://github.com/DiogoRibeiro7/adaptive-importance-sampling.git"
 
 From Source
 ~~~~~~~~~~~
@@ -42,8 +42,8 @@ Clone the repository and install in development mode:
 .. code-block:: bash
 
    # Clone repository
-   git clone https://github.com/DiogoRibeiro7/adaptive-importance-sampling-ice.git
-   cd adaptive-importance-sampling-ice
+   git clone https://github.com/DiogoRibeiro7/adaptive-importance-sampling.git
+   cd adaptive-importance-sampling
 
    # Install in development mode
    pip install -e .
@@ -62,8 +62,8 @@ If you use Poetry for dependency management:
    poetry add safe-ice
 
    # Or clone and install
-   git clone https://github.com/DiogoRibeiro7/adaptive-importance-sampling-ice.git
-   cd adaptive-importance-sampling-ice
+   git clone https://github.com/DiogoRibeiro7/adaptive-importance-sampling.git
+   cd adaptive-importance-sampling
    poetry install
 
 Using Conda
@@ -81,7 +81,7 @@ Create a conda environment and install:
    conda install numpy scipy matplotlib
 
    # Install Safe-ICE
-   pip install git+https://github.com/DiogoRibeiro7/adaptive-importance-sampling-ice.git
+   pip install git+https://github.com/DiogoRibeiro7/adaptive-importance-sampling.git
 
 Docker Installation
 ~~~~~~~~~~~~~~~~~~~
@@ -102,8 +102,8 @@ For development, install additional dependencies:
 .. code-block:: bash
 
    # Clone repository
-   git clone https://github.com/DiogoRibeiro7/adaptive-importance-sampling-ice.git
-   cd adaptive-importance-sampling-ice
+   git clone https://github.com/DiogoRibeiro7/adaptive-importance-sampling.git
+   cd adaptive-importance-sampling
 
    # Install with development dependencies
    poetry install --with dev
@@ -194,7 +194,7 @@ On Apple Silicon (M1/M2), use conda for best performance:
 .. code-block:: bash
 
    conda install numpy scipy matplotlib
-   pip install git+https://github.com/DiogoRibeiro7/adaptive-importance-sampling-ice.git
+   pip install git+https://github.com/DiogoRibeiro7/adaptive-importance-sampling.git
 
 **Linux**
 
@@ -213,7 +213,7 @@ Getting Help
 
 If you encounter issues:
 
-1. Check the `GitHub Issues <https://github.com/DiogoRibeiro7/adaptive-importance-sampling-ice/issues>`_
+1. Check the `GitHub Issues <https://github.com/DiogoRibeiro7/adaptive-importance-sampling/issues>`_
 2. Read the :doc:`quickstart` guide
 3. Ask on the discussions forum
 4. Contact the maintainers
