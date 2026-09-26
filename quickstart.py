@@ -123,7 +123,7 @@ ice = SafeICE(
 pf, results = ice.run()
 """)
 
-    print("\n2. Optimized SafeICE (2-10x faster):")
+    print("\n2. Optimized SafeICE (batched/vectorized sampling):")
     print("""
 from safe_ice import OptimizedSafeICE
 
