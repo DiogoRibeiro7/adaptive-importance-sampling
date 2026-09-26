@@ -154,9 +154,7 @@ class TestParameterSensitivity:
             for dimension in dimensions
             if dimension["label"] == "Failure Probability"
         )
-        assert list(failure_dimension["values"]) == pytest.approx(
-            [1e-4, 2e-4, 4e-4]
-        )
+        assert list(failure_dimension["values"]) == pytest.approx([1e-4, 2e-4, 4e-4])
 
 
 class TestDashboard:
