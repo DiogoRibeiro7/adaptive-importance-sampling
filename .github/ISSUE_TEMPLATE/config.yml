@@ -1,8 +1,8 @@
 blank_issues_enabled: false
 contact_links:
   - name: Question or discussion
-    url: https://github.com/DiogoRibeiro7/adaptive-importance-sampling-ice/discussions
+    url: https://github.com/DiogoRibeiro7/adaptive-importance-sampling/discussions
     about: Ask about usage, methodology, or interpreting results.
   - name: Security vulnerability
-    url: https://github.com/DiogoRibeiro7/adaptive-importance-sampling-ice/security/advisories/new
+    url: https://github.com/DiogoRibeiro7/adaptive-importance-sampling/security/advisories/new
     about: Report privately. Please do not open a public issue.

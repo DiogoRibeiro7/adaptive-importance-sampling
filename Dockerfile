@@ -55,7 +55,7 @@ CMD ["safe-ice", "--help"]
 
 LABEL org.opencontainers.image.title="Safe-ICE" \
       org.opencontainers.image.description="Safe Cross-Entropy-Based Importance Sampling for rare event simulation" \
-      org.opencontainers.image.source="https://github.com/DiogoRibeiro7/adaptive-importance-sampling-ice" \
+      org.opencontainers.image.source="https://github.com/DiogoRibeiro7/adaptive-importance-sampling" \
       org.opencontainers.image.licenses="MIT"
 
 HEALTHCHECK --interval=30s --timeout=5s \

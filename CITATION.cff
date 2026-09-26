@@ -9,7 +9,7 @@ authors:
     family-names: Ribeiro
     email: dfr@esmad.ipp.pt
     affiliation: ESMAD, Instituto Politécnico do Porto
-repository-code: "https://github.com/DiogoRibeiro7/adaptive-importance-sampling-ice"
+repository-code: "https://github.com/DiogoRibeiro7/adaptive-importance-sampling"
 abstract: >-
   A Python implementation of the Safe Cross-Entropy-Based Importance Sampling
   (Safe-ICE) algorithm for estimating small failure probabilities in

@@ -10,14 +10,14 @@ Install Safe-ICE using pip:
 
 .. code-block:: bash
 
-   pip install git+https://github.com/DiogoRibeiro7/adaptive-importance-sampling-ice.git
+   pip install git+https://github.com/DiogoRibeiro7/adaptive-importance-sampling.git
 
 Or install from source:
 
 .. code-block:: bash
 
-   git clone https://github.com/DiogoRibeiro7/adaptive-importance-sampling-ice.git
-   cd adaptive-importance-sampling-ice
+   git clone https://github.com/DiogoRibeiro7/adaptive-importance-sampling.git
+   cd adaptive-importance-sampling
    pip install -e .
 
 Basic Usage
