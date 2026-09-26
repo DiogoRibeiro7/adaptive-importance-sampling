@@ -25,6 +25,7 @@ from safe_ice.analysis.interactive_visualization import (  # noqa: E402
     InteractiveVisualizer,
     create_interactive_dashboard,
 )
+from safe_ice.distributions.mixture import vMFNMDistribution  # noqa: E402
 
 
 @pytest.fixture(scope="module")
