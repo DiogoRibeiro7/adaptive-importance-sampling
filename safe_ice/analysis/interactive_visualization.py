@@ -443,8 +443,8 @@ class InteractiveVisualizer:
         plotly.graph_objects.Figure
             Interactive sensitivity plot.
         """
-        # Extract failure probabilities
-        pf_values = [r.get("pf", 0) for r in results_list]
+        # Extract the Safe-ICE failure probabilities from the public result key.
+        pf_values = [float(r["failure_probability"]) for r in results_list]
 
         # Create parallel coordinates plot
         data_dict = parameter_ranges.copy()
