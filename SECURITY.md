@@ -15,7 +15,7 @@ only; there are no maintained backport branches.
 Please do **not** open a public issue for a security problem.
 
 Report it privately through GitHub's
-[security advisory form](https://github.com/DiogoRibeiro7/adaptive-importance-sampling-ice/security/advisories/new),
+[security advisory form](https://github.com/DiogoRibeiro7/adaptive-importance-sampling/security/advisories/new),
 or by email to <dfr@esmad.ipp.pt>.
 
 Please include:
