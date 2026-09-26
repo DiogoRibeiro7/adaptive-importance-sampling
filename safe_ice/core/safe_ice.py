@@ -248,8 +248,7 @@ class SafeICE:
             final_samples, phi_t, lambda_t
         )
         final_weights: NDArrayF = (
-            final_prior_densities
-            / np.maximum(final_safe_densities, DENSITY_FLOOR)
+            final_prior_densities / np.maximum(final_safe_densities, DENSITY_FLOOR)
         ).astype(np.float64, copy=False)
         pf_unclamped: float = float(
             np.mean((final_g_values <= 0.0).astype(np.float64) * final_weights)
