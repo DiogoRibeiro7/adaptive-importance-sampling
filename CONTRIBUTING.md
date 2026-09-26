@@ -180,11 +180,11 @@ def test_safe_ice_dimension():
 
 ### 1. Create a Feature Branch
 
-Create a branch from `develop`:
+Create a branch from `main`:
 
 ```bash
-git checkout develop
-git pull origin develop
+git checkout main
+git pull origin main
 git checkout -b feature/your-feature-name
 ```
 
