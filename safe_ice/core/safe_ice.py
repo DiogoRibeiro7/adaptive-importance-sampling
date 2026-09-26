@@ -243,8 +243,15 @@ class SafeICE:
         # --- Final estimate via importance sampling (not crude MC) ---
         final_samples: NDArrayF = self._generate_safe_mixture_samples(phi_t, lambda_t)
         final_g_values: NDArrayF = self._evaluate_limit_state(final_samples)
-        pf_unclamped: float = self._estimate_failure_probability(
-            final_samples, final_g_values, phi_t, lambda_t
+        final_prior_densities: NDArrayF = self._evaluate_prior_density(final_samples)
+        final_safe_densities: NDArrayF = self._evaluate_safe_mixture_density(
+            final_samples, phi_t, lambda_t
+        )
+        final_weights: NDArrayF = (
+            final_prior_densities / np.maximum(final_safe_densities, DENSITY_FLOOR)
+        ).astype(np.float64, copy=False)
+        pf_unclamped: float = float(
+            np.mean((final_g_values <= 0.0).astype(np.float64) * final_weights)
         )
         pf_estimate: float = self._clamp_to_probability(pf_unclamped)
 
@@ -262,9 +269,11 @@ class SafeICE:
             "final_sigma": float(sigma_t),
             "final_cv": float(self.history["cv"][-1]),
             "final_lambda": float(lambda_t),
-            "final_samples": all_samples_arr,
-            "final_weights": np.ones(all_samples_arr.shape[0], dtype=np.float64),
-            "final_g_values": all_g_arr,
+            "final_samples": final_samples,
+            "final_weights": final_weights,
+            "final_g_values": final_g_values,
+            "all_samples": all_samples_arr,
+            "all_g_values": all_g_arr,
             "history": self.history,
             "convergence_metrics": {
                 "cv_values": list(self.history["cv"]),
