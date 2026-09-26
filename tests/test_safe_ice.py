@@ -94,7 +94,7 @@ class TestSafeICEExecution:
         assert all(record["n_failures"] >= 0 for record in results["iterations"])
         assert all("parameters" in record for record in results["iterations"])
         assert all(
-            record["parameters"].K == record["K"] for record in results["iterations"]
+            record["K"] == record["parameters"].K for record in results["iterations"]
         )
         assert np.all(results["final_weights"] >= 0)
         assert not np.allclose(results["final_weights"], 1.0)
