@@ -2,7 +2,7 @@ name: Performance Regression Detector
 
 on:
   pull_request:
-    branches: [main, master, develop]
+    branches: [main]
 
 permissions:
   contents: read
@@ -83,7 +83,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v7
         with:
-          node-version: '20'
+          node-version: '24'
 
       - name: Download benchmark results
         uses: actions/download-artifact@v8
