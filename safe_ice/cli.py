@@ -46,7 +46,7 @@ def run_demo() -> None:
         print("\n" + "=" * 60)
         print("Results:")
         print(f"  Estimated failure probability: {pf:.6e}")
-        print(f"  Number of samples generated: {len(results['final_samples'])}")
+        print(f"  Iteration samples generated: {len(results['all_samples'])}")
         print("  Reference probability: ~6.5e-5")
         print("=" * 60)
 
