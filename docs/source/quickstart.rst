@@ -170,9 +170,9 @@ The ``results`` dictionary contains detailed information:
 .. code-block:: python
 
    # Access results
-   samples = results['final_samples']      # All generated samples
+   samples = results['final_samples']      # Samples from the final proposal
    weights = results['final_weights']      # Importance weights
-   g_values = results['final_g_values']    # Limit state values
+   g_values = results['final_g_values']    # Limit-state values for final samples
 
    # Convergence metrics
    metrics = results['convergence_metrics']
