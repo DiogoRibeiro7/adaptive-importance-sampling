@@ -72,6 +72,12 @@ class TestConvergencePlot:
         visualizer.plot_convergence_interactive(results, show=False)
         assert set(results) == before
 
+    def test_failure_trace_uses_recorded_counts(self, visualizer, results) -> None:
+        figure = visualizer.plot_convergence_interactive(results, show=False)
+        failure_trace = next(trace for trace in figure.data if trace.name == "Failures")
+        expected = [record["n_failures"] for record in results["iterations"]]
+        assert list(failure_trace.y) == expected
+
 
 class TestSampleEvolution:
     def test_three_dimensional_run(self, visualizer, results) -> None:
