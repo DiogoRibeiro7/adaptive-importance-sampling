@@ -223,7 +223,7 @@ analyzer.analyze_sample_distribution(results, g)  # 2D problems only
 ```bash
 safe-ice --version
 safe-ice demo
-safe-ice benchmark --problem four-mode
+safe-ice benchmark four-mode
 ```
 
 ### Available benchmark problems
