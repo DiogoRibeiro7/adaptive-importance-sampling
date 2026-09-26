@@ -62,7 +62,7 @@ def simple_example():
     print("Analytical failure probability: 1.11e-2")
     print(f"Relative error: {abs(pf - 0.0111) / 0.0111:.2%}")
     print("\nAlgorithm statistics:")
-    print(f"  Total samples: {len(results['final_samples'])}")
+    print(f"  Iteration samples: {len(results['all_samples'])}")
     print(f"  Iterations: {len(results['iterations'])}")
     print(f"  Execution time: {elapsed_time:.2f} seconds")
     print(f"  Final components: {results['final_parameters'].K}")
