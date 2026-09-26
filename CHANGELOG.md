@@ -7,6 +7,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- richer Safe-ICE iteration diagnostics, including per-iteration failure counts,
+  mixture-parameter snapshots, and the configured CV stopping threshold;
+- testable plotting APIs that return Matplotlib/Plotly figures and support
+  non-interactive use with `show=False`.
+
+### Changed
+
+- final result semantics now distinguish the fresh final importance-sampling draw
+  (`final_samples`, `final_weights`, `final_g_values`) from iteration-wide
+  diagnostics (`all_samples`, `all_g_values`);
+- interactive mixture evolution now uses the actual vMF-Nakagami density for 2D
+  runs instead of Gaussian surrogate contours;
+- sample-distribution boundary analysis evaluates vectorized limit-state
+  functions in batch, with a scalar fallback;
+- workflow triggers now target `main` only, and the performance-reporting job
+  uses Node 24.
+
+### Fixed
+
+- several misleading diagnostics and visualizations: fabricated failure
+  probability evolution, a hard-coded CV threshold, zeroed failure-count traces,
+  synthetic 3D failure surfaces, and sensitivity plots reading the wrong result
+  key;
+- stale README, quickstart, contributor, release-checklist, installation, and
+  repository-rename references.
+
+
 ## [0.4.0] - 2026-08-19
 
 ### Added
