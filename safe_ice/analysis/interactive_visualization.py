@@ -224,29 +224,6 @@ class InteractiveVisualizer:
             )
         )
 
-        # Add failure boundary (g=0)
-        if samples.shape[1] >= 3:
-            # Create mesh for failure surface (simplified)
-            theta = np.linspace(0, 2 * np.pi, 20)
-            phi = np.linspace(0, np.pi, 20)
-            r = 3.0  # Approximate radius
-
-            x_mesh = r * np.outer(np.sin(phi), np.cos(theta))
-            y_mesh = r * np.outer(np.sin(phi), np.sin(theta))
-            z_mesh = r * np.outer(np.cos(phi), np.ones(theta.size))
-
-            fig.add_trace(
-                go.Surface(
-                    x=x_mesh,
-                    y=y_mesh,
-                    z=z_mesh,
-                    opacity=0.2,
-                    colorscale="Greys",
-                    showscale=False,
-                    name="Failure boundary",
-                )
-            )
-
         # Update layout
         fig.update_layout(
             title="3D Sample Distribution",

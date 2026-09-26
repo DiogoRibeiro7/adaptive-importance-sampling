@@ -82,7 +82,9 @@ class TestConvergencePlot:
 class TestSampleEvolution:
     def test_three_dimensional_run(self, visualizer, results) -> None:
         figure = visualizer.plot_sample_evolution_3d(results, show=False)
-        assert len(figure.data) > 0
+        assert len(figure.data) == 1
+        assert figure.data[0].type == "scatter3d"
+        assert all(trace.type != "surface" for trace in figure.data)
 
     def test_two_dimensional_run_is_handled(self, visualizer) -> None:
         """The 3-D plot has to cope with a problem that has only two axes."""
