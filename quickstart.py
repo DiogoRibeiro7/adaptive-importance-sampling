@@ -19,8 +19,11 @@ try:
 except ImportError as e:
     print(f"✗ Error importing Safe-ICE: {e}")
     print("\nPlease install Safe-ICE first:")
-    print("  pip install safe-ice")
-    print("  # or")
+    print(
+        "  pip install git+https://github.com/DiogoRibeiro7/"
+        "adaptive-importance-sampling.git"
+    )
+    print("  # or, from a local checkout")
     print("  pip install -e .")
     sys.exit(1)
 
@@ -97,9 +100,18 @@ def check_optional_features():
 
     if missing:
         print("\nTo install optional features:")
-        print("  pip install safe-ice[viz]   # Visualization tools")
-        print("  pip install safe-ice[perf]  # Performance extras")
-        print("  pip install safe-ice[all]   # Everything")
+        print(
+            '  pip install "safe-ice[viz] @ git+https://github.com/DiogoRibeiro7/'
+            'adaptive-importance-sampling.git"'
+        )
+        print(
+            '  pip install "safe-ice[perf] @ git+https://github.com/DiogoRibeiro7/'
+            'adaptive-importance-sampling.git"'
+        )
+        print(
+            '  pip install "safe-ice[all] @ git+https://github.com/DiogoRibeiro7/'
+            'adaptive-importance-sampling.git"'
+        )
 
 
 def show_advanced_usage():
