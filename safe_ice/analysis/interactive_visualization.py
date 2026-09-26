@@ -70,7 +70,6 @@ class InteractiveVisualizer:
         # Extract data
         iter_nums = list(range(1, len(iterations) + 1))
         cv_values = metrics.get("cv_values", [])
-    sigma_values = metrics.get("sigma_values", [])
         sigma_values = metrics.get("sigma_values", [])
         K_values = [it["K"] for it in iterations]
         n_failures = [it.get("n_failures", 0) for it in iterations]
