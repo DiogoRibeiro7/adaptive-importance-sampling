@@ -49,7 +49,7 @@ def measure_performance(
         "time": elapsed_time,
         "memory_used": mem_used,
         "memory_peak": peak_mb,
-        "total_samples": len(results["final_samples"]),
+        "total_samples": len(results["all_samples"]),
         "iterations": len(results["iterations"]),
         "final_K": results["final_parameters"].K,
     }
