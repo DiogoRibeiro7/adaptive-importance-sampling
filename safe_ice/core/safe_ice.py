@@ -211,6 +211,13 @@ class SafeICE:
                     "sigma": float(sigma_t),
                     "lambda": float(lambda_t),
                     "n_failures": int(np.count_nonzero(g_values <= 0.0)),
+                    "parameters": vMFNMParameters(
+                        pi=phi_t.pi.copy(),
+                        m=phi_t.m.copy(),
+                        Omega=phi_t.Omega.copy(),
+                        mu=phi_t.mu.copy(),
+                        kappa=phi_t.kappa.copy(),
+                    ),
                 }
             )
             all_samples.append(samples)
