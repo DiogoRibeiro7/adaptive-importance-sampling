@@ -210,6 +210,7 @@ class SafeICE:
                     "K": int(phi_t.K),
                     "sigma": float(sigma_t),
                     "lambda": float(lambda_t),
+                    "n_failures": int(np.count_nonzero(g_values <= 0.0)),
                 }
             )
             all_samples.append(samples)
