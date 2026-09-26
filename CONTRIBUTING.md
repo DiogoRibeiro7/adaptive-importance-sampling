@@ -32,8 +32,8 @@ Before making significant changes, please open an issue to discuss your proposed
 Fork the repository on GitHub, then clone your fork:
 
 ```bash
-git clone https://github.com/YOUR-USERNAME/adaptive-importance-sampling-ice.git
-cd adaptive-importance-sampling-ice
+git clone https://github.com/YOUR-USERNAME/adaptive-importance-sampling.git
+cd adaptive-importance-sampling
 ```
 
 ### 2. Install the project
