@@ -7,6 +7,8 @@ from typing import Any
 
 import numpy as np
 
+from ..distributions.mixture import vMFNMDistribution
+
 try:
     import plotly.graph_objects as go
     from plotly.subplots import make_subplots
@@ -246,7 +248,7 @@ class InteractiveVisualizer:
         results: dict[str, Any],
         dimension_indices: tuple[int, int] = (0, 1),
         show: bool = True,
-    ) -> go.Figure:
+    ) -> go.Figure | None:
         """
         Animate mixture evolution over iterations.
 
@@ -269,35 +271,30 @@ class InteractiveVisualizer:
             warnings.warn("No iteration data available", stacklevel=2)
             return None
 
-        # Create frames for animation
-        frames = []
-        d1, d2 = dimension_indices
+        first_params = iterations[0].get("parameters")
+        if first_params is None:
+            warnings.warn("No mixture parameters recorded", stacklevel=2)
+            return None
+        if first_params.d != 2 or dimension_indices != (0, 1):
+            warnings.warn(
+                "Exact mixture-evolution contours are only available for "
+                "two-dimensional Safe-ICE runs.",
+                stacklevel=2,
+            )
+            return None
 
-        # Generate grid for density evaluation
+        # Create frames from the actual vMF-Nakagami density on R^2.
+        frames = []
         x_range = np.linspace(-5, 5, 50)
         y_range = np.linspace(-5, 5, 50)
         X, Y = np.meshgrid(x_range, y_range)
+        grid = np.column_stack((X.ravel(), Y.ravel()))
 
         for i, iter_data in enumerate(iterations):
-            if "parameters" not in iter_data:
+            params = iter_data.get("parameters")
+            if params is None:
                 continue
-
-            params = iter_data["parameters"]
-
-            # Compute mixture density on grid (simplified)
-            Z = np.zeros_like(X)
-
-            # This is a simplified visualization
-            # In practice, you'd evaluate the actual mixture density
-            for k in range(params.K):
-                if d1 < params.mu.shape[1] and d2 < params.mu.shape[1]:
-                    mu_k = params.mu[k, [d1, d2]]
-                    # Approximate with Gaussian
-                    for ii in range(X.shape[0]):
-                        for jj in range(X.shape[1]):
-                            point = np.array([X[ii, jj], Y[ii, jj]])
-                            dist = np.linalg.norm(point - mu_k * 3)
-                            Z[ii, jj] += params.pi[k] * np.exp(-0.5 * dist**2)
+            Z = vMFNMDistribution(params).pdf(grid).reshape(X.shape)
 
             frame = go.Frame(
                 data=[
@@ -315,8 +312,8 @@ class InteractiveVisualizer:
         # Add animation controls
         fig.update_layout(
             title="Mixture Evolution Animation",
-            xaxis_title=f"u_{d1 + 1}",
-            yaxis_title=f"u_{d2 + 1}",
+            xaxis_title="u_1",
+            yaxis_title="u_2",
             updatemenus=[
                 {
                     "type": "buttons",
