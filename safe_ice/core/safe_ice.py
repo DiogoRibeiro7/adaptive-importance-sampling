@@ -277,6 +277,7 @@ class SafeICE:
             "history": self.history,
             "convergence_metrics": {
                 "cv_values": list(self.history["cv"]),
+                "cv_threshold": float(self.delta_star),
                 "delta_values": list(self.history["sigma"]),
                 "sigma_values": list(self.history["sigma"]),
                 "lambda_values": list(self.history["lambda_val"]),
