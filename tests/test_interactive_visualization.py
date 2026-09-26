@@ -103,12 +103,15 @@ class TestMixtureEvolution:
     def test_default_dimensions(self, visualizer, results) -> None:
         figure = visualizer.plot_mixture_evolution(results, show=False)
         assert figure is not None
+        assert len(figure.frames) == len(results["iterations"])
+        assert len(figure.data) > 0
 
     def test_explicit_dimension_pair(self, visualizer, results) -> None:
         figure = visualizer.plot_mixture_evolution(
             results, dimension_indices=(1, 2), show=False
         )
         assert figure is not None
+        assert len(figure.frames) == len(results["iterations"])
 
 
 class TestParameterSensitivity:
