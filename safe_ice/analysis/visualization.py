@@ -65,9 +65,11 @@ class AdvancedAnalysis:
 
     @staticmethod
     def analyze_sample_distribution(
-        results: dict[str, Any], problem_func: LimitStateFunction
-    ) -> None:
-        """Analyze final sample distribution (for 2D problems)"""
+        results: dict[str, Any],
+        problem_func: LimitStateFunction,
+        show: bool = True,
+    ) -> Any:
+        """Analyze final sample distribution (for 2D problems)."""
         if results["final_samples"].shape[1] != 2:
             print("Sample distribution analysis only available for 2D problems")
             return
@@ -79,7 +81,7 @@ class AdvancedAnalysis:
         failure_samples = samples[g_values <= 0]
         safe_samples = samples[g_values > 0]
 
-        _fig, axes = plt.subplots(1, 2, figsize=(12, 5))
+        fig, axes = plt.subplots(1, 2, figsize=(12, 5))
 
         # Sample scatter plot
         axes[0].scatter(
@@ -100,15 +102,26 @@ class AdvancedAnalysis:
                 label="Failure samples",
             )
 
-        # Add failure boundary (approximate)
+        # Add the g(u)=0 boundary. Prefer the vectorized API that Safe-ICE
+        # itself supports, with a row-wise fallback for scalar-only callables.
         x_range = np.linspace(-6, 6, 100)
         y_range = np.linspace(-6, 6, 100)
         X_grid, Y_grid = np.meshgrid(x_range, y_range)
-        Z_grid = np.zeros_like(X_grid)
-
-        for i in range(len(x_range)):
-            for j in range(len(y_range)):
-                Z_grid[j, i] = problem_func(np.array([X_grid[j, i], Y_grid[j, i]]))
+        grid_points = np.column_stack((X_grid.ravel(), Y_grid.ravel()))
+        try:
+            raw = problem_func(grid_points)
+            values = np.asarray(raw, dtype=np.float64).reshape(-1)
+            if values.shape[0] != grid_points.shape[0]:
+                raise ValueError("Limit-state output shape mismatch")
+        except Exception:
+            values = np.asarray(
+                [
+                    float(np.asarray(problem_func(point)).reshape(-1)[0])
+                    for point in grid_points
+                ],
+                dtype=np.float64,
+            )
+        Z_grid = values.reshape(X_grid.shape)
 
         axes[0].contour(
             X_grid, Y_grid, Z_grid, levels=[0], colors="black", linewidths=2
@@ -132,7 +145,8 @@ class AdvancedAnalysis:
         axes[1].set_title("Limit State Function Distribution")
 
         plt.tight_layout()
-        plt.show()
+        if show:
+            plt.show()
 
         # Statistics
         failure_rate = len(failure_samples) / len(samples)
@@ -140,3 +154,4 @@ class AdvancedAnalysis:
         print(f"  Total samples: {len(samples)}")
         print(f"  Failure samples: {len(failure_samples)} ({failure_rate:.1%})")
         print(f"  G-function range: [{np.min(g_values):.3f}, {np.max(g_values):.3f}]")
+        return fig
