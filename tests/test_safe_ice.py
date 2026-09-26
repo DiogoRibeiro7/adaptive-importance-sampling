@@ -88,6 +88,13 @@ class TestSafeICEExecution:
         assert results["final_samples"].shape[1] == 2
         assert len(results["final_weights"]) == len(results["final_samples"])
         assert np.all(results["final_weights"] >= 0)
+        assert not np.allclose(results["final_weights"], 1.0)
+        assert results["all_samples"].shape[0] == 100
+        expected = np.mean(
+            (results["final_g_values"] <= 0.0).astype(float)
+            * results["final_weights"]
+        )
+        assert results["pf_unclamped"] == pytest.approx(expected)
 
     def test_multiple_iterations(self, seed):
         """Test multiple iterations with convergence."""
@@ -106,8 +113,9 @@ class TestSafeICEExecution:
 
         assert pf > 0
         assert pf < 1e-3  # Known to be a rare event
-        assert results["final_samples"].shape[0] >= 200  # At least one iteration
-        assert results["final_samples"].shape[0] <= 200 * 5  # At most max_iterations
+        assert results["final_samples"].shape[0] == 200
+        assert results["all_samples"].shape[0] >= 200
+        assert results["all_samples"].shape[0] <= 200 * 5
         assert results["final_samples"].shape[1] == 2
         assert len(results["final_weights"]) == len(results["final_samples"])
 
@@ -385,7 +393,8 @@ class TestConvergence:
         _pf, results = ice.run(verbose=False)
 
         # With strict CV, should converge or reach max_iterations
-        assert len(results["final_samples"]) <= 1000 * 20
+        assert len(results["final_samples"]) == 1000
+        assert len(results["all_samples"]) <= 1000 * 20
 
     def test_early_stopping(self, seed):
         """Test that algorithm stops early when converged."""
@@ -406,7 +415,8 @@ class TestConvergence:
         _pf, results = ice.run(verbose=False)
 
         # Should stop before max_iterations
-        assert len(results["final_samples"]) < 500 * 20
+        assert len(results["final_samples"]) == 500
+        assert len(results["all_samples"]) < 500 * 20
 
 
 class TestReproducibility:
