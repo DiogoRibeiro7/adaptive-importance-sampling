@@ -44,7 +44,7 @@ class TestEndToEndWorkflow:
         # 5. Check convergence metrics
         metrics = results["convergence_metrics"]
         assert "cv_values" in metrics
-        assert "delta_values" in metrics
+        assert "sigma_values" in metrics
         assert len(metrics["cv_values"]) <= 5  # max_iterations
 
         # 6. Verify probability estimate is non-negative and finite

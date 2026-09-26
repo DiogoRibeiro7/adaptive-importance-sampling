@@ -58,7 +58,7 @@ class InteractiveVisualizer:
             subplot_titles=(
                 "Coefficient of Variation",
                 "Number of Components",
-                "Delta Evolution",
+                "Sigma Evolution",
                 "Failure Samples",
             ),
             specs=[
@@ -70,7 +70,7 @@ class InteractiveVisualizer:
         # Extract data
         iter_nums = list(range(1, len(iterations) + 1))
         cv_values = metrics.get("cv_values", [])
-        delta_values = metrics.get("delta_values", [])
+        sigma_values = metrics.get("sigma_values", [])
         K_values = [it["K"] for it in iterations]
         n_failures = [it.get("n_failures", 0) for it in iterations]
 
@@ -112,17 +112,17 @@ class InteractiveVisualizer:
             col=2,
         )
 
-        # Plot 3: Delta evolution
+        # Plot 3: Sigma evolution
         fig.add_trace(
             go.Scatter(
                 x=iter_nums,
-                y=delta_values,
+                y=sigma_values,
                 mode="lines+markers",
-                name="Delta",
+                name="Sigma",
                 line={"color": "orange", "width": 2},
                 marker={"size": 8},
                 fill="tozeroy",
-                hovertemplate="Iteration: %{x}<br>Delta: %{y:.3f}<extra></extra>",
+                hovertemplate="Iteration: %{x}<br>Sigma: %{y:.3f}<extra></extra>",
             ),
             row=2,
             col=1,
@@ -156,7 +156,7 @@ class InteractiveVisualizer:
         fig.update_xaxes(title_text="Iteration", row=2, col=2)
         fig.update_yaxes(title_text="CV", row=1, col=1)
         fig.update_yaxes(title_text="K", row=1, col=2)
-        fig.update_yaxes(title_text="Delta", row=2, col=1)
+        fig.update_yaxes(title_text="Sigma", row=2, col=1)
         fig.update_yaxes(title_text="Count", row=2, col=2)
 
         if show:

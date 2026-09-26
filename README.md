@@ -125,7 +125,7 @@ vectorised function.
 | `final_samples`       | `ndarray (n, d)` | Samples from the final proposal                   |
 | `final_weights`       | `ndarray (n,)`   | Importance weights for those samples              |
 | `final_g_values`      | `ndarray (n,)`   | Limit-state values for those samples              |
-| `convergence_metrics` | `dict`           | `cv_values` and `delta_values` per iteration      |
+| `convergence_metrics` | `dict`           | `cv_values` and `sigma_values` per iteration      |
 
 `iterations` is a list of records, so the iteration *count* is
 `len(results["iterations"])`.
