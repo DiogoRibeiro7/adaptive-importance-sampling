@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.1] - 2026-09-26
+
 ### Added
 
 - richer Safe-ICE iteration diagnostics, including per-iteration failure counts,
@@ -852,7 +854,8 @@ quoted as `1.22e-5` against a measured `5.815e-05`.
   Karhunen-Loève expansion.
 - Performance evaluation and convergence analysis utilities.
 
-[Unreleased]: https://github.com/DiogoRibeiro7/adaptive-importance-sampling/compare/v0.4.0...HEAD
+[Unreleased]: https://github.com/DiogoRibeiro7/adaptive-importance-sampling/compare/v0.4.1...HEAD
+[0.4.1]: https://github.com/DiogoRibeiro7/adaptive-importance-sampling/compare/v0.4.0...v0.4.1
 [0.4.0]: https://github.com/DiogoRibeiro7/adaptive-importance-sampling/releases/tag/v0.4.0
 [0.3.0]: https://github.com/DiogoRibeiro7/adaptive-importance-sampling/releases/tag/v0.3.0
 [0.2.0]: https://github.com/DiogoRibeiro7/adaptive-importance-sampling/releases/tag/v0.2.0
