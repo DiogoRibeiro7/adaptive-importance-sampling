@@ -152,8 +152,10 @@ from safe_ice import SafeICE, SubsetSimulation
 pf_ice, _ = SafeICE(g, dimension=d, random_state=0).run(verbose=False)
 pf_ss, ss = SubsetSimulation(g, dimension=d, random_state=0).run(verbose=False)
 
-print(f"Safe-ICE {pf_ice:.3e}, subset simulation {pf_ss:.3e} "
-      f"from {ss['n_evaluations']} evaluations")
+print(
+    f"Safe-ICE {pf_ice:.3e}, subset simulation {pf_ss:.3e} "
+    f"from {ss['n_evaluations']} evaluations"
+)
 ```
 
 On the flood example in [notebook 05](../examples.md#notebooks) the three
