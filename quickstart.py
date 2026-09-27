@@ -223,7 +223,7 @@ def main():
     print("   safe-ice benchmark four-mode")
 
     print("\n3. Read the documentation:")
-    print("   https://safe-ice.readthedocs.io/")
+    print("   https://diogoribeiro7.github.io/adaptive-importance-sampling/")
 
     print("\n4. Explore in Jupyter:")
     print("   jupyter lab")

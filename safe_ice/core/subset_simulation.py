@@ -11,11 +11,11 @@ This is not importance sampling. Rather than reweighting samples from a fitted
 proposal, it factorises the rare event into a chain of nested ones that are each
 easy to reach:
 
-.. math::
+$$
+P_F = \\mathbb{P}(F_1) \\prod_{i=2}^{m} \\mathbb{P}(F_i \\mid F_{i-1})
+$$
 
-    P_F = \\mathbb{P}(F_1) \\prod_{i=2}^{m} \\mathbb{P}(F_i \\mid F_{i-1})
-
-where :math:`F_1 \\supset F_2 \\supset \\dots \\supset F_m = F` are defined by a
+where $F_1 \\supset F_2 \\supset \\dots \\supset F_m = F$ are defined by a
 falling sequence of thresholds on ``g``. Each threshold is chosen so that a
 fixed fraction ``p0`` of the current samples pass it, which makes every
 conditional probability equal to ``p0`` by construction, and the conditional

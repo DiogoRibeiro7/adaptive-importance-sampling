@@ -2,6 +2,7 @@
 #
 # Targets assume the package is installed in the active environment:
 #   pip install -e . && pip install --group dev
+# The docs targets also need the docs group: pip install --group docs
 
 .PHONY: help install dev-setup test test-all test-slow lint format typecheck \
         check coverage docs docs-serve clean build docker demo examples
@@ -26,7 +27,8 @@ help:
 	@echo "  typecheck   Run mypy"
 	@echo "  check       format + lint + typecheck + test-all"
 	@echo ""
-	@echo "  docs        Build the Sphinx documentation"
+	@echo "  docs        Build the documentation site, failing on any warning"
+	@echo "  docs-serve  Preview the documentation with live reload"
 	@echo "  build       Build the sdist and wheel"
 	@echo "  clean       Remove build and cache artifacts"
 
@@ -74,12 +76,11 @@ check: format lint typecheck test-all
 # ---------------------------------------------------------------------- docs
 
 docs:
-	$(MAKE) -C docs clean
-	$(MAKE) -C docs html
-	@echo "Documentation built at docs/build/html/index.html"
+	mkdocs build --strict
+	@echo "Documentation built at site/index.html"
 
-docs-serve: docs
-	cd docs/build/html && $(PYTHON) -m http.server 8000
+docs-serve:
+	mkdocs serve
 
 # ------------------------------------------------------------------ packaging
 

@@ -43,7 +43,7 @@ This issue tracks recurring housekeeping for this repository. A bot will add a m
 
 ## 📚 Docs & Examples
 
-- [ ] Docs build cleanly (Sphinx/MkDocs): `make docs` or `mkdocs build`
+- [ ] Docs build cleanly: `mkdocs build --strict`, and the GitHub Pages site is current
 - [ ] Examples & notebooks run end-to-end
 - [ ] API reference reflects current code
 - [ ] Tutorial / “Getting Started” tested on a clean env

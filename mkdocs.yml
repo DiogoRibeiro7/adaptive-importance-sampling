@@ -1,0 +1,142 @@
+site_name: Safe-ICE
+site_description: >-
+  Safe cross-entropy importance sampling for estimating small failure
+  probabilities in reliability analysis.
+site_url: https://diogoribeiro7.github.io/adaptive-importance-sampling/
+repo_url: https://github.com/DiogoRibeiro7/adaptive-importance-sampling
+repo_name: DiogoRibeiro7/adaptive-importance-sampling
+edit_uri: edit/main/docs/
+copyright: Copyright &copy; 2025 Diogo Ribeiro. Released under the MIT License.
+strict: true
+
+# Promote broken in-page anchors from info to warning, so that strict mode
+# rejects a link to a heading that has been renamed.
+validation:
+  anchors: warn
+
+# The API reference is generated from the package's docstrings and the
+# changelog is included from the repository root, so `mkdocs serve` should
+# rebuild when either of them changes, not only when docs/ does.
+watch:
+  - safe_ice
+  - CHANGELOG.md
+
+theme:
+  name: material
+
+  icon:
+    repo: fontawesome/brands/github
+
+  palette:
+    - scheme: slate
+      primary: indigo
+      accent: cyan
+      toggle:
+        icon: material/brightness-7
+        name: Switch to light mode
+
+    - scheme: default
+      primary: indigo
+      accent: blue
+      toggle:
+        icon: material/brightness-4
+        name: Switch to dark mode
+
+  features:
+    - navigation.tabs
+    - navigation.sections
+    - navigation.top
+    - navigation.footer
+    - search.suggest
+    - search.highlight
+    - content.code.copy
+    - content.tabs.link
+    - toc.follow
+
+nav:
+  - Home: index.md
+  - Getting started: getting-started.md
+  - User guide:
+      - Limit-state functions: guide/limit-states.md
+      - Running and diagnosing: guide/running.md
+      - Choosing an estimator: guide/estimators.md
+      - Accuracy and benchmarks: guide/accuracy.md
+  - Theory: theory.md
+  - Examples: examples.md
+  - API reference:
+      - Overview: api/index.md
+      - Estimators: api/estimators.md
+      - Distributions: api/distributions.md
+      - Penalized EM: api/optimization.md
+      - Problems: api/problems.md
+      - Analysis: api/analysis.md
+      - Transforms: api/transforms.md
+  - Development: development.md
+  - Releases:
+      - Release process: releases.md
+      - Changelog: changelog.md
+
+plugins:
+  - search
+  - mkdocstrings:
+      handlers:
+        python:
+          # Read the package from the source tree, not an installed copy, so
+          # the reference always matches the commit being built.
+          paths: [.]
+          options:
+            docstring_style: numpy
+            docstring_section_style: table
+            filters: ["!^_"]
+            heading_level: 2
+            members_order: source
+            merge_init_into_class: true
+            separate_signature: true
+            show_root_heading: true
+            show_root_full_path: false
+            show_signature_annotations: true
+            signature_crossrefs: true
+            show_source: true
+            show_symbol_type_heading: true
+            show_symbol_type_toc: true
+
+markdown_extensions:
+  - admonition
+  - attr_list
+  - def_list
+  - footnotes
+  - md_in_html
+  - tables
+  - pymdownx.arithmatex:
+      generic: true
+  - pymdownx.details
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.inlinehilite
+  # The changelog page includes CHANGELOG.md from the repository root, so it is
+  # written once. check_paths makes a missing file fail the build.
+  - pymdownx.snippets:
+      base_path: [.]
+      check_paths: true
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+  - pymdownx.tabbed:
+      alternate_style: true
+  - toc:
+      permalink: true
+
+extra_css:
+  - stylesheets/extra.css
+
+extra_javascript:
+  - javascripts/mathjax.js
+  - https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js
+
+extra:
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/DiogoRibeiro7/adaptive-importance-sampling
+      name: Safe-ICE on GitHub

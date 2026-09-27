@@ -13,10 +13,11 @@ from .safe_ice_optimized import OptimizedSafeICE
 class AdaptiveSafeICE(OptimizedSafeICE):
     """Safe-ICE that picks its sample size and mixture size from the dimension.
 
-    The defaults of :class:`SafeICE` are tuned for small problems. This
-    subclass chooses ``N``, ``K0``, ``delta_target`` and ``delta_star`` from the
-    dimension instead, which is the only thing it does: the algorithm itself is
-    inherited unchanged from :class:`OptimizedSafeICE`, and any of the four can
+    The defaults of [`SafeICE`][safe_ice.SafeICE] are tuned for small problems.
+    This subclass chooses ``N``, ``K0``, ``delta_target`` and ``delta_star``
+    from the dimension instead, which is the only thing it does: the algorithm
+    itself is inherited unchanged from
+    [`OptimizedSafeICE`][safe_ice.OptimizedSafeICE], and any of the four can
     still be passed explicitly to override the choice.
 
     Parameters
@@ -30,13 +31,13 @@ class AdaptiveSafeICE(OptimizedSafeICE):
     auto_tune, adaptive_schedule:
         Accepted for backwards compatibility and currently have no effect.
     **kwargs:
-        Forwarded to :class:`OptimizedSafeICE`.
+        Forwarded to [`OptimizedSafeICE`][safe_ice.OptimizedSafeICE].
 
     Notes
     -----
     This class used to carry its own ``run``, annealing schedule, convergence
     test and parameter initialisation. That loop did not converge -- see the
-    module docstring of :mod:`safe_ice.core.safe_ice_optimized` -- and its
+    module docstring of ``safe_ice.core.safe_ice_optimized`` -- and its
     initialisation drew the radial parameters from fixed ranges (m in (2, 4),
     Omega in (1, 3)) regardless of dimension, which places the proposal at a
     radius of roughly 1.5 whether the problem is 2- or 200-dimensional. The

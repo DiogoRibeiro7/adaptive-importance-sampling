@@ -105,17 +105,17 @@ class BenchmarkProblems:
         A Bouc-Wen oscillator (equation 39) driven by white-noise ground
         acceleration discretised in the frequency domain (equation 41):
 
-        .. math::
-
-            m\ddot{x} + c\dot{x} + k[\alpha x + (1-\alpha) x_y z] = f(t)
+        $$
+        m\ddot{x} + c\dot{x} + k[\alpha x + (1-\alpha) x_y z] = f(t)
+        $$
 
         with the hysteretic variable following the Bouc-Wen law (equation 40).
         The equations of motion are integrated with the classical fourth-order
         Runge-Kutta method, and the limit state (equation 42) is
 
-        .. math::
-
-            g(u) = z - x(t_{end})
+        $$
+        g(u) = z - x(t_{end})
+        $$
 
         so failure is a displacement at ``t_end`` exceeding the threshold.
 
@@ -293,13 +293,13 @@ class BenchmarkProblems:
     ) -> Callable[[npt.ArrayLike], float | npt.NDArray[np.float64]]:
         """Ratio of Nakagami-distributed variables.
 
-        .. note::
+        !!! note
 
-           Not one of the paper's benchmarks. Sections 4.1 to 4.5 cover the
-           four-mode series system, the three-mode problem, the nonlinear
-           oscillator, the two-mode system and the heat transfer problem; this
-           is an extra exercise for the Nakagami machinery. Its reference value
-           comes from crude Monte Carlo here, not from the paper.
+            Not one of the paper's benchmarks. Sections 4.1 to 4.5 cover the
+            four-mode series system, the three-mode problem, the nonlinear
+            oscillator, the two-mode system and the heat transfer problem; this
+            is an extra exercise for the Nakagami machinery. Its reference
+            value comes from crude Monte Carlo here, not from the paper.
         """
 
         def limit_state_function(

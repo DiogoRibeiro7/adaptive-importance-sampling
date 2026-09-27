@@ -20,7 +20,7 @@ Removing both recovers ICE-vMFNM exactly, which is how it is implemented here:
 penalty coefficient is held at 0 so the M-step is the plain weighted EM update
 of equation (19). Everything else -- the smoothed indicator, the schedule for
 sigma, the weights and the final estimator -- is shared with
-:class:`~safe_ice.core.safe_ice.SafeICE`.
+[`SafeICE`][safe_ice.SafeICE].
 
 Sharing it is deliberate. A comparison is only meaningful if the two methods
 differ in the ways being compared and in no others, and reimplementing the
@@ -59,7 +59,7 @@ class ICEvMFNM(SafeICE):
         problem ends with 6. That is a different mechanism from Safe-ICE's,
         which prunes deliberately and from 20 down.
     delta_target, delta_star, max_iterations, N, sigma0, em_max_iter:
-        As in :class:`SafeICE`.
+        As in [`SafeICE`][safe_ice.SafeICE].
     random_state:
         Seed or generator, for reproducibility.
 

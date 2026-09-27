@@ -19,7 +19,7 @@ def _evaluate_batch(
 ) -> NDArrayF:
     """Evaluate a limit-state function on a batch, falling back to row-wise.
 
-    Mirrors :meth:`safe_ice.core.safe_ice.SafeICE._evaluate_limit_state` so
+    Mirrors ``SafeICE._evaluate_limit_state`` so
     that vectorised and scalar-only limit-state functions are both accepted.
     """
     try:

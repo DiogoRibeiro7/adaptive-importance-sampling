@@ -251,7 +251,8 @@ class InverseNakagamiDistribution:
         Parameters
         ----------
         rng : numpy random generator, optional
-            Forwarded to :meth:`NakagamiDistribution.sample`.
+            Forwarded to
+            [`NakagamiDistribution.sample`][safe_ice.NakagamiDistribution.sample].
         """
         r = NakagamiDistribution.sample(m, Omega, n, rng=rng)
         eps = np.finfo(np.float64).tiny

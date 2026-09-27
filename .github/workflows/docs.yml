@@ -1,0 +1,80 @@
+name: Documentation
+
+# Builds the MkDocs site and publishes it to GitHub Pages. Pull requests are
+# checked by the "Build documentation" job in ci.yml, which runs the same strict
+# build without deploying.
+#
+# One-time setup: Settings > Pages > Build and deployment > Source must be set
+# to "GitHub Actions", or the deploy job fails.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'docs/**'
+      - 'mkdocs.yml'
+      # The API reference is generated from the package's docstrings, and the
+      # changelog page includes CHANGELOG.md.
+      - 'safe_ice/**'
+      - 'CHANGELOG.md'
+      # The docs dependency group and its lock.
+      - 'pyproject.toml'
+      - 'poetry.lock'
+      - '.github/workflows/docs.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# One deployment at a time, and never cancel one that has started.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: Build site
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.12'
+
+      - name: Install Poetry
+        run: python -m pip install --disable-pip-version-check poetry==2.4.1
+
+      - name: Install documentation dependencies
+        # Only the docs group: mkdocstrings reads the package from the source
+        # tree, so the package itself does not need installing.
+        run: poetry install --only docs --no-root --no-interaction --no-ansi
+
+      - name: Build
+        # --strict turns every warning into an error: a broken link, a missing
+        # page, a stale anchor or an unresolved cross-reference fails the build.
+        run: poetry run mkdocs build --strict --site-dir site
+
+      - uses: actions/configure-pages@v6
+
+      - uses: actions/upload-pages-artifact@v5
+        with:
+          path: site
+
+  deploy:
+    name: Deploy to GitHub Pages
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v5
