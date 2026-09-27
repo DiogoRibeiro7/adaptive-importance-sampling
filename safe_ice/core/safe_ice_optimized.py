@@ -1,6 +1,6 @@
 """Safe-ICE with vectorised sample generation.
 
-:class:`~safe_ice.core.safe_ice.SafeICE` draws its proposal one sample at a
+[`SafeICE`][safe_ice.SafeICE] draws its proposal one sample at a
 time. This subclass overrides only that step: component assignments are drawn
 in bulk and each component's samples are generated in a single call. Everything
 that determines the answer -- the sigma schedule, the penalised EM update, the
@@ -56,13 +56,14 @@ class OptimizedSafeICE(SafeICE):
         Upper bound on the number of samples passed to the limit-state
         function at once. Defaults to ``min(N, 10000)``.
 
-    All remaining parameters are those of :class:`SafeICE` and are forwarded
-    unchanged.
-
     Notes
     -----
+    All remaining parameters are those of [`SafeICE`][safe_ice.SafeICE] and are
+    forwarded unchanged.
+
     With the default ``batch_size`` this class produces the same estimates as
-    :class:`SafeICE` up to the random stream; it is not a different algorithm.
+    [`SafeICE`][safe_ice.SafeICE] up to the random stream; it is not a
+    different algorithm.
     """
 
     def __init__(

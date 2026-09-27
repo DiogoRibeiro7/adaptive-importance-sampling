@@ -25,7 +25,7 @@ python -m build && python -m twine check --strict dist/*
 
 - [ ] All of the above pass
 - [ ] Examples still run: `python examples/basic_usage.py`
-- [ ] Docs build: `make -C docs clean html`
+- [ ] Docs build: `mkdocs build --strict` (needs `pip install --group docs`)
 
 ## 3. Update the changelog
 
@@ -69,7 +69,8 @@ The release workflow fails the build if it does not.
 
 ## 6. After the release
 
-- [ ] Read the Docs has built the new version
+- [ ] The Documentation workflow has deployed the release commit, and the
+      site's changelog page shows the new version
 - [ ] Close the milestone and open the next one
 - [ ] Update `CITATION.cff` if the release should be cited
 

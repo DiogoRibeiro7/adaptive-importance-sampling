@@ -67,7 +67,7 @@ about:
   license: MIT
   license_family: MIT
   license_file: LICENSE
-  doc_url: https://safe-ice.readthedocs.io/
+  doc_url: https://diogoribeiro7.github.io/adaptive-importance-sampling/
   dev_url: https://github.com/diogoribeiro7/adaptive-importance-sampling
 
 extra:

@@ -30,7 +30,7 @@ LOG_MIN = -745.0
 def radii_and_directions(X: NDArrayF) -> tuple[NDArrayF, NDArrayF]:
     """Split rows of ``X`` into radii and unit directions.
 
-    Rows whose norm falls at or below :data:`RADIUS_FLOOR` are degenerate: the
+    Rows whose norm falls at or below ``RADIUS_FLOOR`` are degenerate: the
     direction is undefined, so the first basis vector is used and the radius is
     clamped to the floor.
 
@@ -56,7 +56,7 @@ def exp_clamped(log_pdf: NDArrayF) -> NDArrayF:
 
     Mirrors the scalar guards: non-finite exponents yield ``0`` (checked first,
     so ``+inf`` yields ``0`` rather than saturating), exponents below
-    :data:`LOG_MIN` underflow to ``0``, and exponents above :data:`LOG_MAX`
+    ``LOG_MIN`` underflow to ``0``, and exponents above ``LOG_MAX``
     saturate at ``exp(LOG_MAX)``.
     """
     out = np.zeros_like(log_pdf, dtype=np.float64)

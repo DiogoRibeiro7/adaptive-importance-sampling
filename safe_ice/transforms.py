@@ -7,17 +7,18 @@ says as much in its introduction: "The prior is typically Gaussian; otherwise a
 Nataf or Rosenblatt transformation can be applied to map the original
 distributions to Gaussian ones."
 
-:class:`MarginalTransform` is that map. Given the marginal distribution of each
-input, and optionally the correlation between them, it converts back and forth
-and wraps a physical limit state into one the estimator accepts.
+[`MarginalTransform`][safe_ice.MarginalTransform] is that map. Given the
+marginal distribution of each input, and optionally the correlation between
+them, it converts back and forth and wraps a physical limit state into one the
+estimator accepts.
 
 Independent inputs
 ------------------
 With independent marginals the map is one-dimensional and exact:
 
-.. math::
-
-    u_i = \\Phi^{-1}(F_i(x_i)), \\qquad x_i = F_i^{-1}(\\Phi(u_i))
+$$
+u_i = \\Phi^{-1}(F_i(x_i)), \\qquad x_i = F_i^{-1}(\\Phi(u_i))
+$$
 
 Correlated inputs
 -----------------
@@ -27,12 +28,12 @@ are correlated by the same amount: the marginal transforms are non-linear, so
 they distort it. The Gaussian correlation ``rho_z`` that produces a given
 ``rho_x`` solves
 
-.. math::
-
-    \\rho_x = \\int\\!\\!\\int
-        \\frac{F_i^{-1}(\\Phi(z_i)) - \\mu_i}{\\sigma_i}
-        \\frac{F_j^{-1}(\\Phi(z_j)) - \\mu_j}{\\sigma_j}
-        \\varphi_2(z_i, z_j; \\rho_z)\\, dz_i\\, dz_j
+$$
+\\rho_x = \\int\\!\\!\\int
+    \\frac{F_i^{-1}(\\Phi(z_i)) - \\mu_i}{\\sigma_i}
+    \\frac{F_j^{-1}(\\Phi(z_j)) - \\mu_j}{\\sigma_j}
+    \\varphi_2(z_i, z_j; \\rho_z)\\, dz_i\\, dz_j
+$$
 
 which is solved here per pair by quadrature and a bracketed root find. The
 distortion is real: two lognormals with a 30% coefficient of variation asked
@@ -109,25 +110,27 @@ class MarginalTransform:
 
     Examples
     --------
-    Wrap a limit state written in physical units and hand it to the estimator::
+    Wrap a limit state written in physical units and hand it to the estimator:
 
-        from scipy.stats import lognorm
-        from safe_ice import SafeICE
-        from safe_ice.transforms import MarginalTransform
+    ```python
+    from scipy.stats import lognorm
+    from safe_ice import SafeICE
+    from safe_ice.transforms import MarginalTransform
 
-        transform = MarginalTransform(
-            [lognorm(s=0.15, scale=200.0), lognorm(s=0.25, scale=80.0)]
-        )
-
-
-        def capacity_exceeded(x):
-            return x[:, 0] - x[:, 1]  # resistance minus load
+    transform = MarginalTransform(
+        [lognorm(s=0.15, scale=200.0), lognorm(s=0.25, scale=80.0)]
+    )
 
 
-        estimator = SafeICE(
-            limit_state_function=transform.wrap(capacity_exceeded),
-            dimension=2,
-        )
+    def capacity_exceeded(x):
+        return x[:, 0] - x[:, 1]  # resistance minus load
+
+
+    estimator = SafeICE(
+        limit_state_function=transform.wrap(capacity_exceeded),
+        dimension=2,
+    )
+    ```
     """
 
     def __init__(

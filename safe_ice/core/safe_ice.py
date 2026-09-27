@@ -78,12 +78,23 @@ class SafeICE:
         Number of samples per iteration.
     sigma0:
         Initial smoothing parameter, or ``"auto"`` to choose one from the
-        limit state itself. See :meth:`_automatic_sigma0`.
+        limit state itself: ``max(1, std(g))`` over a pilot sample from the
+        prior. ``_automatic_sigma0`` explains why it errs upwards.
     sigma0_pilot:
         Limit-state evaluations spent estimating the scale when ``sigma0`` is
         ``"auto"``. Worth lowering if each evaluation is expensive.
     em_max_iter:
         Maximum EM iterations per ICE step.
+    cv_tolerance:
+        Stored on the instance but not used by the algorithm; convergence is
+        decided by ``delta_star`` alone.
+    lambda_max:
+        Upper bound on the light-tailed share ``lambda`` of the proposal, so
+        the heavy-tailed component always keeps at least ``1 - lambda_max`` of
+        the mass. See ``_cosine_annealing_schedule``.
+    random_state:
+        Seed or generator, for reproducibility. ``None`` uses NumPy's global
+        random state.
     """
 
     def __init__(
@@ -827,7 +838,8 @@ class SafeICE:
         The component is written in polar form as a radial density times an
         angular one. Converting that back to a density on R^d needs the
         Jacobian of the polar map, ``du = r^(d-1) dr dw``, exactly as
-        :meth:`vMFNMDistribution.pdf` does. Without it the component does not
+        [`vMFNMDistribution.pdf`][safe_ice.vMFNMDistribution.pdf] does. Without
+        it the component does not
         integrate to one, and since it is part of the importance-sampling
         denominator every estimate is scaled by the error.
         """

@@ -1,31 +1,27 @@
-# Builds and serves the Safe-ICE documentation.
+# Builds the Safe-ICE documentation site and serves it with live reload.
 #
 #   docker build -f Dockerfile.docs -t safe-ice-docs .
 #   docker run --rm -p 8000:8000 safe-ice-docs
 
 FROM python:3.12-slim
 
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    make \
-    git \
-    && rm -rf /var/lib/apt/lists/*
-
 WORKDIR /workspace
 
-COPY docs/requirements.txt /tmp/docs-requirements.txt
+# The docs dependency group is declared in pyproject.toml, which pip >= 25.1
+# reads directly.
+COPY pyproject.toml /workspace/
 RUN pip install --no-cache-dir --upgrade pip \
-    && pip install --no-cache-dir -r /tmp/docs-requirements.txt
+    && pip install --no-cache-dir --group docs
 
-# Package metadata lives entirely in pyproject.toml.
-COPY pyproject.toml README.md LICENSE /workspace/
-COPY safe_ice /workspace/safe_ice
-RUN pip install --no-cache-dir -e .
-
+# mkdocstrings reads the package from the source tree and the changelog page
+# includes CHANGELOG.md, so both are needed alongside docs/.
+COPY mkdocs.yml CHANGELOG.md /workspace/
 COPY docs /workspace/docs
+COPY safe_ice /workspace/safe_ice
 
-WORKDIR /workspace/docs
-RUN make clean && make html
+# Fail the image build, rather than the first request, if the site is broken.
+RUN mkdocs build --strict
 
 EXPOSE 8000
 
-CMD ["python", "-m", "http.server", "8000", "--directory", "build/html"]
+CMD ["mkdocs", "serve", "--dev-addr", "0.0.0.0:8000"]

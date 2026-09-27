@@ -7,6 +7,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- a documentation site built with MkDocs and Material for MkDocs and published
+  to GitHub Pages at <https://diogoribeiro7.github.io/adaptive-importance-sampling/>:
+  a user guide, the theory as implemented, examples, and an API reference
+  generated from the docstrings with mkdocstrings;
+- a `Documentation` workflow that builds the site strictly and deploys it with
+  the official GitHub Pages actions.
+
+### Changed
+
+- the `docs` dependency group now holds MkDocs, Material for MkDocs,
+  mkdocstrings and Ruff in place of Sphinx, and CI builds the site with
+  `poetry run mkdocs build --strict`;
+- docstrings use Markdown rather than reStructuredText roles and directives, so
+  they render in the API reference, and `SafeICE` now documents `cv_tolerance`,
+  `lambda_max` and `random_state`;
+- the documentation URL in the package metadata, `.zenodo.json`, the conda
+  recipe and `quickstart.py` points at the GitHub Pages site.
+
+### Removed
+
+- the Sphinx sources under `docs/source/` and the Read the Docs configuration,
+  which no longer served a site.
+
 ## [0.4.1] - 2026-09-26
 
 ### Added

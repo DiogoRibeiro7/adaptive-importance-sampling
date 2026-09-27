@@ -1,6 +1,7 @@
 # Safe-ICE
 
 [![CI](https://github.com/DiogoRibeiro7/adaptive-importance-sampling/actions/workflows/ci.yml/badge.svg)](https://github.com/DiogoRibeiro7/adaptive-importance-sampling/actions/workflows/ci.yml)
+[![Docs](https://github.com/DiogoRibeiro7/adaptive-importance-sampling/actions/workflows/docs.yml/badge.svg)](https://diogoribeiro7.github.io/adaptive-importance-sampling/)
 [![Python 3.11+](https://img.shields.io/badge/python-3.11%20%7C%203.12%20%7C%203.13%20%7C%203.14-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Checked with mypy](https://img.shields.io/badge/mypy-strict-2a6db2.svg)](https://mypy-lang.org/)
@@ -23,6 +24,10 @@ Implements the method described in:
 
 > Gao, Z., & Karniadakis, G. (2025). *Safe Cross-Entropy-Based Importance
 > Sampling for Rare Event Simulations.* arXiv:2509.07160.
+
+**Documentation:** <https://diogoribeiro7.github.io/adaptive-importance-sampling/>,
+with a user guide, the theory, and an API reference generated from the
+docstrings.
 
 ## Contents
 
@@ -340,14 +345,15 @@ pip install --group dev          # pip >= 25.1; or: uv sync --group dev
 pre-commit install
 ```
 
-| Task       | Command                                   |
-| ---------- | ----------------------------------------- |
-| Fast tests | `pytest`                                  |
-| All tests  | `pytest -m ""`                            |
-| Lint       | `ruff check .`                            |
-| Format     | `ruff format .`                           |
-| Type check | `mypy`                                    |
-| Coverage   | `pytest --cov=safe_ice --cov-report=html` |
+| Task       | Command                                    |
+| ---------- | ------------------------------------------ |
+| Fast tests | `pytest`                                   |
+| All tests  | `pytest -m ""`                             |
+| Lint       | `ruff check .`                             |
+| Format     | `ruff format .`                            |
+| Type check | `mypy`                                     |
+| Coverage   | `pytest --cov=safe_ice --cov-report=html`  |
+| Docs       | `pip install --group docs && mkdocs serve` |
 
 `pytest` skips tests marked `slow` by default so the common case stays quick;
 CI runs the full set. Ruff replaces black, isort, and flake8 — there is no

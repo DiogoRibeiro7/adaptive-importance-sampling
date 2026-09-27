@@ -94,6 +94,19 @@ We maintain strict code quality standards:
 - Use NumPy-style docstrings
 - Include parameter types and return types
 - Add usage examples for complex functions
+- Docstrings are rendered as Markdown, not reStructuredText, in the API
+  reference: cross-reference with `` [`SafeICE`][safe_ice.SafeICE] ``, write
+  maths between `$...$`, and fence code examples with ` ```python `
+
+The documentation site lives in `docs/` and `mkdocs.yml`. Preview it with:
+
+```bash
+pip install --group docs
+mkdocs serve
+```
+
+CI builds it with `mkdocs build --strict`, so a broken link or an unresolved
+cross-reference fails the pull request.
 
 ### Example Docstring
 
@@ -244,7 +257,7 @@ Before submitting:
 - [ ] Code is formatted (`ruff format .`)
 - [ ] Linting passes (`ruff check .`)
 - [ ] Type checking passes (`mypy`)
-- [ ] Documentation is updated
+- [ ] Documentation is updated, and `mkdocs build --strict` passes
 - [ ] CHANGELOG.md is updated (for significant changes)
 
 ## Reporting Issues

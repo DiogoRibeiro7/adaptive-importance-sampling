@@ -33,7 +33,7 @@ class PenalizedEMOptimizer:
             to the plain weighted EM step of equation (19) and leaves the
             number of components fixed. That is what the ICE-vMFNM baseline
             of reference [26] does, and it is the difference this package's
-            :class:`~safe_ice.core.ice_vmfnm.ICEvMFNM` relies on.
+            [`ICEvMFNM`][safe_ice.ICEvMFNM] relies on.
         """
         self.max_em_iterations = int(max_em_iterations)
         self.em_tolerance = float(em_tolerance)
@@ -117,7 +117,7 @@ class PenalizedEMOptimizer:
     ) -> NDArrayF:
         """E-step: compute posterior responsibilities.
 
-        ``weights`` is accepted for symmetry with :meth:`_penalized_m_step`,
+        ``weights`` is accepted for symmetry with ``_penalized_m_step``,
         which is where importance weighting is actually applied.
         """
         n = int(data.shape[0])

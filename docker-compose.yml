@@ -48,12 +48,11 @@ services:
       - "8000:8000"
     volumes:
       - ./docs:/workspace/docs
-    working_dir: /workspace/docs
-    command: >
-      sh -c "
-      sphinx-build -b html source build/html &&
-      python -m http.server 8000 --directory build/html
-      "
+      - ./mkdocs.yml:/workspace/mkdocs.yml
+      - ./safe_ice:/workspace/safe_ice
+      - ./CHANGELOG.md:/workspace/CHANGELOG.md
+    working_dir: /workspace
+    command: mkdocs serve --dev-addr 0.0.0.0:8000
 
   test:
     build:
